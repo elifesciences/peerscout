@@ -8,11 +8,20 @@ def column_astype(df, col_name, col_type):
 def applymap_dict_list(dict_list, f):
   return [dict((k, f(v)) for k, v in row.items()) for row in dict_list]
 
+def is_nat(x):
+  return isinstance(x, type(pd.NaT))
+
+def is_null(x):
+  return pd.isnull(x) or is_nat(x)
+
 def nat_to_none(x):
-  return None if type(x) == type(pd.NaT) else x
+  return None if is_nat(x) else x
+
+def remove_none(d):
+  return dict((k, v) for k, v in d.items() if not is_null(v))
 
 def clean_result(result):
-  return applymap_dict_list(result, nat_to_none)
+  return [remove_none(x) for x in applymap_dict_list(result, nat_to_none)]
 
 def droplevel_keep_non_blanks(columns):
   return [c[-1] if c[-1] != '' else c[0] for c in columns]
@@ -118,12 +127,12 @@ class RecommendReviewers(object):
       self.__find_previous_reviewers_by_manuscripts(other_manuscripts)
     )
     potential_reviewers_columns = [
-      'person-id', 'base-manuscript-number',
+      'person-id',
       'title', 'first-name', 'middle-name', 'last-name', 'institution']
     potential_reviewers = pd.concat([
       other_authors[potential_reviewers_columns],
       previous_reviewers[potential_reviewers_columns]
-    ])
+    ]).drop_duplicates()
     return {
       'potential-reviewers': clean_result(
         potential_reviewers\
