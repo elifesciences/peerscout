@@ -1,0 +1,7 @@
+{
+  "python.unitTest.pyTestArgs": [
+    "server"
+  ]
+,
+"python.unitTest.pyTestEnabled": true
+}
