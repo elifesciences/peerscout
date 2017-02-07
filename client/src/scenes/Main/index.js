@@ -118,22 +118,50 @@ const LabelledStats = ({ label, value }) => (
   </View>
 );
 
-const combinedReviewerName = potentialReviewer =>
+const combinedReviewerName = person =>
   [
-    potentialReviewer['title'],
-    potentialReviewer['first-name'],
-    potentialReviewer['middle-name'],
-    potentialReviewer['last-name']
+    person['title'],
+    person['first-name'],
+    person['middle-name'],
+    person['last-name']
   ].filter(s => !!s).join(' ');
 
-const PotentialReviewer = ({ potentialReviewer }) => (
-  <Card style={ styles.potentialReviewer.card }>
-    <CardHeader
-      title={ combinedReviewerName(potentialReviewer) }
-      subtitle={ potentialReviewer['institution'] }
-    />
-  </Card>
+const ManuscriptInlineSummary = ({ manuscript }) => (
+  <Text>{ manuscript['manuscript-number'] }</Text>
 );
+
+const PotentialReviewer = ({
+  potentialReviewer: {
+    person = {},
+    'author-of-manuscripts': authorOfManuscripts = [],
+    'reviewer-of-manuscripts': reviewerOfManuscripts = []
+  }
+}) => {
+  return (
+    <Card style={ styles.potentialReviewer.card }>
+      <CardHeader
+        title={ combinedReviewerName(person) }
+        subtitle={ person['institution'] }
+      />
+      <CardText>
+        <Text>Author of: </Text>
+        {
+          authorOfManuscripts && authorOfManuscripts.map((manuscript, index) => (
+            <ManuscriptInlineSummary manuscript={ manuscript }/>
+          ))
+        }
+      </CardText>
+      <CardText>
+        <Text>Reviewer of: </Text>
+        {
+          reviewerOfManuscripts && reviewerOfManuscripts.map((manuscript, index) => (
+            <ManuscriptInlineSummary manuscript={ manuscript }/>
+          ))
+        }
+      </CardText>
+    </Card>
+  );
+};
 
 const ManuscriptSummary = ({ manuscript }) => (
   <Card style={ styles.manuscriptSummary.container }>
