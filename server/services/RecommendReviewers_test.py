@@ -149,6 +149,13 @@ MANUSCRIPT_HISTORY_REVIEW_COMPLETE1 = {
   'stage-affective-person-id': PERSON_ID1
 }
 
+POTENTIAL_REVIEWER1 = {
+  'person': PERSON1_RESULT,
+  'scores': {
+    'keyword': 1
+  }
+}
+
 PP = pprint.PrettyPrinter(indent=2, width=40)
 
 def test_no_match():
@@ -239,10 +246,10 @@ def test_matching_one_keyword_author():
   ], columns=MANUSCRIPT_KEYWORDS.columns)
   recommend_reviewers = RecommendReviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
-  print("result:", result)
+  print("result:", PP.pformat(result))
   assert result == {
     'potential-reviewers': [{
-      'person': PERSON1_RESULT,
+      **POTENTIAL_REVIEWER1,
       'author-of-manuscripts': [{
         **MANUSCRIPT_VERSION1_RESULT,
         'authors': [PERSON1_RESULT],
@@ -331,6 +338,37 @@ def test_matching_one_keyword_author_should_return_memberships():
   print("result_person:", PP.pformat(result_person))
   assert result_person == person_with_memberships
 
+def test_matching_one_keyword_author_should_return_other_accepted_papers():
+  datasets = dict(DATASETS)
+  datasets['persons-current'] = pd.DataFrame([
+    PERSON1
+  ], columns=PERSONS.columns)
+  datasets['authors'] = pd.DataFrame([
+    AUTHOR1, {
+      **AUTHOR1,
+      **MANUSCRIPT_ID_FIELDS2
+    }
+  ], columns=AUTHORS.columns)
+  datasets['manuscript-versions'] = pd.DataFrame([
+    MANUSCRIPT_VERSION1, {
+      **MANUSCRIPT_VERSION2,
+      'decision': DECISSION_ACCEPTED
+    }
+  ], columns=MANUSCRIPT_VERSIONS.columns)
+  datasets['manuscript-keywords'] = pd.DataFrame([
+    MANUSCRIPT_KEYWORD1
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
+  recommend_reviewers = RecommendReviewers(datasets)
+  result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
+  author_of_manuscripts = result['potential-reviewers'][0]['author-of-manuscripts']
+  author_of_manuscript_ids = [m['version-key'] for m in author_of_manuscripts]
+  print("author_of_manuscripts:", PP.pformat(author_of_manuscripts))
+  print("author_of_manuscript_ids:", author_of_manuscript_ids)
+  assert set(author_of_manuscript_ids) == set([
+    MANUSCRIPT_VERSION1_RESULT['version-key'],
+    MANUSCRIPT_VERSION2_RESULT['version-key']
+  ])
+
 def test_matching_one_keyword_author_should_not_return_other_draft_papers():
   datasets = dict(DATASETS)
   datasets['persons-current'] = pd.DataFrame([
@@ -356,7 +394,7 @@ def test_matching_one_keyword_author_should_not_return_other_draft_papers():
   print("result:", result)
   assert result == {
     'potential-reviewers': [{
-      'person': PERSON1_RESULT,
+      **POTENTIAL_REVIEWER1,
       'author-of-manuscripts': [{
         **MANUSCRIPT_VERSION1_RESULT,
         'authors': [PERSON1_RESULT],
@@ -388,7 +426,7 @@ def test_matching_one_keyword_author_should_return_author_only_once():
   print("result:", result)
   assert result == {
     'potential-reviewers': [{
-      'person': PERSON1_RESULT,
+      **POTENTIAL_REVIEWER1,
       'author-of-manuscripts': [{
         **MANUSCRIPT_VERSION1_RESULT,
         'authors': [PERSON1_RESULT],
@@ -418,7 +456,7 @@ def test_matching_one_keyword_previous_reviewer():
   print("result:", result)
   assert result == {
     'potential-reviewers': [{
-      'person': PERSON1_RESULT,
+      **POTENTIAL_REVIEWER1,
       'author-of-manuscripts': [],
       'reviewer-of-manuscripts': [{
         **MANUSCRIPT_VERSION1_RESULT,
@@ -450,7 +488,7 @@ def test_matching_one_keyword_previous_reviewer_should_return_reviewer_only_once
   print("result:", PP.pformat(result))
   assert result == {
     'potential-reviewers': [{
-      'person': PERSON1_RESULT,
+      **POTENTIAL_REVIEWER1,
       'author-of-manuscripts': [],
       'reviewer-of-manuscripts': [{
         **MANUSCRIPT_VERSION1_RESULT,

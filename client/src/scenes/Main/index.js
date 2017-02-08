@@ -192,7 +192,8 @@ const PotentialReviewer = ({
   potentialReviewer: {
     person = {},
     'author-of-manuscripts': authorOfManuscripts = [],
-    'reviewer-of-manuscripts': reviewerOfManuscripts = []
+    'reviewer-of-manuscripts': reviewerOfManuscripts = [],
+    scores
   }
 }) => {
   return (
@@ -245,6 +246,14 @@ const PotentialReviewer = ({
             reviewerOfManuscripts && reviewerOfManuscripts.map((manuscript, index) => (
               <ManuscriptInlineSummary key={ index } manuscript={ manuscript }/>
             ))
+          }
+        </View>
+        <View  style={ styles.potentialReviewer.subSection }>
+          <Text style={ styles.potentialReviewer.label }>Scores: </Text>
+          {
+            scores && (
+              <Text>{ `${scores['keyword']} keyword match (higher is better)` }</Text>
+            )
           }
         </View>
       </CardText>
