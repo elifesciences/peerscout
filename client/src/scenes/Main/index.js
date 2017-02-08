@@ -91,6 +91,14 @@ const styles = {
     },
     card: {
       marginBottom: 10,
+    },
+    subSection: {
+      marginBottom: 5
+    },
+    label: {
+      display: 'inline-block',
+      minWidth: 100,
+      fontWeight: 'bold'
     }
   },
   manuscriptSummary: {
@@ -101,6 +109,9 @@ const styles = {
       fontSize: 20,
       fontWeight: 'bold'
     }
+  },
+  inlineContainer: {
+    display: 'inline-block'
   }
 }
 
@@ -118,7 +129,7 @@ const LabelledStats = ({ label, value }) => (
   </View>
 );
 
-const combinedReviewerName = person =>
+const combinedPersonName = person =>
   [
     person['title'],
     person['first-name'],
@@ -126,8 +137,12 @@ const combinedReviewerName = person =>
     person['last-name']
   ].filter(s => !!s).join(' ');
 
+const quote = s => s && `\u201c${s}\u201d`
+
 const ManuscriptInlineSummary = ({ manuscript }) => (
-  <Text>{ manuscript['manuscript-number'] }</Text>
+  <View style={ styles.inlineContainer }>
+    <Text>{ quote(manuscript['title']) }</Text>
+  </View>
 );
 
 const PotentialReviewer = ({
@@ -140,24 +155,26 @@ const PotentialReviewer = ({
   return (
     <Card style={ styles.potentialReviewer.card }>
       <CardHeader
-        title={ combinedReviewerName(person) }
+        title={ combinedPersonName(person) }
         subtitle={ person['institution'] }
       />
       <CardText>
-        <Text>Author of: </Text>
-        {
-          authorOfManuscripts && authorOfManuscripts.map((manuscript, index) => (
-            <ManuscriptInlineSummary manuscript={ manuscript }/>
-          ))
-        }
-      </CardText>
-      <CardText>
-        <Text>Reviewer of: </Text>
-        {
-          reviewerOfManuscripts && reviewerOfManuscripts.map((manuscript, index) => (
-            <ManuscriptInlineSummary manuscript={ manuscript }/>
-          ))
-        }
+        <View style={ styles.potentialReviewer.subSection }>
+          <Text style={ styles.potentialReviewer.label }>Author of: </Text>
+          {
+            authorOfManuscripts && authorOfManuscripts.map((manuscript, index) => (
+              <ManuscriptInlineSummary key={ index } manuscript={ manuscript }/>
+            ))
+          }
+        </View>
+        <View  style={ styles.potentialReviewer.subSection }>
+          <Text style={ styles.potentialReviewer.label }>Reviewer of: </Text>
+          {
+            reviewerOfManuscripts && reviewerOfManuscripts.map((manuscript, index) => (
+              <ManuscriptInlineSummary key={ index } manuscript={ manuscript }/>
+            ))
+          }
+        </View>
       </CardText>
     </Card>
   );
@@ -165,8 +182,11 @@ const PotentialReviewer = ({
 
 const ManuscriptSummary = ({ manuscript }) => (
   <Card style={ styles.manuscriptSummary.container }>
+    <CardHeader
+      title={ quote(manuscript['title']) }
+      subtitle={ manuscript['manuscript-number'] }
+    />
     <CardText>
-      <Text style={ styles.manuscriptSummary.text }>{ manuscript['manuscript-number'] }</Text>
     </CardText>
   </Card>
 );

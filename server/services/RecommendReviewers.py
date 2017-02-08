@@ -49,6 +49,7 @@ def groupby_columns_to_dict(groupby_keys, version_keys, vf):
     k: [
       vf(version_key)
       for _, version_key in set(v)
+      if vf(version_key)
     ]
     for k, v in groupby(zip(groupby_keys, version_keys), lambda x: x[0])
   }
@@ -68,17 +69,34 @@ VERSION_KEY = 'version-key'
 
 PERSON_COLUMNS = ['person-id', 'title', 'first-name', 'middle-name', 'last-name', 'institution']
 
+def filter_accepted_manuscript_versions(manuscript_versions):
+  return manuscript_versions[
+    manuscript_versions['decision'].isin(['Accept Full Submission', 'Auto-Accept'])
+  ]
+
 class RecommendReviewers(object):
   def __init__(self, datasets):
     self.manuscript_keywords_df = datasets["manuscript-keywords"].drop('sequence', axis=1).copy()
     self.authors_df = datasets["authors"]
     self.persons_df = datasets["persons-current"]
     self.manuscript_history_df = datasets['manuscript-history']
-    self.manuscript_keywords_df = self.manuscript_keywords_df.copy()
-    self.manuscript_keywords_df['manuscript-no'] =\
-      self.manuscript_keywords_df['base-manuscript-number'].apply(
+
+    self.manuscript_versions_df = filter_accepted_manuscript_versions(
+      datasets['manuscript-versions'].rename(columns={
+        'key': 'version-key'
+      })
+    )
+    self.manuscript_versions_df['manuscript-no'] =\
+      self.manuscript_versions_df['base-manuscript-number'].apply(
         manuscript_number_to_no
       )
+
+    self.manuscript_keywords_df = self.manuscript_keywords_df.copy()
+    self.manuscript_keywords_df = self.manuscript_keywords_df[
+      self.manuscript_keywords_df[VERSION_KEY].isin(
+        self.manuscript_versions_df[VERSION_KEY]
+      )
+    ][MANUSCRIPT_ID_COLUMNS + ['word']].drop_duplicates()
     persons_list = clean_result(self.persons_df[PERSON_COLUMNS].to_dict(orient='records'))
     self.persons_map = dict((p[PERSON_ID], p) for p in persons_list)
 
@@ -94,21 +112,21 @@ class RecommendReviewers(object):
       lambda person_id: self.persons_map.get(person_id, None)
     )
 
-    manuscripts_list = clean_result(pd.concat([
-      self.authors_df[MANUSCRIPT_ID_COLUMNS],
-      self.manuscript_keywords_df[MANUSCRIPT_ID_COLUMNS]
-    ]).drop_duplicates().to_dict(orient='records'))
+    manuscripts_list = clean_result(
+      self.manuscript_versions_df[MANUSCRIPT_ID_COLUMNS + ['title']]\
+      .drop_duplicates().to_dict(orient='records'))
     manuscripts_list = [{
       **manuscript,
       'authors': temp_authors_map.get(manuscript[VERSION_KEY], []),
       'reviewers': temp_reviewers_map.get(manuscript[VERSION_KEY], [])
     } for manuscript in manuscripts_list]
     self.manuscripts_by_version_key_map = dict((m[VERSION_KEY], m) for m in manuscripts_list)
+    print("self.manuscripts_by_version_key_map:", self.manuscripts_by_version_key_map)
 
     manuscripts_by_columns = lambda groupby_keys, version_keys:\
       groupby_columns_to_dict(
         groupby_keys, version_keys,
-        lambda version_key: self.manuscripts_by_version_key_map.get(version_key, [])
+        lambda version_key: self.manuscripts_by_version_key_map.get(version_key, None)
       )
 
     self.manuscripts_by_author_map = manuscripts_by_columns(
@@ -138,6 +156,11 @@ class RecommendReviewers(object):
     )
     return other_manuscripts
 
+  def __find_keywords_by_version_keys(self, version_keys):
+    return self.manuscript_keywords_df[
+      self.manuscript_keywords_df[VERSION_KEY].isin(version_keys)
+    ]['word']
+
   def __find_authors_by_manuscripts(self, manuscripts):
     other_authors = self.authors_df[self.authors_df['base-manuscript-number'].isin(
       manuscripts['base-manuscript-number'])]
@@ -161,9 +184,9 @@ class RecommendReviewers(object):
     return previous_reviewers
 
   def __find_manuscripts_by_key(self, manuscript_no):
-    return self.manuscript_keywords_df[
-      self.manuscript_keywords_df['manuscript-no'] == manuscript_no
-    ]
+    return self.manuscript_versions_df[
+      self.manuscript_versions_df['manuscript-no'] == manuscript_no
+    ].sort_values('version-key').groupby('manuscript-no').last()
 
   def __add_person_info(self, df, person_id_key='person-id'):
     return df.merge(
@@ -181,7 +204,7 @@ class RecommendReviewers(object):
     keyword_list = self.__parse_keywords(keywords)
     if manuscript_no is not None and manuscript_no != '':
       matching_manuscripts = self.__find_manuscripts_by_key(manuscript_no)
-      manuscript_keywords = matching_manuscripts['word']
+      manuscript_keywords = self.__find_keywords_by_version_keys(matching_manuscripts[VERSION_KEY])
       keyword_list += list(manuscript_keywords.values)
     else:
       matching_manuscripts = self.__find_manuscripts_by_key(None)
