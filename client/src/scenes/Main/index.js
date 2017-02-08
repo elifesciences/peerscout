@@ -180,6 +180,16 @@ const PotentialReviewer = ({
         subtitle={ person['institution'] }
       />
       <CardText>
+        {
+          person.stats && person.stats['review-duration'] && (
+            <View style={ styles.potentialReviewer.subSection }>
+              <Text style={ styles.potentialReviewer.label }>Review Time: </Text>
+              <Text style={ styles.potentialReviewer.value }>
+                { `${person.stats['review-duration']['mean'].toFixed(1)} days (avg)` }
+              </Text>
+            </View>
+          )
+        }
         <View style={ styles.potentialReviewer.subSection }>
           <Text style={ styles.potentialReviewer.label }>Author of: </Text>
           {

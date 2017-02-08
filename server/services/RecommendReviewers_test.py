@@ -1,6 +1,8 @@
 """
 Unit test
 """
+import pprint
+
 import pandas as pd
 
 from .RecommendReviewers import RecommendReviewers
@@ -25,7 +27,7 @@ MANUSCRIPT_KEYWORDS = pd.DataFrame(
   columns=MANUSCRIPT_ID_COLUMNS + ['sequence', 'word'])
 MANUSCRIPT_HISTORY = pd.DataFrame(
   [],
-  columns=MANUSCRIPT_ID_COLUMNS + ['stage-affective-person-id', 'stage-name'])
+  columns=MANUSCRIPT_ID_COLUMNS + ['stage-affective-person-id', 'stage-name', 'start-date'])
 
 DATASETS = {
   'authors': AUTHORS,
@@ -51,7 +53,7 @@ VERSION_KEY1 = '11111|0'
 MANUSCRIPT_TITLE1 = 'Manuscript Title1'
 
 MANUSCRIPT_NO2 = '22222'
-MANUSCRIPT_NUMBER2 = 'some-prefix-' + MANUSCRIPT_NO1
+MANUSCRIPT_NUMBER2 = 'some-prefix-' + MANUSCRIPT_NO2
 VERSION_KEY2 = '22222|0'
 MANUSCRIPT_TITLE2 = 'Manuscript Title2'
 
@@ -62,9 +64,9 @@ MANUSCRIPT_ID_FIELDS1 = {
 }
 
 MANUSCRIPT_ID_FIELDS2 = {
-  'base-manuscript-number': MANUSCRIPT_NUMBER1,
-  'manuscript-number': MANUSCRIPT_NUMBER1,
-  'version-key': VERSION_KEY1
+  'base-manuscript-number': MANUSCRIPT_NUMBER2,
+  'manuscript-number': MANUSCRIPT_NUMBER2,
+  'version-key': VERSION_KEY2
 }
 
 DECISSION_ACCEPTED = 'Accept Full Submission'
@@ -102,11 +104,16 @@ AUTHOR1 = {
   'author-person-id': PERSON_ID1
 }
 
+STAGE_REVIEW_ACCEPTED = 'Reviewers Accept'
+STAGE_REVIEW_COMPLETE = 'Review Received'
+
 MANUSCRIPT_HISTORY_REVIEW_COMPLETE1 = {
   **MANUSCRIPT_ID_FIELDS1,
-  'stage-name': 'Review Complete',
+  'stage-name': STAGE_REVIEW_COMPLETE,
   'stage-affective-person-id': PERSON_ID1
 }
+
+PP = pprint.PrettyPrinter(indent=2, depth=2, width=40)
 
 def test_no_match():
   recommend_reviewers = RecommendReviewers(DATASETS)
@@ -209,6 +216,57 @@ def test_matching_one_keyword_author():
     }],
     'matching-manuscripts': []
   }
+
+def test_matching_one_keyword_author_should_return_stats():
+  datasets = dict(DATASETS)
+  datasets['persons-current'] = pd.DataFrame([
+    PERSON1
+  ], columns=PERSONS.columns)
+  datasets['authors'] = pd.DataFrame([
+    AUTHOR1
+  ], columns=AUTHORS.columns)
+  datasets['manuscript-versions'] = pd.DataFrame([
+    MANUSCRIPT_VERSION1
+  ], columns=MANUSCRIPT_VERSIONS.columns)
+  datasets['manuscript-keywords'] = pd.DataFrame([
+    MANUSCRIPT_KEYWORD1
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
+  datasets['manuscript-history'] = pd.DataFrame([{
+    **MANUSCRIPT_ID_FIELDS1,
+    'stage-affective-person-id': PERSON_ID1,
+    'stage-name': STAGE_REVIEW_ACCEPTED,
+    'start-date': pd.Timestamp('2017-01-01')
+  }, {
+    **MANUSCRIPT_ID_FIELDS1,
+    'stage-affective-person-id': PERSON_ID1,
+    'stage-name': STAGE_REVIEW_COMPLETE,
+    'start-date': pd.Timestamp('2017-01-02')
+  }, {
+    **MANUSCRIPT_ID_FIELDS2,
+    'stage-affective-person-id': PERSON_ID1,
+    'stage-name': STAGE_REVIEW_ACCEPTED,
+    'start-date': pd.Timestamp('2017-02-01')
+  }, {
+    **MANUSCRIPT_ID_FIELDS2,
+    'stage-affective-person-id': PERSON_ID1,
+    'stage-name': STAGE_REVIEW_COMPLETE,
+    'start-date': pd.Timestamp('2017-02-03')
+  }], columns=MANUSCRIPT_HISTORY.columns)
+  recommend_reviewers = RecommendReviewers(datasets)
+  person_with_stats = {
+    **PERSON1,
+    'stats': {
+      'review-duration': {
+        'min': 1.0,
+        'mean': 1.5,
+        'max': 2
+      }
+    }
+  }
+  result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
+  result_person = result['potential-reviewers'][0]['person']
+  print("result_person:", PP.pformat(result_person))
+  assert result_person == person_with_stats
 
 def test_matching_one_keyword_author_should_not_return_other_draft_papers():
   datasets = dict(DATASETS)
@@ -326,7 +384,7 @@ def test_matching_one_keyword_previous_reviewer_should_return_reviewer_only_once
   ], columns=MANUSCRIPT_KEYWORDS.columns)
   recommend_reviewers = RecommendReviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
-  print("result:", result)
+  print("result:", PP.pformat(result))
   assert result == {
     'potential-reviewers': [{
       'person': PERSON1,

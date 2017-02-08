@@ -80,6 +80,34 @@ def unescape_if_string(s):
     return html.unescape(s)
   return s
 
+def create_stage_pivot(stage_history):
+  return stage_history.pivot_table(
+    index=['manuscript-number', 'version-key', 'stage-affective-person-id'],
+    columns='stage-name',
+    values='start-date',
+    aggfunc='first')
+
+def duration_stats_between_by_person(stage_pivot, from_stage, to_stage):
+  min_duration = pd.Timedelta(minutes=10)
+  if (from_stage in stage_pivot.columns) and (to_stage in stage_pivot.columns):
+    duration = stage_pivot[to_stage] - stage_pivot[from_stage]
+    duration = duration[duration > min_duration]
+  else:
+    return pd.DataFrame([])
+  duration = duration.astype('timedelta64[s]')
+  return duration.dropna()\
+  .to_frame('duration')\
+  .reset_index()\
+  .rename(columns={'stage-affective-person-id': 'person-id'})\
+  .groupby('person-id', as_index=False)\
+  .agg([
+    pd.np.min, pd.np.mean, pd.np.max
+  ])['duration'].rename(columns={
+    'amin': 'min',
+    'amax': 'max'
+  })\
+  / (24 * 60 * 60)
+
 class RecommendReviewers(object):
   def __init__(self, datasets):
     self.manuscript_keywords_df = datasets["manuscript-keywords"].drop('sequence', axis=1).copy()
@@ -112,6 +140,19 @@ class RecommendReviewers(object):
     persons_list = clean_result(self.persons_df[PERSON_COLUMNS].to_dict(orient='records'))
     self.persons_map = dict((p[PERSON_ID], p) for p in persons_list)
 
+    stage_pivot = create_stage_pivot(self.manuscript_history_df)
+    review_durations = duration_stats_between_by_person(
+      stage_pivot, 'Reviewers Accept', 'Review Received')
+    for person_id, row in review_durations.iterrows():
+      if person_id in self.persons_map:
+        self.persons_map[person_id]['stats'] = {
+          'review-duration': {
+            'min': row['min'],
+            'mean': row['mean'],
+            'max': row['max']
+          }
+        }
+
     temp_authors_map = groupby_columns_to_dict(
       self.authors_df[VERSION_KEY].values,
       self.authors_df['author-person-id'].values,
@@ -133,7 +174,6 @@ class RecommendReviewers(object):
       'reviewers': temp_reviewers_map.get(manuscript[VERSION_KEY], [])
     } for manuscript in manuscripts_list]
     self.manuscripts_by_version_key_map = dict((m[VERSION_KEY], m) for m in manuscripts_list)
-    print("self.manuscripts_by_version_key_map:", self.manuscripts_by_version_key_map)
 
     manuscripts_by_columns = lambda groupby_keys, version_keys:\
       groupby_columns_to_dict(
@@ -187,7 +227,7 @@ class RecommendReviewers(object):
     previous_reviewers = self.manuscript_history_df[
       self.manuscript_history_df['base-manuscript-number'].isin(
         manuscripts['base-manuscript-number'])]
-    previous_reviewers = previous_reviewers[previous_reviewers['stage-name'] == 'Review Complete']
+    previous_reviewers = previous_reviewers[previous_reviewers['stage-name'] == 'Review Received']
     previous_reviewers = previous_reviewers[
       ['base-manuscript-number', 'stage-affective-person-id']].drop_duplicates()
     previous_reviewers = previous_reviewers.rename(columns={
