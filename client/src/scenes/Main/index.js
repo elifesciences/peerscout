@@ -94,12 +94,17 @@ const styles = {
       marginBottom: 10,
     },
     subSection: {
-      marginBottom: 5
+      marginBottom: 5,
+      display: 'flex',
+      flexDirection: 'row'
     },
     label: {
       display: 'inline-block',
       minWidth: 100,
       fontWeight: 'bold'
+    },
+    value: {
+      flex: 1
     }
   },
   manuscriptSummary: {
@@ -125,6 +130,10 @@ const styles = {
   personChip: {
     display: 'inline-block',
     marginRight: 5
+  },
+  flexColumn: {
+    display: 'flex',
+    flexDirection: 'column'
   }
 }
 
@@ -218,7 +227,9 @@ const PotentialReviewer = ({
           person['dates-not-available'] && person['dates-not-available'].length > 0 && (
             <View style={ styles.potentialReviewer.subSection }>
               <Text style={ styles.potentialReviewer.label }>Not Available: </Text>
-              <Text>{ person['dates-not-available'].map(formatPeriodNotAvailable).join(', ') }</Text>
+              <Text style={ styles.potentialReviewer.value }>
+                { person['dates-not-available'].map(formatPeriodNotAvailable).join(', ') }
+              </Text>
             </View>
           )
         }
@@ -234,27 +245,37 @@ const PotentialReviewer = ({
         }
         <View style={ styles.potentialReviewer.subSection }>
           <Text style={ styles.potentialReviewer.label }>Author of: </Text>
-          {
-            authorOfManuscripts && authorOfManuscripts.map((manuscript, index) => (
-              <ManuscriptInlineSummary key={ index } manuscript={ manuscript }/>
-            ))
-          }
+          <View style={ styles.potentialReviewer.value }>
+            <FlexColumn>
+              {
+                authorOfManuscripts && authorOfManuscripts.map((manuscript, index) => (
+                  <ManuscriptInlineSummary key={ index } manuscript={ manuscript }/>
+                ))
+              }
+            </FlexColumn>
+          </View>
         </View>
         <View  style={ styles.potentialReviewer.subSection }>
           <Text style={ styles.potentialReviewer.label }>Reviewer of: </Text>
-          {
-            reviewerOfManuscripts && reviewerOfManuscripts.map((manuscript, index) => (
-              <ManuscriptInlineSummary key={ index } manuscript={ manuscript }/>
-            ))
-          }
+          <View style={ styles.potentialReviewer.value }>
+            <FlexColumn>
+              {
+                reviewerOfManuscripts && reviewerOfManuscripts.map((manuscript, index) => (
+                  <ManuscriptInlineSummary key={ index } manuscript={ manuscript }/>
+                ))
+              }
+            </FlexColumn>
+          </View>
         </View>
         <View  style={ styles.potentialReviewer.subSection }>
           <Text style={ styles.potentialReviewer.label }>Scores: </Text>
-          {
-            scores && (
-              <Text>{ `${scores['keyword']} keyword match (higher is better)` }</Text>
-            )
-          }
+          <View style={ styles.potentialReviewer.value }>
+            {
+              scores && (
+                <Text>{ `${scores['keyword']} keyword match (higher is better)` }</Text>
+              )
+            }
+          </View>
         </View>
       </CardText>
     </Card>
@@ -293,6 +314,12 @@ const ManuscriptSummary = ({
       </View>
     </CardText>
   </Card>
+);
+
+const FlexColumn = props => (
+  <View style={ styles.flexColumn }>
+    { props.children }
+  </View>
 );
 
 class Main extends React.Component {
