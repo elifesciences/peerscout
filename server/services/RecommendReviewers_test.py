@@ -24,6 +24,12 @@ PERSON_MEMBERSHIPS = pd.DataFrame(
     'member-type', 'member-id'
   ]
 )
+PERSON_DATES_NOT_AVAILABLE = pd.DataFrame(
+  [],
+  columns=PERSON_ID_COLUMNS + [
+    'dna-start-date', 'dna-end-date'
+  ]
+)
 MANUSCRIPTS = pd.DataFrame(
   [],
   columns=['manuscript-number'])
@@ -42,6 +48,7 @@ DATASETS = {
   'persons': PERSONS,
   'persons-current': PERSONS,
   'person-memberships': PERSON_MEMBERSHIPS,
+  'person-dates-not-available': PERSON_DATES_NOT_AVAILABLE,
   'manuscripts': MANUSCRIPTS,
   'manuscript-versions': MANUSCRIPT_VERSIONS,
   'manuscript-keywords': MANUSCRIPT_KEYWORDS,
@@ -60,6 +67,7 @@ PERSON1 = {
 PERSON1_RESULT = {
   **PERSON1,
   'memberships': [],
+  'dates-not-available': [],
   'stats': {
     'review-duration': None
   }

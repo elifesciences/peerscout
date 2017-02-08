@@ -156,6 +156,12 @@ class RecommendReviewers(object):
     memberships_df = datasets["person-memberships"].rename(columns={
       'person-key': PERSON_ID
     })
+    dates_not_available_df = datasets["person-dates-not-available"].rename(columns={
+      'person-key': PERSON_ID
+    })
+    dates_not_available_df = dates_not_available_df[
+      dates_not_available_df['dna-end-date'] >= pd.to_datetime('today')
+    ]
 
     self.manuscript_history_review_received_df = filter_by(
       self.manuscript_history_df,
@@ -182,6 +188,7 @@ class RecommendReviewers(object):
     ][MANUSCRIPT_ID_COLUMNS + ['word']].drop_duplicates()
 
     temp_memberships_map = groupby_column_to_dict(memberships_df, PERSON_ID)
+    dates_not_available_map = groupby_column_to_dict(dates_not_available_df, PERSON_ID)
 
     stage_pivot = create_stage_pivot(self.manuscript_history_all_df)
     review_durations_map = duration_stats_between_by_person(
@@ -190,6 +197,7 @@ class RecommendReviewers(object):
     persons_list = [{
       **person,
       'memberships': temp_memberships_map.get(person['person-id'], []),
+      'dates-not-available': dates_not_available_map.get(person['person-id'], []),
       'stats': {
         'review-duration': review_durations_map.get(person['person-id'], None)
       }

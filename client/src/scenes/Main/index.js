@@ -183,6 +183,11 @@ const Membership = ({ membership }) => {
   );
 };
 
+const formatDate = date => new Date(date).toLocaleDateString();
+
+const formatPeriodNotAvailable = periodNotAvailable =>
+  `${formatDate(periodNotAvailable['dna-start-date'])} - ${formatDate(periodNotAvailable['dna-end-date'])}`;
+
 const PotentialReviewer = ({
   potentialReviewer: {
     person = {},
@@ -205,6 +210,14 @@ const PotentialReviewer = ({
                   <Membership key={ index } membership={ membership }/>
                 ))
               }
+            </View>
+          )
+        }
+        {
+          person['dates-not-available'] && person['dates-not-available'].length > 0 && (
+            <View style={ styles.potentialReviewer.subSection }>
+              <Text style={ styles.potentialReviewer.label }>Not Available: </Text>
+              <Text>{ person['dates-not-available'].map(formatPeriodNotAvailable).join(', ') }</Text>
             </View>
           )
         }
