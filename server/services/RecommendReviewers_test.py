@@ -59,7 +59,10 @@ PERSON1 = {
 
 PERSON1_RESULT = {
   **PERSON1,
-  'memberships': []
+  'memberships': [],
+  'stats': {
+    'review-duration': None
+  }
 }
 
 MEMBERSHIP1_RESULT = {

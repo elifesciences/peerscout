@@ -65,6 +65,9 @@ def groupby_column_to_dict(df, groupby_col):
     for k, v in groupby(a, lambda item: item[groupby_col])
   }
 
+def groupby_index_to_dict(df):
+  return groupby_column_to_dict(df, df.index.name)
+
 def map_to_dict(keys, d, default_value=None):
   return [d.get(k, default_value) for k in keys]
 
@@ -180,24 +183,18 @@ class RecommendReviewers(object):
 
     temp_memberships_map = groupby_column_to_dict(memberships_df, PERSON_ID)
 
+    stage_pivot = create_stage_pivot(self.manuscript_history_all_df)
+    review_durations_map = duration_stats_between_by_person(
+      stage_pivot, 'Reviewers Accept', 'Review Received').to_dict(orient='index')
+
     persons_list = [{
       **person,
-      'memberships': temp_memberships_map.get(person['person-id'], [])
+      'memberships': temp_memberships_map.get(person['person-id'], []),
+      'stats': {
+        'review-duration': review_durations_map.get(person['person-id'], None)
+      }
     } for person in clean_result(self.persons_df[PERSON_COLUMNS].to_dict(orient='records'))]
     self.persons_map = dict((p[PERSON_ID], p) for p in persons_list)
-
-    stage_pivot = create_stage_pivot(self.manuscript_history_all_df)
-    review_durations = duration_stats_between_by_person(
-      stage_pivot, 'Reviewers Accept', 'Review Received')
-    for person_id, row in review_durations.iterrows():
-      if person_id in self.persons_map:
-        self.persons_map[person_id]['stats'] = {
-          'review-duration': {
-            'min': row['min'],
-            'mean': row['mean'],
-            'max': row['max']
-          }
-        }
 
     temp_authors_map = groupby_columns_to_dict(
       self.authors_df[VERSION_KEY].values,
