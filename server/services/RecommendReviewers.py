@@ -75,12 +75,20 @@ def filter_accepted_manuscript_versions(manuscript_versions):
     manuscript_versions['decision'].isin(['Accept Full Submission', 'Auto-Accept'])
   ]
 
+def unescape_if_string(s):
+  if isinstance(s, str):
+    return html.unescape(s)
+  return s
+
 class RecommendReviewers(object):
   def __init__(self, datasets):
     self.manuscript_keywords_df = datasets["manuscript-keywords"].drop('sequence', axis=1).copy()
     self.authors_df = datasets["authors"]
-    self.persons_df = datasets["persons-current"]
+    self.persons_df = datasets["persons-current"].copy()
     self.manuscript_history_df = datasets['manuscript-history']
+
+    for c in PERSON_COLUMNS[1:]:
+      self.persons_df[c] = self.persons_df[c].apply(unescape_if_string)
 
     self.manuscript_versions_df = filter_accepted_manuscript_versions(
       datasets['manuscript-versions'].copy().rename(columns={
