@@ -147,7 +147,8 @@ const combinedPersonName = person =>
     person['title'],
     person['first-name'],
     person['middle-name'],
-    person['last-name']
+    person['last-name'],
+    `(${person['person-id']})`
   ].filter(s => !!s).join(' ');
 
 const quote = s => s && `\u201c${s}\u201d`
@@ -155,6 +156,7 @@ const quote = s => s && `\u201c${s}\u201d`
 const ManuscriptInlineSummary = ({ manuscript }) => (
   <View style={ styles.inlineContainer }>
     <Text>{ quote(manuscript['title']) }</Text>
+    <Text>{ ` (${manuscript['manuscript-number']})` }</Text>
   </View>
 );
 
