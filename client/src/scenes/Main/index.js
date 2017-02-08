@@ -166,6 +166,23 @@ const PersonInlineSummary = ({ person }) => (
   </Chip>  
 );
 
+const Membership = ({ membership }) => {
+  if (membership['member-type'] != 'ORCID') {
+    return (
+      <Text>{ `${membership['member-type']}: ${membership['member-id']}` }</Text>
+    );
+  }
+  return (
+    <Link
+      style={ styles.link }
+      target="_blank"
+      href={ `http://orcid.org/${membership['member-id']}` }
+    >
+      <Text>ORCID</Text>
+    </Link>
+  );
+};
+
 const PotentialReviewer = ({
   potentialReviewer: {
     person = {},
@@ -180,6 +197,17 @@ const PotentialReviewer = ({
         subtitle={ person['institution'] }
       />
       <CardText>
+        {
+          person.memberships && (
+            <View style={ styles.potentialReviewer.subSection }>
+              {
+                person.memberships && person.memberships.map((membership, index) => (
+                  <Membership key={ index } membership={ membership }/>
+                ))
+              }
+            </View>
+          )
+        }
         {
           person.stats && person.stats['review-duration'] && (
             <View style={ styles.potentialReviewer.subSection }>

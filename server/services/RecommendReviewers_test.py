@@ -18,6 +18,12 @@ PERSONS = pd.DataFrame(
   columns=PERSON_ID_COLUMNS + [
     'title', 'first-name', 'middle-name', 'last-name', 'institution', 'status'
   ])
+PERSON_MEMBERSHIPS = pd.DataFrame(
+  [],
+  columns=PERSON_ID_COLUMNS + [
+    'member-type', 'member-id'
+  ]
+)
 MANUSCRIPTS = pd.DataFrame(
   [],
   columns=['manuscript-number'])
@@ -35,6 +41,7 @@ DATASETS = {
   'authors': AUTHORS,
   'persons': PERSONS,
   'persons-current': PERSONS,
+  'person-memberships': PERSON_MEMBERSHIPS,
   'manuscripts': MANUSCRIPTS,
   'manuscript-versions': MANUSCRIPT_VERSIONS,
   'manuscript-keywords': MANUSCRIPT_KEYWORDS,
@@ -48,6 +55,21 @@ PERSON1 = {
   'first-name': 'John',
   'last-name': 'Smith',
   'status': 'Active'
+}
+
+PERSON1_RESULT = {
+  **PERSON1,
+  'memberships': []
+}
+
+MEMBERSHIP1_RESULT = {
+  'member-type': 'memberme',
+  'member-id': '12345'
+}
+
+MEMBERSHIP1 = {
+  **MEMBERSHIP1_RESULT,
+  'person-id': PERSON_ID1,
 }
 
 MANUSCRIPT_NO1 = '12345'
@@ -209,10 +231,10 @@ def test_matching_one_keyword_author():
   print("result:", result)
   assert result == {
     'potential-reviewers': [{
-      'person': PERSON1,
+      'person': PERSON1_RESULT,
       'author-of-manuscripts': [{
         **MANUSCRIPT_VERSION1_RESULT,
-        'authors': [PERSON1],
+        'authors': [PERSON1_RESULT],
         'reviewers': []
       }],
       'reviewer-of-manuscripts': []
@@ -257,7 +279,7 @@ def test_matching_one_keyword_author_should_return_stats():
   }], columns=MANUSCRIPT_HISTORY.columns)
   recommend_reviewers = RecommendReviewers(datasets)
   person_with_stats = {
-    **PERSON1,
+    **PERSON1_RESULT,
     'stats': {
       'review-duration': {
         'min': 1.0,
@@ -270,6 +292,33 @@ def test_matching_one_keyword_author_should_return_stats():
   result_person = result['potential-reviewers'][0]['person']
   print("result_person:", PP.pformat(result_person))
   assert result_person == person_with_stats
+
+def test_matching_one_keyword_author_should_return_memberships():
+  datasets = dict(DATASETS)
+  datasets['persons-current'] = pd.DataFrame([
+    PERSON1
+  ], columns=PERSONS.columns)
+  datasets['person-memberships'] = pd.DataFrame([
+    MEMBERSHIP1,
+  ], columns=PERSON_MEMBERSHIPS.columns)
+  datasets['authors'] = pd.DataFrame([
+    AUTHOR1
+  ], columns=AUTHORS.columns)
+  datasets['manuscript-versions'] = pd.DataFrame([
+    MANUSCRIPT_VERSION1
+  ], columns=MANUSCRIPT_VERSIONS.columns)
+  datasets['manuscript-keywords'] = pd.DataFrame([
+    MANUSCRIPT_KEYWORD1
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
+  recommend_reviewers = RecommendReviewers(datasets)
+  person_with_memberships = {
+    **PERSON1_RESULT,
+    'memberships': [MEMBERSHIP1_RESULT]
+  }
+  result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
+  result_person = result['potential-reviewers'][0]['person']
+  print("result_person:", PP.pformat(result_person))
+  assert result_person == person_with_memberships
 
 def test_matching_one_keyword_author_should_not_return_other_draft_papers():
   datasets = dict(DATASETS)
@@ -296,10 +345,10 @@ def test_matching_one_keyword_author_should_not_return_other_draft_papers():
   print("result:", result)
   assert result == {
     'potential-reviewers': [{
-      'person': PERSON1,
+      'person': PERSON1_RESULT,
       'author-of-manuscripts': [{
         **MANUSCRIPT_VERSION1_RESULT,
-        'authors': [PERSON1],
+        'authors': [PERSON1_RESULT],
         'reviewers': []
       }],
       'reviewer-of-manuscripts': []
@@ -328,10 +377,10 @@ def test_matching_one_keyword_author_should_return_author_only_once():
   print("result:", result)
   assert result == {
     'potential-reviewers': [{
-      'person': PERSON1,
+      'person': PERSON1_RESULT,
       'author-of-manuscripts': [{
         **MANUSCRIPT_VERSION1_RESULT,
-        'authors': [PERSON1],
+        'authors': [PERSON1_RESULT],
         'reviewers': []
       }],
       'reviewer-of-manuscripts': []
@@ -358,12 +407,12 @@ def test_matching_one_keyword_previous_reviewer():
   print("result:", result)
   assert result == {
     'potential-reviewers': [{
-      'person': PERSON1,
+      'person': PERSON1_RESULT,
       'author-of-manuscripts': [],
       'reviewer-of-manuscripts': [{
         **MANUSCRIPT_VERSION1_RESULT,
         'authors': [],
-        'reviewers': [PERSON1]
+        'reviewers': [PERSON1_RESULT]
       }]
     }],
     'matching-manuscripts': []
@@ -390,12 +439,12 @@ def test_matching_one_keyword_previous_reviewer_should_return_reviewer_only_once
   print("result:", PP.pformat(result))
   assert result == {
     'potential-reviewers': [{
-      'person': PERSON1,
+      'person': PERSON1_RESULT,
       'author-of-manuscripts': [],
       'reviewer-of-manuscripts': [{
         **MANUSCRIPT_VERSION1_RESULT,
         'authors': [],
-        'reviewers': [PERSON1]
+        'reviewers': [PERSON1_RESULT]
       }]
     }],
     'matching-manuscripts': []

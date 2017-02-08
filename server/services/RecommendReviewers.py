@@ -55,6 +55,16 @@ def groupby_columns_to_dict(groupby_keys, version_keys, vf):
     for k, v in groupby(zip(groupby_keys, version_keys), lambda x: x[0])
   }
 
+def filter_dict_keys(d, f):
+  return {k: v for k, v in d.items() if f(k)}
+
+def groupby_column_to_dict(df, groupby_col):
+  a = df.to_dict(orient='records')
+  return {
+    k: [filter_dict_keys(item, lambda col: col != groupby_col) for item in v]
+    for k, v in groupby(a, lambda item: item[groupby_col])
+  }
+
 def map_to_dict(keys, d, default_value=None):
   return [d.get(k, default_value) for k in keys]
 
@@ -140,6 +150,9 @@ class RecommendReviewers(object):
     )
 
     self.persons_df = datasets["persons-current"].copy()
+    memberships_df = datasets["person-memberships"].rename(columns={
+      'person-key': PERSON_ID
+    })
 
     self.manuscript_history_review_received_df = filter_by(
       self.manuscript_history_df,
@@ -164,7 +177,13 @@ class RecommendReviewers(object):
         self.manuscript_versions_df[VERSION_KEY]
       )
     ][MANUSCRIPT_ID_COLUMNS + ['word']].drop_duplicates()
-    persons_list = clean_result(self.persons_df[PERSON_COLUMNS].to_dict(orient='records'))
+
+    temp_memberships_map = groupby_column_to_dict(memberships_df, PERSON_ID)
+
+    persons_list = [{
+      **person,
+      'memberships': temp_memberships_map.get(person['person-id'], [])
+    } for person in clean_result(self.persons_df[PERSON_COLUMNS].to_dict(orient='records'))]
     self.persons_map = dict((p[PERSON_ID], p) for p in persons_list)
 
     stage_pivot = create_stage_pivot(self.manuscript_history_all_df)
