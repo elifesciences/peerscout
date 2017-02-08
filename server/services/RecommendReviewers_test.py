@@ -20,10 +20,10 @@ MANUSCRIPTS = pd.DataFrame(
 MANUSCRIPT_VERSIONS = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + ['title', 'decision'])
-MANUSCRIPTS_KEYWORDS = pd.DataFrame(
+MANUSCRIPT_KEYWORDS = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + ['sequence', 'word'])
-MANUSCRIPTS_HISTORY = pd.DataFrame(
+MANUSCRIPT_HISTORY = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + ['stage-affective-person-id', 'stage-name'])
 
@@ -33,8 +33,8 @@ DATASETS = {
   'persons-current': PERSONS,
   'manuscripts': MANUSCRIPTS,
   'manuscript-versions': MANUSCRIPT_VERSIONS,
-  'manuscript-keywords': MANUSCRIPTS_KEYWORDS,
-  'manuscript-history': MANUSCRIPTS_HISTORY
+  'manuscript-keywords': MANUSCRIPT_KEYWORDS,
+  'manuscript-history': MANUSCRIPT_HISTORY
 }
 
 PERSON_ID1 = 'person1'
@@ -126,7 +126,7 @@ def test_matching_manuscript():
   ], columns=MANUSCRIPT_VERSIONS.columns)
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1
-  ], columns=MANUSCRIPTS_KEYWORDS.columns)
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
   recommend_reviewers = RecommendReviewers(datasets)
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
   assert result == {
@@ -148,7 +148,7 @@ def test_matching_manuscript_should_return_manuscript_only_once():
   ], columns=MANUSCRIPT_VERSIONS.columns)
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1, MANUSCRIPT_KEYWORD1
-  ], columns=MANUSCRIPTS_KEYWORDS.columns)
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
   recommend_reviewers = RecommendReviewers(datasets)
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
   print("result:", result)
@@ -172,7 +172,7 @@ def test_matching_manuscript_should_not_return_draft_version():
   }], columns=MANUSCRIPT_VERSIONS.columns)
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1
-  ], columns=MANUSCRIPTS_KEYWORDS.columns)
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
   recommend_reviewers = RecommendReviewers(datasets)
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
   assert result == {
@@ -193,7 +193,7 @@ def test_matching_one_keyword_author():
   ], columns=MANUSCRIPT_VERSIONS.columns)
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1
-  ], columns=MANUSCRIPTS_KEYWORDS.columns)
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
   recommend_reviewers = RecommendReviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", result)
@@ -229,7 +229,7 @@ def test_matching_one_keyword_author_should_not_return_other_draft_papers():
   ], columns=MANUSCRIPT_VERSIONS.columns)
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1
-  ], columns=MANUSCRIPTS_KEYWORDS.columns)
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
   recommend_reviewers = RecommendReviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", result)
@@ -261,7 +261,7 @@ def test_matching_one_keyword_author_should_return_author_only_once():
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1,
     MANUSCRIPT_KEYWORD1
-  ], columns=MANUSCRIPTS_KEYWORDS.columns)
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
   recommend_reviewers = RecommendReviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", result)
@@ -288,10 +288,10 @@ def test_matching_one_keyword_previous_reviewer():
   ], columns=MANUSCRIPT_VERSIONS.columns)
   datasets['manuscript-history'] = pd.DataFrame([
     MANUSCRIPT_HISTORY_REVIEW_COMPLETE1
-  ], columns=MANUSCRIPTS_HISTORY.columns)
+  ], columns=MANUSCRIPT_HISTORY.columns)
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1
-  ], columns=MANUSCRIPTS_KEYWORDS.columns)
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
   recommend_reviewers = RecommendReviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", result)
@@ -319,11 +319,11 @@ def test_matching_one_keyword_previous_reviewer_should_return_reviewer_only_once
   datasets['manuscript-history'] = pd.DataFrame([
     MANUSCRIPT_HISTORY_REVIEW_COMPLETE1,
     MANUSCRIPT_HISTORY_REVIEW_COMPLETE1
-  ], columns=MANUSCRIPTS_HISTORY.columns)
+  ], columns=MANUSCRIPT_HISTORY.columns)
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1,
     MANUSCRIPT_KEYWORD1
-  ], columns=MANUSCRIPTS_KEYWORDS.columns)
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
   recommend_reviewers = RecommendReviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", result)
