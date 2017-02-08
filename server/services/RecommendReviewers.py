@@ -68,7 +68,10 @@ MANUSCRIPT_ID_COLUMNS = ['base-manuscript-number', 'manuscript-number', 'version
 PERSON_ID = 'person-id'
 VERSION_KEY = 'version-key'
 
-PERSON_COLUMNS = ['person-id', 'title', 'first-name', 'middle-name', 'last-name', 'institution']
+PERSON_COLUMNS = [
+  'person-id',
+  'title', 'first-name', 'middle-name', 'last-name', 'institution', 'status'
+]
 
 def filter_accepted_manuscript_versions(manuscript_versions):
   return manuscript_versions[

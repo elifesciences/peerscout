@@ -148,7 +148,7 @@ const combinedPersonName = person =>
     person['first-name'],
     person['middle-name'],
     person['last-name'],
-    `(${person['person-id']})`
+    `(${person['person-id']}/${person['status']})`
   ].filter(s => !!s).join(' ');
 
 const quote = s => s && `\u201c${s}\u201d`

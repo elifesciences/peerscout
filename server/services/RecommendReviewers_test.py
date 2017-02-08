@@ -15,7 +15,9 @@ AUTHORS = pd.DataFrame(
   columns=MANUSCRIPT_ID_COLUMNS + ['author-person-id'])
 PERSONS = pd.DataFrame(
   [],
-  columns=PERSON_ID_COLUMNS + ['title', 'first-name', 'middle-name', 'last-name', 'institution'])
+  columns=PERSON_ID_COLUMNS + [
+    'title', 'first-name', 'middle-name', 'last-name', 'institution', 'status'
+  ])
 MANUSCRIPTS = pd.DataFrame(
   [],
   columns=['manuscript-number'])
@@ -44,7 +46,8 @@ PERSON_ID1 = 'person1'
 PERSON1 = {
   'person-id': 'person1',
   'first-name': 'John',
-  'last-name': 'Smith'
+  'last-name': 'Smith',
+  'status': 'Active'
 }
 
 MANUSCRIPT_NO1 = '12345'
