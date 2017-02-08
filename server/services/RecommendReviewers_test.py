@@ -113,7 +113,7 @@ MANUSCRIPT_HISTORY_REVIEW_COMPLETE1 = {
   'stage-affective-person-id': PERSON_ID1
 }
 
-PP = pprint.PrettyPrinter(indent=2, depth=2, width=40)
+PP = pprint.PrettyPrinter(indent=2, width=40)
 
 def test_no_match():
   recommend_reviewers = RecommendReviewers(DATASETS)
