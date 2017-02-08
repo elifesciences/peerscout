@@ -115,6 +115,10 @@ class RecommendReviewers(object):
     self.persons_df = datasets["persons-current"].copy()
     self.manuscript_history_df = datasets['manuscript-history']
 
+    self.manuscript_history_review_received_df = self.manuscript_history_df[
+      self.manuscript_history_df['stage-name'] == 'Review Received'
+    ]
+
     for c in PERSON_COLUMNS[1:]:
       self.persons_df[c] = self.persons_df[c].apply(unescape_if_string)
 
@@ -160,8 +164,8 @@ class RecommendReviewers(object):
     )
 
     temp_reviewers_map = groupby_columns_to_dict(
-      self.manuscript_history_df[VERSION_KEY].values,
-      self.manuscript_history_df['stage-affective-person-id'].values,
+      self.manuscript_history_review_received_df[VERSION_KEY].values,
+      self.manuscript_history_review_received_df['stage-affective-person-id'].values,
       lambda person_id: self.persons_map.get(person_id, None)
     )
 
@@ -187,8 +191,8 @@ class RecommendReviewers(object):
     )
 
     self.manuscripts_by_reviewer_map = manuscripts_by_columns(
-      self.manuscript_history_df['stage-affective-person-id'].values,
-      self.manuscript_history_df[VERSION_KEY].values
+      self.manuscript_history_review_received_df['stage-affective-person-id'].values,
+      self.manuscript_history_review_received_df[VERSION_KEY].values
     )
 
   def __find_manuscripts_by_keywords(self, keywords, version_key=None):
@@ -224,10 +228,9 @@ class RecommendReviewers(object):
     return other_authors
 
   def __find_previous_reviewers_by_manuscripts(self, manuscripts):
-    previous_reviewers = self.manuscript_history_df[
-      self.manuscript_history_df['base-manuscript-number'].isin(
+    previous_reviewers = self.manuscript_history_review_received_df[
+      self.manuscript_history_review_received_df['base-manuscript-number'].isin(
         manuscripts['base-manuscript-number'])]
-    previous_reviewers = previous_reviewers[previous_reviewers['stage-name'] == 'Review Received']
     previous_reviewers = previous_reviewers[
       ['base-manuscript-number', 'stage-affective-person-id']].drop_duplicates()
     previous_reviewers = previous_reviewers.rename(columns={
