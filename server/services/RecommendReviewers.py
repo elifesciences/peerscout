@@ -75,6 +75,9 @@ def filter_accepted_manuscript_versions(manuscript_versions):
     manuscript_versions['decision'].isin(['Accept Full Submission', 'Auto-Accept'])
   ]
 
+def filter_by(df, col_name, values):
+  return df[df[col_name].isin(values)]
+
 def unescape_if_string(s):
   if isinstance(s, str):
     return html.unescape(s)
@@ -110,23 +113,40 @@ def duration_stats_between_by_person(stage_pivot, from_stage, to_stage):
 
 class RecommendReviewers(object):
   def __init__(self, datasets):
-    self.manuscript_keywords_df = datasets["manuscript-keywords"].drop('sequence', axis=1).copy()
-    self.authors_df = datasets["authors"]
-    self.persons_df = datasets["persons-current"].copy()
-    self.manuscript_history_df = datasets['manuscript-history']
-
-    self.manuscript_history_review_received_df = self.manuscript_history_df[
-      self.manuscript_history_df['stage-name'] == 'Review Received'
-    ]
-
-    for c in PERSON_COLUMNS[1:]:
-      self.persons_df[c] = self.persons_df[c].apply(unescape_if_string)
-
     self.manuscript_versions_df = filter_accepted_manuscript_versions(
       datasets['manuscript-versions'].copy().rename(columns={
         'key': 'version-key'
       })
     )
+    valid_version_keys = self.manuscript_versions_df[VERSION_KEY]
+    self.manuscript_keywords_df = filter_by(
+      datasets["manuscript-keywords"].drop('sequence', axis=1).copy(),
+      VERSION_KEY,
+      valid_version_keys
+    )
+    self.authors_df = filter_by(
+      datasets["authors"],
+      VERSION_KEY,
+      valid_version_keys
+    )
+    self.manuscript_history_all_df = datasets['manuscript-history']
+    self.manuscript_history_df = filter_by(
+      self.manuscript_history_all_df,
+      VERSION_KEY,
+      valid_version_keys
+    )
+
+    self.persons_df = datasets["persons-current"].copy()
+
+    self.manuscript_history_review_received_df = filter_by(
+      self.manuscript_history_df,
+      'stage-name',
+      ['Review Received']
+    )
+
+    for c in PERSON_COLUMNS[1:]:
+      self.persons_df[c] = self.persons_df[c].apply(unescape_if_string)
+
     self.manuscript_versions_df['title'] = self.manuscript_versions_df['title'].apply(
       lambda title: html.unescape(title)
     )
@@ -144,7 +164,7 @@ class RecommendReviewers(object):
     persons_list = clean_result(self.persons_df[PERSON_COLUMNS].to_dict(orient='records'))
     self.persons_map = dict((p[PERSON_ID], p) for p in persons_list)
 
-    stage_pivot = create_stage_pivot(self.manuscript_history_df)
+    stage_pivot = create_stage_pivot(self.manuscript_history_all_df)
     review_durations = duration_stats_between_by_person(
       stage_pivot, 'Reviewers Accept', 'Review Received')
     for person_id, row in review_durations.iterrows():
