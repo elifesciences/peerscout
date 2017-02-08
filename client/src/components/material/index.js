@@ -1,5 +1,6 @@
 export { default as AppBar } from 'material-ui/AppBar';
 export { default as Checkbox } from 'material-ui/Checkbox';
+export { default as Chip } from 'material-ui/Chip';
 export { default as FlatButton } from 'material-ui/FlatButton';
 export { default as Drawer } from 'material-ui/Drawer';
 export { default as Divider } from 'material-ui/Divider';

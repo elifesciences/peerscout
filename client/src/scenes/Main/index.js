@@ -8,6 +8,7 @@ import {
   CardActions,
   CardHeader,
   CardText,
+  Chip,
   FlatButton,
   FileInput,
   FontAwesomeIcon,
@@ -108,10 +109,22 @@ const styles = {
     text: {
       fontSize: 20,
       fontWeight: 'bold'
+    },
+    subSection: {
+      marginBottom: 5
+    },
+    label: {
+      display: 'inline-block',
+      minWidth: 100,
+      fontWeight: 'bold'
     }
   },
   inlineContainer: {
     display: 'inline-block'
+  },
+  personChip: {
+    display: 'inline-block',
+    marginRight: 5
   }
 }
 
@@ -143,6 +156,12 @@ const ManuscriptInlineSummary = ({ manuscript }) => (
   <View style={ styles.inlineContainer }>
     <Text>{ quote(manuscript['title']) }</Text>
   </View>
+);
+
+const PersonInlineSummary = ({ person }) => (
+  <Chip style={ styles.personChip }>
+    <Text>{ combinedPersonName(person) }</Text>
+  </Chip>  
 );
 
 const PotentialReviewer = ({
@@ -180,13 +199,36 @@ const PotentialReviewer = ({
   );
 };
 
-const ManuscriptSummary = ({ manuscript }) => (
+const ManuscriptSummary = ({
+  manuscript: {
+    title,
+    'manuscript-number': manuscriptNumber,
+    authors,
+    reviewers
+  }
+}) => (
   <Card style={ styles.manuscriptSummary.container }>
     <CardHeader
-      title={ quote(manuscript['title']) }
-      subtitle={ manuscript['manuscript-number'] }
+      title={ quote(title) }
+      subtitle={ manuscriptNumber }
     />
     <CardText>
+      <View style={ styles.manuscriptSummary.subSection }>
+        <Text style={ styles.manuscriptSummary.label }>Authors: </Text>
+        {
+          authors && authors.map((author, index) => (
+            <PersonInlineSummary key={ index } person={ author }/>
+          ))
+        }
+      </View>
+      <View  style={ styles.manuscriptSummary.subSection }>
+        <Text style={ styles.manuscriptSummary.label }>Reviewers: </Text>
+        {
+          reviewers && reviewers.map((reviewer, index) => (
+            <PersonInlineSummary key={ index } person={ reviewer }/>
+          ))
+        }
+      </View>
     </CardText>
   </Card>
 );

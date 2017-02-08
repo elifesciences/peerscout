@@ -1,4 +1,5 @@
 from itertools import groupby
+import html
 
 import pandas as pd
 
@@ -82,9 +83,12 @@ class RecommendReviewers(object):
     self.manuscript_history_df = datasets['manuscript-history']
 
     self.manuscript_versions_df = filter_accepted_manuscript_versions(
-      datasets['manuscript-versions'].rename(columns={
+      datasets['manuscript-versions'].copy().rename(columns={
         'key': 'version-key'
       })
+    )
+    self.manuscript_versions_df['title'] = self.manuscript_versions_df['title'].apply(
+      lambda title: html.unescape(title)
     )
     self.manuscript_versions_df['manuscript-no'] =\
       self.manuscript_versions_df['base-manuscript-number'].apply(
