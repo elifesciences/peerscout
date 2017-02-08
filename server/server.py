@@ -38,7 +38,7 @@ def recommend_reviewers_api():
   if keywords is None:
     return 'keywords parameter required', 400
   result = recommend_reviewers.recommend(keywords, manuscript_no)
-  print("result:", result)
+  # print("result:", result)
   # if result is None:
   #   return 'did not match any intend', 404
   return jsonify(result)
