@@ -162,7 +162,7 @@ class RecommendReviewers(object):
       valid_version_keys
     )
 
-    self.persons_df = datasets["persons-current"].copy()
+    self.persons_df = datasets["persons"].copy()
     memberships_df = datasets["person-memberships"].rename(columns={
       'person-key': PERSON_ID
     })
