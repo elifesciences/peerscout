@@ -3,6 +3,16 @@ import html
 
 import pandas as pd
 
+debug_enabled = False
+
+def set_debug_enabled(enabled):
+  global debug_enabled
+  debug_enabled = enabled
+
+def debug(*args):
+  if debug_enabled:
+    print(*args)
+
 flatten = lambda l: [item for sublist in l for item in sublist]
 
 def column_astype(df, col_name, col_type):
@@ -89,10 +99,31 @@ PERSON_COLUMNS = [
   'title', 'first-name', 'middle-name', 'last-name', 'institution', 'status'
 ]
 
+DECISIONS_ACCEPTED = set(['Accept Full Submission', 'Auto-Accept'])
+TYPES_ACCEPTED = set([
+  'Research Article', 'Short Report', 'Tools and Resources', 'Research Advance'
+])
+
 def filter_accepted_manuscript_versions(manuscript_versions):
   return manuscript_versions[
-    manuscript_versions['decision'].isin(['Accept Full Submission', 'Auto-Accept'])
+    manuscript_versions['decision'].isin(DECISIONS_ACCEPTED)
   ]
+
+def filter_research_articles(manuscript_versions):
+  print("manuscript types:", manuscript_versions['manuscript-type'].unique())
+  return manuscript_versions[
+    manuscript_versions['manuscript-type'].isin(
+      ['Research Article', 'Initial Submission: Research Article'])
+  ]
+
+def is_manuscript_accepted(manuscript):
+  return manuscript.get('decision', None) in DECISIONS_ACCEPTED
+
+def is_manuscript_type_relevant(manuscript):
+  return manuscript.get('manuscript-type') in TYPES_ACCEPTED
+
+def is_manuscript_relevant(manuscript):
+  return is_manuscript_accepted(manuscript) and is_manuscript_type_relevant(manuscript)
 
 def filter_by(df, col_name, values):
   return df[df[col_name].isin(values)]
@@ -132,26 +163,35 @@ def duration_stats_between_by_person(stage_pivot, from_stage, to_stage):
 
 class RecommendReviewers(object):
   def __init__(self, datasets):
-    self.manuscript_versions_df = filter_accepted_manuscript_versions(
-      datasets['manuscript-versions'].copy().rename(columns={
-        'key': 'version-key'
-      })
+    self.manuscript_versions_all_df = datasets['manuscript-versions'].copy().rename(columns={
+      'key': 'version-key'
+    })
+    self.manuscript_versions_all_df['manuscript-no'] =\
+      self.manuscript_versions_all_df['base-manuscript-number'].apply(
+        manuscript_number_to_no
+      )
+    self.manuscript_versions_all_df['title'] = self.manuscript_versions_all_df['title'].apply(
+      unescape_if_string
     )
-    self.manuscript_versions_df['title'] = self.manuscript_versions_df['title'].apply(
-      lambda title: html.unescape(title)
-    )
+    self.manuscript_versions_df = filter_research_articles(filter_accepted_manuscript_versions(
+      self.manuscript_versions_all_df
+    ))
+    print("manuscript_versions_df:", self.manuscript_versions_df.shape)
     self.manuscript_last_versions_df = self.manuscript_versions_df\
       .sort_values(VERSION_KEY)\
       .groupby(['base-manuscript-number', 'manuscript-number'], as_index=False)\
       .last()
     valid_version_keys = self.manuscript_last_versions_df[VERSION_KEY]
+    self.manuscript_keywords_all_df = datasets["manuscript-keywords"]\
+      .drop('sequence', axis=1).copy()
     self.manuscript_keywords_df = filter_by(
-      datasets["manuscript-keywords"].drop('sequence', axis=1).copy(),
+      self.manuscript_keywords_all_df,
       VERSION_KEY,
       valid_version_keys
     )
+    self.authors_all_df = datasets["authors"]
     self.authors_df = filter_by(
-      datasets["authors"],
+      self.authors_all_df,
       VERSION_KEY,
       valid_version_keys
     )
@@ -182,11 +222,6 @@ class RecommendReviewers(object):
     for c in PERSON_COLUMNS[1:]:
       self.persons_df[c] = self.persons_df[c].apply(unescape_if_string)
 
-    self.manuscript_versions_df['manuscript-no'] =\
-      self.manuscript_versions_df['base-manuscript-number'].apply(
-        manuscript_number_to_no
-      )
-
     self.manuscript_keywords_df = self.manuscript_keywords_df.copy()
     self.manuscript_keywords_df = self.manuscript_keywords_df[
       self.manuscript_keywords_df[VERSION_KEY].isin(
@@ -210,10 +245,12 @@ class RecommendReviewers(object):
       }
     } for person in clean_result(self.persons_df[PERSON_COLUMNS].to_dict(orient='records'))]
     self.persons_map = dict((p[PERSON_ID], p) for p in persons_list)
+    debug("self.persons_df:", self.persons_df)
+    debug("persons_map:", self.persons_map)
 
     temp_authors_map = groupby_columns_to_dict(
-      self.authors_df[VERSION_KEY].values,
-      self.authors_df['author-person-id'].values,
+      self.authors_all_df[VERSION_KEY].values,
+      self.authors_all_df['author-person-id'].values,
       lambda person_id: self.persons_map.get(person_id, None)
     )
 
@@ -222,26 +259,33 @@ class RecommendReviewers(object):
       self.manuscript_history_review_received_df['stage-affective-person-id'].values,
       lambda person_id: self.persons_map.get(person_id, None)
     )
+    debug("self.manuscript_history_review_received_df:", self.manuscript_history_review_received_df)
+    debug("temp_authors_map:", temp_authors_map)
+    debug("temp_reviewers_map:", temp_reviewers_map)
 
-    manuscripts_list = clean_result(
-      self.manuscript_last_versions_df[MANUSCRIPT_ID_COLUMNS + ['title']]\
+    manuscripts_all_list = clean_result(
+      self.manuscript_versions_all_df[
+        MANUSCRIPT_ID_COLUMNS + ['title', 'decision', 'manuscript-type']
+      ]\
       .to_dict(orient='records'))
-    manuscripts_list = [{
+    manuscripts_all_list = [{
       **manuscript,
       'authors': temp_authors_map.get(manuscript[VERSION_KEY], []),
       'reviewers': temp_reviewers_map.get(manuscript[VERSION_KEY], [])
-    } for manuscript in manuscripts_list]
-    self.manuscripts_by_version_key_map = dict((m[VERSION_KEY], m) for m in manuscripts_list)
+    } for manuscript in manuscripts_all_list]
+    self.manuscripts_by_version_key_map = dict((m[VERSION_KEY], m) for m in manuscripts_all_list)
+    debug("manuscripts_by_version_key_map:", self.manuscripts_by_version_key_map)
 
     self.manuscripts_by_author_map = {}
     self.manuscripts_by_reviewer_map = {}
-    for m in manuscripts_list:
-      for author in m['authors']:
-        self.manuscripts_by_author_map.setdefault(author[PERSON_ID], [])\
-        .append(m)
-      for reviewer in m['reviewers']:
-        self.manuscripts_by_reviewer_map.setdefault(reviewer[PERSON_ID], [])\
-        .append(m)
+    for m in manuscripts_all_list:
+      if is_manuscript_relevant(m):
+        for author in m['authors']:
+          self.manuscripts_by_author_map.setdefault(author[PERSON_ID], [])\
+          .append(m)
+        for reviewer in m['reviewers']:
+          self.manuscripts_by_reviewer_map.setdefault(reviewer[PERSON_ID], [])\
+          .append(m)
 
     # manuscripts_by_columns = lambda groupby_keys, version_keys:\
     #   groupby_columns_to_dict(
@@ -277,8 +321,8 @@ class RecommendReviewers(object):
     return other_manuscripts
 
   def __find_keywords_by_version_keys(self, version_keys):
-    return self.manuscript_keywords_df[
-      self.manuscript_keywords_df[VERSION_KEY].isin(version_keys)
+    return self.manuscript_keywords_all_df[
+      self.manuscript_keywords_all_df[VERSION_KEY].isin(version_keys)
     ]['word']
 
   def __find_authors_by_manuscripts(self, manuscripts):
@@ -303,8 +347,8 @@ class RecommendReviewers(object):
     return previous_reviewers
 
   def __find_manuscripts_by_key(self, manuscript_no):
-    return self.manuscript_versions_df[
-      self.manuscript_versions_df['manuscript-no'] == manuscript_no
+    return self.manuscript_versions_all_df[
+      self.manuscript_versions_all_df['manuscript-no'] == manuscript_no
     ].sort_values('version-key').groupby('manuscript-no').last()
 
   def __add_person_info(self, df, person_id_key='person-id'):
