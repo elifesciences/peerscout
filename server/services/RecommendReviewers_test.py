@@ -35,7 +35,7 @@ MANUSCRIPTS = pd.DataFrame(
   columns=['manuscript-number'])
 MANUSCRIPT_VERSIONS = pd.DataFrame(
   [],
-  columns=MANUSCRIPT_ID_COLUMNS + ['title', 'decision'])
+  columns=MANUSCRIPT_ID_COLUMNS + ['title', 'decision', 'manuscript-type'])
 MANUSCRIPT_KEYWORDS = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + ['sequence', 'word'])
@@ -46,7 +46,6 @@ MANUSCRIPT_HISTORY = pd.DataFrame(
 DATASETS = {
   'authors': AUTHORS,
   'persons': PERSONS,
-  'persons-current': PERSONS,
   'person-memberships': PERSON_MEMBERSHIPS,
   'person-dates-not-available': PERSON_DATES_NOT_AVAILABLE,
   'manuscripts': MANUSCRIPTS,
@@ -108,6 +107,8 @@ MANUSCRIPT_ID_FIELDS2 = {
 DECISSION_ACCEPTED = 'Accept Full Submission'
 DECISSION_REJECTED = 'Reject Full Submission'
 
+TYPE_RESEARCH_ARTICLE = 'Research Article'
+
 MANUSCRIPT_VERSION1_RESULT = {
   **MANUSCRIPT_ID_FIELDS1,
   'title': MANUSCRIPT_TITLE1
@@ -115,7 +116,8 @@ MANUSCRIPT_VERSION1_RESULT = {
 
 MANUSCRIPT_VERSION1 = {
   **MANUSCRIPT_VERSION1_RESULT,
-  'decision': DECISSION_ACCEPTED
+  'decision': DECISSION_ACCEPTED,
+  'manuscript-type': TYPE_RESEARCH_ARTICLE
 }
 
 MANUSCRIPT_VERSION2_RESULT = {
@@ -125,7 +127,8 @@ MANUSCRIPT_VERSION2_RESULT = {
 
 MANUSCRIPT_VERSION2 = {
   **MANUSCRIPT_VERSION2_RESULT,
-  'decision': DECISSION_ACCEPTED
+  'decision': DECISSION_ACCEPTED,
+  'manuscript-type': TYPE_RESEARCH_ARTICLE
 }
 
 KEYWORD1 = 'keyword1'
@@ -168,7 +171,7 @@ def test_no_match():
 
 def test_matching_manuscript():
   datasets = dict(DATASETS)
-  datasets['persons-current'] = pd.DataFrame([
+  datasets['persons'] = pd.DataFrame([
     PERSON1
   ], columns=PERSONS.columns)
   datasets['manuscript-versions'] = pd.DataFrame([
@@ -190,7 +193,7 @@ def test_matching_manuscript():
 
 def test_matching_manuscript_should_return_manuscript_only_once():
   datasets = dict(DATASETS)
-  datasets['persons-current'] = pd.DataFrame([
+  datasets['persons'] = pd.DataFrame([
     PERSON1
   ], columns=PERSONS.columns)
   datasets['manuscript-versions'] = pd.DataFrame([
@@ -213,7 +216,7 @@ def test_matching_manuscript_should_return_manuscript_only_once():
 
 def test_matching_manuscript_should_not_return_draft_version():
   datasets = dict(DATASETS)
-  datasets['persons-current'] = pd.DataFrame([
+  datasets['persons'] = pd.DataFrame([
     PERSON1
   ], columns=PERSONS.columns)
   datasets['manuscript-versions'] = pd.DataFrame([{
@@ -232,7 +235,7 @@ def test_matching_manuscript_should_not_return_draft_version():
 
 def test_matching_one_keyword_author():
   datasets = dict(DATASETS)
-  datasets['persons-current'] = pd.DataFrame([
+  datasets['persons'] = pd.DataFrame([
     PERSON1
   ], columns=PERSONS.columns)
   datasets['authors'] = pd.DataFrame([
@@ -262,7 +265,7 @@ def test_matching_one_keyword_author():
 
 def test_matching_one_keyword_author_should_return_stats():
   datasets = dict(DATASETS)
-  datasets['persons-current'] = pd.DataFrame([
+  datasets['persons'] = pd.DataFrame([
     PERSON1
   ], columns=PERSONS.columns)
   datasets['authors'] = pd.DataFrame([
@@ -313,7 +316,7 @@ def test_matching_one_keyword_author_should_return_stats():
 
 def test_matching_one_keyword_author_should_return_memberships():
   datasets = dict(DATASETS)
-  datasets['persons-current'] = pd.DataFrame([
+  datasets['persons'] = pd.DataFrame([
     PERSON1
   ], columns=PERSONS.columns)
   datasets['person-memberships'] = pd.DataFrame([
@@ -340,7 +343,7 @@ def test_matching_one_keyword_author_should_return_memberships():
 
 def test_matching_one_keyword_author_should_return_other_accepted_papers():
   datasets = dict(DATASETS)
-  datasets['persons-current'] = pd.DataFrame([
+  datasets['persons'] = pd.DataFrame([
     PERSON1
   ], columns=PERSONS.columns)
   datasets['authors'] = pd.DataFrame([
@@ -371,7 +374,7 @@ def test_matching_one_keyword_author_should_return_other_accepted_papers():
 
 def test_matching_one_keyword_author_should_not_return_other_draft_papers():
   datasets = dict(DATASETS)
-  datasets['persons-current'] = pd.DataFrame([
+  datasets['persons'] = pd.DataFrame([
     PERSON1
   ], columns=PERSONS.columns)
   datasets['authors'] = pd.DataFrame([
@@ -407,7 +410,7 @@ def test_matching_one_keyword_author_should_not_return_other_draft_papers():
 
 def test_matching_one_keyword_author_should_return_author_only_once():
   datasets = dict(DATASETS)
-  datasets['persons-current'] = pd.DataFrame([
+  datasets['persons'] = pd.DataFrame([
     PERSON1
   ], columns=PERSONS.columns)
   datasets['authors'] = pd.DataFrame([
@@ -439,7 +442,7 @@ def test_matching_one_keyword_author_should_return_author_only_once():
 
 def test_matching_one_keyword_previous_reviewer():
   datasets = dict(DATASETS)
-  datasets['persons-current'] = pd.DataFrame([
+  datasets['persons'] = pd.DataFrame([
     PERSON1
   ], columns=PERSONS.columns)
   datasets['manuscript-versions'] = pd.DataFrame([
@@ -469,7 +472,7 @@ def test_matching_one_keyword_previous_reviewer():
 
 def test_matching_one_keyword_previous_reviewer_should_return_reviewer_only_once():
   datasets = dict(DATASETS)
-  datasets['persons-current'] = pd.DataFrame([
+  datasets['persons'] = pd.DataFrame([
     PERSON1
   ], columns=PERSONS.columns)
   datasets['manuscript-versions'] = pd.DataFrame([
