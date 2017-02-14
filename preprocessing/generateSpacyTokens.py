@@ -13,55 +13,53 @@ def version_key_to_no(x):
   return 1 + int(x.split('|')[-1])
 
 def extract_unique_keywords(series):
-    return sorted(set(flatten(series.apply(lambda x: set(x.split(' '))).values)))
+  return sorted(set(flatten(series.apply(
+    lambda x: set(x.split(' ')) if x is not None else set()).values)))
 
-def process_manuscript_versions(csv_path, extract_keywords):
+def process_manuscript_versions(csv_path, extract_keywords_from_list):
   input_filename = csv_path + '/manuscript-versions.csv'
   output_filename = csv_path + '/manuscript-abstracts-spacy.csv'
-  df = pd.read_csv(input_filename)
+  df = pd.read_csv(input_filename, low_memory=False)
   df['manuscript-no'] = df['base-manuscript-number'].apply(manuscript_number_to_no)
   df['version-no'] = df['version-key'].apply(version_key_to_no)
-  df['abstract-spacy'] = df['abstract'].progress_apply(
-    lambda s: extract_keywords(s) if isinstance(s, str) else None
-  )
+  df['abstract-spacy'] = extract_keywords_from_list(df['abstract'].values)
   df = df[[
     'manuscript-no', 'version-no',
     'abstract-spacy',
     'base-manuscript-number', 'manuscript-number', 'version-key'
   ]]
+  # print("keywords:", extract_unique_keywords(df['abstract-spacy']))
   print("writing csv to:", output_filename)
-  df.to_csv(output_filename)
+  df.to_csv(output_filename, index=False)
 
-def process_article_contents(csv_path, extract_keywords):
+def process_article_contents(csv_path, extract_keywords_from_list):
   input_filename = csv_path + '/article-content.csv'
   output_filename = csv_path + '/article-content-spacy.csv'
-  df = pd.read_csv(input_filename)
-  df['content-spacy'] = df['content'].progress_apply(
-    lambda s: extract_keywords(s) if isinstance(s, str) else None
-  )
+  df = pd.read_csv(input_filename, low_memory=False)
+  df['content-spacy'] = extract_keywords_from_list(df['content'].values)
   df = df[[
     'manuscript-no', 'version-no',
     'content-spacy'
   ]]
-  print("keywords:", extract_unique_keywords(df['content-spacy']))
+  # print("keywords:", extract_unique_keywords(df['content-spacy']))
   print("writing csv to:", output_filename)
-  df.to_csv(output_filename)
+  df.to_csv(output_filename, index=False)
 
 def main():
-  print("loading spacy")
+  tqdm.pandas()
+
+  split_pattern = re.compile(r'\s-\s|,|[^\w\s]|/|’\s')
+  keyword_pattern = re.compile(r'^[a-zA-Z][^()\[\]+_%.\'0-9]+$')
+  keyword_replace_pattern = re.compile(r'(a|th[aei][a-z]*|all|o|n|\s+)(\s)')
+
+  print("loading spacy...")
   nlp = spacy.load('en')
   print("done")
 
-  tqdm.pandas()
-
-  split_pattern = re.compile(r'\s-\s|,')
-  keyword_pattern = re.compile(r'[a-zA-z][^()\[\]+_%.\'0-9]+')
-  keyword_replace_pattern = re.compile(r'(a|th[aei][a-z]*|o|n|\s+)(\s)')
-
-  def extract_keywords(s):
+  def extract_keywords_from_doc(doc):
     keywords = [
       chunk.lemma_.strip()
-      for chunk in nlp(unescape_and_strip_tags(s)).noun_chunks
+      for chunk in doc.noun_chunks
     ]
     keywords = flatten([split_pattern.split(s) for s in keywords])
     for _ in range(2):
@@ -71,16 +69,28 @@ def main():
     keywords = [
       keyword
       for keyword in keywords
-      if len(keyword) > 3 and keyword_pattern.fullmatch(keyword)
+      if len(keyword) > 3 and keyword_pattern.match(keyword)
     ]
     # print(keywords)
     return ' '.join([keyword.replace(' ', '_') for keyword in keywords])
 
+  def extract_keywords_from_list(texts):
+    valid_strings = [
+      (i, unescape_and_strip_tags(text))
+      for i, text in enumerate(texts)
+      if isinstance(text, str)
+    ]
+    result = [None] * len(texts)
+    pbar = tqdm(nlp.pipe([text for _, text in valid_strings]))
+    for item, doc in zip(valid_strings, pbar):
+      result[item[0]] = extract_keywords_from_doc(doc)
+    return result
+
   csv_path = "./csv-small"
   # csv_path = "../csv"
 
-  process_manuscript_versions(csv_path, extract_keywords)
-  process_article_contents(csv_path, extract_keywords)
+  process_manuscript_versions(csv_path, extract_keywords_from_list)
+  process_article_contents(csv_path, extract_keywords_from_list)
 
 
 if __name__ == "__main__":
