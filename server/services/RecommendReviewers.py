@@ -89,10 +89,16 @@ def map_to_dict(keys, d, default_value=None):
 #   #return df.where((pd.notnull(df)), None)
 #   return df.applymap(lambda x: None if type(x) == type(pd.NaT) else x)
 
-MANUSCRIPT_ID_COLUMNS = ['base-manuscript-number', 'manuscript-number', 'version-key']
+MANUSCRIPT_NO = 'manuscript-no'
+VERSION_NO = 'version-no'
+# internal composite id
+MANUSCRIPT_VERSION_ID = 'manuscript-version-id'
+
+RAW_MANUSCRIPT_ID_COLUMNS = [MANUSCRIPT_NO, VERSION_NO]
+TEMP_MANUSCRIPT_ID_COLUMNS = [MANUSCRIPT_VERSION_ID]
+MANUSCRIPT_ID_COLUMNS = RAW_MANUSCRIPT_ID_COLUMNS + TEMP_MANUSCRIPT_ID_COLUMNS
 
 PERSON_ID = 'person-id'
-VERSION_KEY = 'version-key'
 
 PERSON_COLUMNS = [
   'person-id',
@@ -135,7 +141,7 @@ def unescape_if_string(s):
 
 def create_stage_pivot(stage_history):
   return stage_history.pivot_table(
-    index=['manuscript-number', 'version-key', 'stage-affective-person-id'],
+    index=[MANUSCRIPT_NO, VERSION_NO, 'stage-affective-person-id'],
     columns='stage-name',
     values='start-date',
     aggfunc='first')
@@ -161,15 +167,15 @@ def duration_stats_between_by_person(stage_pivot, from_stage, to_stage):
   })\
   / (24 * 60 * 60)
 
+def add_manuscript_version_id(df):
+  df[MANUSCRIPT_VERSION_ID] = df[MANUSCRIPT_NO].str.cat(
+    df[VERSION_NO].map(str), sep='-')
+  return df
+
 class RecommendReviewers(object):
   def __init__(self, datasets):
-    self.manuscript_versions_all_df = datasets['manuscript-versions'].copy().rename(columns={
-      'key': 'version-key'
-    })
-    self.manuscript_versions_all_df['manuscript-no'] =\
-      self.manuscript_versions_all_df['base-manuscript-number'].apply(
-        manuscript_number_to_no
-      )
+    self.manuscript_versions_all_df = add_manuscript_version_id(
+      datasets['manuscript-versions'].copy())
     self.manuscript_versions_all_df['title'] = self.manuscript_versions_all_df['title'].apply(
       unescape_if_string
     )
@@ -178,28 +184,30 @@ class RecommendReviewers(object):
     ))
     print("manuscript_versions_df:", self.manuscript_versions_df.shape)
     self.manuscript_last_versions_df = self.manuscript_versions_df\
-      .sort_values(VERSION_KEY)\
-      .groupby(['base-manuscript-number', 'manuscript-number'], as_index=False)\
+      .sort_values(VERSION_NO)\
+      .groupby([MANUSCRIPT_NO], as_index=False)\
       .last()
-    valid_version_keys = self.manuscript_last_versions_df[VERSION_KEY]
-    self.manuscript_keywords_all_df = datasets["manuscript-keywords"]\
-      .drop('sequence', axis=1).copy()
+    valid_version_ids = self.manuscript_last_versions_df[MANUSCRIPT_VERSION_ID]
+    self.manuscript_keywords_all_df = add_manuscript_version_id(
+      datasets["manuscript-keywords"]\
+      .drop('sequence', axis=1).copy())
     self.manuscript_keywords_df = filter_by(
       self.manuscript_keywords_all_df,
-      VERSION_KEY,
-      valid_version_keys
+      MANUSCRIPT_VERSION_ID,
+      valid_version_ids
     )
-    self.authors_all_df = datasets["authors"]
+    self.authors_all_df = add_manuscript_version_id(datasets["authors"])
     self.authors_df = filter_by(
       self.authors_all_df,
-      VERSION_KEY,
-      valid_version_keys
+      MANUSCRIPT_VERSION_ID,
+      valid_version_ids
     )
-    self.manuscript_history_all_df = datasets['manuscript-history']
+    self.manuscript_history_all_df = add_manuscript_version_id(
+      datasets['manuscript-history'])
     self.manuscript_history_df = filter_by(
       self.manuscript_history_all_df,
-      VERSION_KEY,
-      valid_version_keys
+      MANUSCRIPT_VERSION_ID,
+      valid_version_ids
     )
 
     self.persons_df = datasets["persons"].copy()
@@ -224,8 +232,8 @@ class RecommendReviewers(object):
 
     self.manuscript_keywords_df = self.manuscript_keywords_df.copy()
     self.manuscript_keywords_df = self.manuscript_keywords_df[
-      self.manuscript_keywords_df[VERSION_KEY].isin(
-        self.manuscript_versions_df[VERSION_KEY]
+      self.manuscript_keywords_df[MANUSCRIPT_VERSION_ID].isin(
+        self.manuscript_versions_df[MANUSCRIPT_VERSION_ID]
       )
     ][MANUSCRIPT_ID_COLUMNS + ['word']].drop_duplicates()
 
@@ -249,13 +257,13 @@ class RecommendReviewers(object):
     debug("persons_map:", self.persons_map)
 
     temp_authors_map = groupby_columns_to_dict(
-      self.authors_all_df[VERSION_KEY].values,
+      self.authors_all_df[MANUSCRIPT_VERSION_ID].values,
       self.authors_all_df['author-person-id'].values,
       lambda person_id: self.persons_map.get(person_id, None)
     )
 
     temp_reviewers_map = groupby_columns_to_dict(
-      self.manuscript_history_review_received_df[VERSION_KEY].values,
+      self.manuscript_history_review_received_df[MANUSCRIPT_VERSION_ID].values,
       self.manuscript_history_review_received_df['stage-affective-person-id'].values,
       lambda person_id: self.persons_map.get(person_id, None)
     )
@@ -270,11 +278,12 @@ class RecommendReviewers(object):
       .to_dict(orient='records'))
     manuscripts_all_list = [{
       **manuscript,
-      'authors': temp_authors_map.get(manuscript[VERSION_KEY], []),
-      'reviewers': temp_reviewers_map.get(manuscript[VERSION_KEY], [])
+      'authors': temp_authors_map.get(manuscript[MANUSCRIPT_VERSION_ID], []),
+      'reviewers': temp_reviewers_map.get(manuscript[MANUSCRIPT_VERSION_ID], [])
     } for manuscript in manuscripts_all_list]
-    self.manuscripts_by_version_key_map = dict((m[VERSION_KEY], m) for m in manuscripts_all_list)
-    debug("manuscripts_by_version_key_map:", self.manuscripts_by_version_key_map)
+    self.manuscripts_by_version_id_map = dict((
+      m[MANUSCRIPT_VERSION_ID], m) for m in manuscripts_all_list)
+    debug("manuscripts_by_version_id_map:", self.manuscripts_by_version_id_map)
 
     self.manuscripts_by_author_map = {}
     self.manuscripts_by_reviewer_map = {}
@@ -303,14 +312,14 @@ class RecommendReviewers(object):
     #   self.manuscript_history_review_received_df[VERSION_KEY].values
     # )
 
-  def __find_manuscripts_by_keywords(self, keywords, version_key=None):
+  def __find_manuscripts_by_keywords(self, keywords, manuscript_no=None):
     other_manuscripts = self.manuscript_keywords_df[
       self.manuscript_keywords_df['word'].isin(keywords)
     ]
-    other_manuscripts = other_manuscripts[other_manuscripts['version-key'] != version_key]
+    other_manuscripts = other_manuscripts[other_manuscripts[MANUSCRIPT_NO] != manuscript_no]
     other_manuscripts = groupby_agg_droplevel(
       other_manuscripts,
-      ['base-manuscript-number', 'manuscript-number', 'version-key'],
+      MANUSCRIPT_ID_COLUMNS,
       {
         'word': {
           'keywords': lambda x: tuple(x),
@@ -320,15 +329,15 @@ class RecommendReviewers(object):
     )
     return other_manuscripts
 
-  def __find_keywords_by_version_keys(self, version_keys):
+  def __find_keywords_by_version_keys(self, version_ids):
     return self.manuscript_keywords_all_df[
-      self.manuscript_keywords_all_df[VERSION_KEY].isin(version_keys)
+      self.manuscript_keywords_all_df[MANUSCRIPT_VERSION_ID].isin(version_ids)
     ]['word']
 
   def __find_authors_by_manuscripts(self, manuscripts):
-    other_authors = self.authors_df[self.authors_df[VERSION_KEY].isin(
-      manuscripts[VERSION_KEY])]
-    other_authors = other_authors[[VERSION_KEY, 'author-person-id']].\
+    other_authors = self.authors_df[self.authors_df[MANUSCRIPT_VERSION_ID].isin(
+      manuscripts[MANUSCRIPT_VERSION_ID])]
+    other_authors = other_authors[[MANUSCRIPT_VERSION_ID, 'author-person-id']].\
       drop_duplicates()
     other_authors = other_authors.rename(columns={
       'author-person-id': 'person-id'
@@ -337,10 +346,10 @@ class RecommendReviewers(object):
 
   def __find_previous_reviewers_by_manuscripts(self, manuscripts):
     previous_reviewers = self.manuscript_history_review_received_df[
-      self.manuscript_history_review_received_df[VERSION_KEY].isin(
-        manuscripts[VERSION_KEY])]
+      self.manuscript_history_review_received_df[MANUSCRIPT_VERSION_ID].isin(
+        manuscripts[MANUSCRIPT_VERSION_ID])]
     previous_reviewers = previous_reviewers[
-      [VERSION_KEY, 'stage-affective-person-id']].drop_duplicates()
+      [MANUSCRIPT_VERSION_ID, 'stage-affective-person-id']].drop_duplicates()
     previous_reviewers = previous_reviewers.rename(columns={
       'stage-affective-person-id': 'person-id'
     })
@@ -348,8 +357,8 @@ class RecommendReviewers(object):
 
   def __find_manuscripts_by_key(self, manuscript_no):
     return self.manuscript_versions_all_df[
-      self.manuscript_versions_all_df['manuscript-no'] == manuscript_no
-    ].sort_values('version-key').groupby('manuscript-no').last()
+      self.manuscript_versions_all_df[MANUSCRIPT_NO] == manuscript_no
+    ].sort_values(VERSION_NO).groupby(MANUSCRIPT_NO).last()
 
   def __add_person_info(self, df, person_id_key='person-id'):
     return df.merge(
@@ -367,7 +376,8 @@ class RecommendReviewers(object):
     keyword_list = self.__parse_keywords(keywords)
     if manuscript_no is not None and manuscript_no != '':
       matching_manuscripts = self.__find_manuscripts_by_key(manuscript_no)
-      manuscript_keywords = self.__find_keywords_by_version_keys(matching_manuscripts[VERSION_KEY])
+      manuscript_keywords = self.__find_keywords_by_version_keys(
+        matching_manuscripts[MANUSCRIPT_VERSION_ID])
       keyword_list += list(manuscript_keywords.values)
     else:
       matching_manuscripts = self.__find_manuscripts_by_key(None)
@@ -380,8 +390,8 @@ class RecommendReviewers(object):
     # TODO sort accordingly
     # TODO use topic modelling
     other_manuscripts_dicts = [
-      self.manuscripts_by_version_key_map.get(version_key)
-      for version_key in other_manuscripts[VERSION_KEY]
+      self.manuscripts_by_version_id_map.get(version_id)
+      for version_id in other_manuscripts[MANUSCRIPT_VERSION_ID]
     ]
     other_manuscripts_dicts = [m for m in other_manuscripts_dicts if m]
     potential_reviewers_ids = set([
@@ -394,8 +404,8 @@ class RecommendReviewers(object):
 
     keyword_match_count_by_by_version_key_map = {
       k: v['count']
-      for k, v in other_manuscripts[[VERSION_KEY, 'count']]\
-      .set_index(VERSION_KEY).to_dict(orient='index').items()
+      for k, v in other_manuscripts[[MANUSCRIPT_VERSION_ID, 'count']]\
+      .set_index(MANUSCRIPT_VERSION_ID).to_dict(orient='index').items()
     }
     # print("keyword_match_count_by_by_version_key_map:", keyword_match_count_by_by_version_key_map)
 
@@ -404,16 +414,16 @@ class RecommendReviewers(object):
       reviewer_of_manuscripts = self.manuscripts_by_reviewer_map.get(person_id, [])
       involved_manuscripts = author_of_manuscripts + reviewer_of_manuscripts
       total_keyword_match_count = float(sum([
-        keyword_match_count_by_by_version_key_map.get(manuscript[VERSION_KEY], 0)
+        keyword_match_count_by_by_version_key_map.get(manuscript[MANUSCRIPT_VERSION_ID], 0)
         for manuscript in involved_manuscripts
       ]))
       if len(keyword_list) > 0:
         total_keyword_match_count = total_keyword_match_count / len(keyword_list)
       if total_keyword_match_count == 0:
         print("person_id:", person_id)
-        print("author_of_manuscripts:", [m[VERSION_KEY] for m in author_of_manuscripts])
-        print("reviewer_of_manuscripts:", [m[VERSION_KEY] for m in reviewer_of_manuscripts])
-        print("involved_manuscripts:", [m[VERSION_KEY] for m in involved_manuscripts])
+        print("author_of_manuscripts:", [m[MANUSCRIPT_VERSION_ID] for m in author_of_manuscripts])
+        print("reviewer_of_manuscripts:", [m[MANUSCRIPT_VERSION_ID] for m in reviewer_of_manuscripts])
+        print("involved_manuscripts:", [m[MANUSCRIPT_VERSION_ID] for m in involved_manuscripts])
         print("total_keyword_match_count:", total_keyword_match_count)
 
       return {
@@ -454,7 +464,7 @@ class RecommendReviewers(object):
     return {
       'potential-reviewers': potential_reviewers,
       'matching-manuscripts': map_to_dict(
-        matching_manuscripts[VERSION_KEY],
-        self.manuscripts_by_version_key_map
+        matching_manuscripts[MANUSCRIPT_VERSION_ID],
+        self.manuscripts_by_version_id_map
       )
     }

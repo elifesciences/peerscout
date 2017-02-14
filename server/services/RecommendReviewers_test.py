@@ -9,7 +9,11 @@ from .RecommendReviewers import RecommendReviewers, set_debug_enabled
 
 set_debug_enabled(True)
 
-MANUSCRIPT_ID_COLUMNS = ['base-manuscript-number', 'manuscript-number', 'version-key']
+MANUSCRIPT_NO = 'manuscript-no'
+VERSION_NO = 'version-no'
+MANUSCRIPT_VERSION_ID = 'manuscript-version-id'
+
+MANUSCRIPT_ID_COLUMNS = [MANUSCRIPT_NO, VERSION_NO, MANUSCRIPT_VERSION_ID]
 PERSON_ID_COLUMNS = ['person-id']
 
 AUTHORS = pd.DataFrame(
@@ -34,7 +38,7 @@ PERSON_DATES_NOT_AVAILABLE = pd.DataFrame(
 )
 MANUSCRIPTS = pd.DataFrame(
   [],
-  columns=['manuscript-number'])
+  columns=[MANUSCRIPT_NO])
 MANUSCRIPT_VERSIONS = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + ['title', 'decision', 'manuscript-type'])
@@ -84,26 +88,29 @@ MEMBERSHIP1 = {
   'person-id': PERSON_ID1,
 }
 
+def version_id(manuscript_no, version_no):
+  return '{}-{}'.format(manuscript_no, version_no)
+
 MANUSCRIPT_NO1 = '12345'
-MANUSCRIPT_NUMBER1 = 'some-prefix-' + MANUSCRIPT_NO1
-VERSION_KEY1 = '11111|0'
+VERSION_NO1 = 1
+MANUSCRIPT_VERSION_ID1 = version_id(MANUSCRIPT_NO1, VERSION_NO1)
 MANUSCRIPT_TITLE1 = 'Manuscript Title1'
 
 MANUSCRIPT_NO2 = '22222'
-MANUSCRIPT_NUMBER2 = 'some-prefix-' + MANUSCRIPT_NO2
-VERSION_KEY2 = '22222|0'
+VERSION_NO2 = 2
+MANUSCRIPT_VERSION_ID2 = version_id(MANUSCRIPT_NO2, VERSION_NO2)
 MANUSCRIPT_TITLE2 = 'Manuscript Title2'
 
 MANUSCRIPT_ID_FIELDS1 = {
-  'base-manuscript-number': MANUSCRIPT_NUMBER1,
-  'manuscript-number': MANUSCRIPT_NUMBER1,
-  'version-key': VERSION_KEY1
+  MANUSCRIPT_NO: MANUSCRIPT_NO1,
+  VERSION_NO: VERSION_NO1,
+  MANUSCRIPT_VERSION_ID: MANUSCRIPT_VERSION_ID1
 }
 
 MANUSCRIPT_ID_FIELDS2 = {
-  'base-manuscript-number': MANUSCRIPT_NUMBER2,
-  'manuscript-number': MANUSCRIPT_NUMBER2,
-  'version-key': VERSION_KEY2
+  MANUSCRIPT_NO: MANUSCRIPT_NO2,
+  VERSION_NO: VERSION_NO2,
+  MANUSCRIPT_VERSION_ID: MANUSCRIPT_VERSION_ID2
 }
 
 DECISSION_ACCEPTED = 'Accept Full Submission'
@@ -153,7 +160,7 @@ MANUSCRIPT_HISTORY_REVIEW_COMPLETE1 = {
 POTENTIAL_REVIEWER1 = {
   'person': PERSON1_RESULT,
   'scores': {
-    'keyword': 1
+    'keyword': 1.0
   }
 }
 
@@ -394,12 +401,12 @@ def test_matching_one_keyword_author_should_return_other_accepted_papers():
   recommend_reviewers = RecommendReviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   author_of_manuscripts = result['potential-reviewers'][0]['author-of-manuscripts']
-  author_of_manuscript_ids = [m['version-key'] for m in author_of_manuscripts]
+  author_of_manuscript_ids = [m[MANUSCRIPT_NO] for m in author_of_manuscripts]
   print("author_of_manuscripts:", PP.pformat(author_of_manuscripts))
   print("author_of_manuscript_ids:", author_of_manuscript_ids)
   assert set(author_of_manuscript_ids) == set([
-    MANUSCRIPT_VERSION1_RESULT['version-key'],
-    MANUSCRIPT_VERSION2_RESULT['version-key']
+    MANUSCRIPT_VERSION1_RESULT[MANUSCRIPT_NO],
+    MANUSCRIPT_VERSION2_RESULT[MANUSCRIPT_NO]
   ])
 
 def test_matching_one_keyword_author_should_not_return_other_draft_papers():
@@ -486,8 +493,7 @@ def test_matching_one_keyword_previous_reviewer():
   ], columns=MANUSCRIPT_KEYWORDS.columns)
   recommend_reviewers = RecommendReviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
-  print("result:", result)
-  assert result == {
+  expected = {
     'potential-reviewers': [{
       **POTENTIAL_REVIEWER1,
       'author-of-manuscripts': [],
@@ -499,6 +505,9 @@ def test_matching_one_keyword_previous_reviewer():
     }],
     'matching-manuscripts': []
   }
+  print("result:", PP.pformat(result))
+  print("expected:", PP.pformat(result))
+  assert result == expected
 
 def test_matching_one_keyword_previous_reviewer_should_return_reviewer_only_once():
   datasets = dict(DATASETS)
@@ -519,15 +528,14 @@ def test_matching_one_keyword_previous_reviewer_should_return_reviewer_only_once
   recommend_reviewers = RecommendReviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", PP.pformat(result))
-  assert result == {
-    'potential-reviewers': [{
-      **POTENTIAL_REVIEWER1,
-      'author-of-manuscripts': [],
-      'reviewer-of-manuscripts': [{
-        **MANUSCRIPT_VERSION1_RESULT,
-        'authors': [],
-        'reviewers': [PERSON1_RESULT]
-      }]
-    }],
-    'matching-manuscripts': []
-  }
+  assert\
+    [
+      r['person']['person-id']
+      for r in result['potential-reviewers']
+    ] == [PERSON_ID1]
+  assert\
+    [
+      r['person-id']
+      for r in result['potential-reviewers'][0]\
+        ['reviewer-of-manuscripts'][0]['reviewers']
+    ] == [PERSON_ID1]
