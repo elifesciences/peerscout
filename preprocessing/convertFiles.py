@@ -1,57 +1,9 @@
-import csv
 import itertools
-import xml.etree.ElementTree
-from os import listdir, makedirs
 from os.path import basename, splitext
-from zipfile import ZipFile
-from textwrap import shorten
 
-from tqdm import tqdm
-import numpy as np
+from convertUtils import\
+  process_files_in_directory_or_zip, has_children, parse_xml_file, TableOutput, write_tables_to_csv
 
-def parse_xml_file(f):
-  return xml.etree.ElementTree.parse(f).getroot()
-
-def parse_xml_string(f):
-  return xml.etree.ElementTree.fromstring(f)
-
-def has_children(elem):
-  return len(list(elem)) > 0
-
-class TableOutput(object):
-  def __init__(self):
-    self.columns = {}
-    self.rows = []
-
-  def append(self, props):
-    for k, v in props.items():
-      if k not in self.columns:
-        self.columns[k] = len(self.columns)
-    a = np.empty(len(self.columns), dtype=object)
-    for k, v in props.items():
-      index = self.columns[k]
-      a[index] = v
-    self.rows.append(a)
-
-  def header(self):
-    a = np.full(len(self.columns), fill_value=None, dtype=object)
-    for k, v in self.columns.items():
-      a[v] = k
-    return a
-
-  def matrix(self):
-    column_count = len(self.columns)
-    m = np.full((len(self.rows) + 1, column_count), fill_value=None, dtype=object)
-    m[0] = self.header()
-    for index, row in enumerate(self.rows):
-      m[index + 1, :len(row)] = row
-    return m
-
-def write_csv(filename, matrix):
-  with open(filename, 'w') as csvfile:
-    csvwriter = csv.writer(csvfile)
-    for row in matrix:
-      csvwriter.writerow(row)
 
 def collect_props(node, props = {}, xpaths = ['*'], exclude=[]):
   node_props = dict(props)
@@ -110,6 +62,32 @@ xml_copy_paths = {
   'people/person': person_copy_paths
 }
 
+all_version_table_names = [
+  'manuscript-versions',
+  'emails-meta'
+] + [table_name for table_name, xpaths in version_copy_paths.items()]
+
+all_persons_table_names = [
+  'persons'
+] + [table_name for table_name, xpaths in person_copy_paths.items()]
+
+# keys_by_table_name = {
+#   'authors': ['version-key', 'author-person-id'],
+#   'editors': ['version-key', 'editor-person-id'],
+#   'senior-editors': ['version-key', 'senior-person-id'],
+#   'referees': ['version-key', 'referee-person-id'],
+#   'potential-editors': ['version-key', 'potential-editor-person-id'],,
+#   'potential-referees': ['version-key', 'potential-referee-person-id'],,
+#   'manuscript-history': ['version-key', 'stage-name', 'stage-affective-person-id', 'start-date'],
+#   'manuscript-keywords': ['version-key', 'editor-person-id'],,
+#   'manuscript-author-funding': ['author-funding/author-funding'],
+#   'manuscript-funding': ['manuscript-funding/manuscript-funding'],
+#   'manuscript-subject-areas': ['subject-areas/subject-area'],
+#   'related-manuscripts': ['related-manuscripts/related-manuscript'],
+#   'manuscript-themes': ['themes/theme']
+# }
+
+
 def build_known_xml_paths():
   known_paths = set([
     'manuscript',
@@ -135,29 +113,44 @@ def get_sub_paths(xpaths, prefix):
 known_version_xml_paths = get_sub_paths(known_xml_paths, 'manuscript/version/')
 known_person_xml_paths = get_sub_paths(known_xml_paths, 'people/person/')
 
+def manuscript_number_to_no(x):
+  return x.split('-')[-1]
+
+def version_key_to_no(x):
+  return 1 + int(x.split('|')[-1])
+
 def convert_xml(doc, tables, manuscript_number):
   export_emails = 'emails' in tables
 
   for manuscript in doc.findall('manuscript'):
+    manuscript_no = manuscript_number_to_no(manuscript_number)
     tables['manuscripts'].append(collect_props(
       manuscript,
-      { 'manuscript-number': manuscript_number },
+      {
+        'manuscript-number': manuscript_number,
+        'manuscript-no': manuscript_no
+      },
       xpaths=['*', 'production-data/*']))
     for version in manuscript.findall('version'):
       version_key = version.find('key').text
+      version_no = version_key_to_no(version_key)
       version_manuscript_number = version.find('manuscript-number').text
-      tables['manuscript-versions'].append(collect_props(version, props={
-          'base-manuscript-number': manuscript_number,
-          # shortcuts for convenience (will get exported separately as well)
-          'keywords': "|".join([ node.text for node in version.findall('keywords/keywords/word') ]),
-          'themes': "|".join([ node.text for node in version.findall('themes/theme/theme') ])
-        },
-        exclude=known_version_xml_paths))
+      for table_name in all_version_table_names:
+        tables[table_name].remove_where_property_is('version-key', version_key)
       version_key_props = {
+        'manuscript-no': manuscript_no,
+        'version-no': version_no,
         'base-manuscript-number': manuscript_number,
         'manuscript-number': version_manuscript_number,
         'version-key': version_key
       }
+      tables['manuscript-versions'].append(collect_props(version, props={
+          **version_key_props,
+          # shortcuts for convenience (will get exported separately as well)
+          'keywords': "|".join([ node.text for node in version.findall('keywords/keywords/word') ]),
+          'themes': "|".join([ node.text for node in version.findall('themes/theme/theme') ])
+        },
+        exclude=known_version_xml_paths.union(set(['key']))))
       for table_name, xpaths in version_copy_paths.items():
         populate_and_append_to_table(tables[table_name],
           itertools.chain.from_iterable([version.findall(xpath) for xpath in xpaths]),
@@ -169,16 +162,19 @@ def convert_xml(doc, tables, manuscript_number):
           del email_props['email-message']
         tables['emails-meta'].append(email_props)
       if export_emails:
+        tables['emails'].remove_where_property_is('version-key', version_key)
         populate_and_append_to_table(tables['emails'],
           version.findall('emails/email'),
           version_key_props)
 
   for person in doc.findall('people/person'):
-    tables['persons'].append(collect_props(person, exclude=known_person_xml_paths))
     person_key = person.find('person-id').text
     person_key_props = {
-      'person-key': person_key
+      'person-id': person_key
     }
+    for table_name in all_persons_table_names:
+      tables[table_name].remove_where_property_is('person-id', person_key)
+    tables['persons'].append(collect_props(person, exclude=known_person_xml_paths))
     for table_name, xpaths in person_copy_paths.items():
       populate_and_append_to_table(tables[table_name],
         itertools.chain.from_iterable([person.findall(xpath) for xpath in xpaths]),
@@ -191,33 +187,10 @@ def convert_xml(doc, tables, manuscript_number):
 def filename_to_manuscript_number(filename):
   return splitext(basename(filename))[0]
 
-def convert_xml_files_in_directory(root_dir, tables):
-  pbar = tqdm(listdir(root_dir), leave=False)
-  for filename in pbar:
-    pbar.set_description("%40s" % shorten(filename, width=40))
-    f = root_dir + "/" + filename
-    doc = parse_xml_file(f)
-    manuscript_number = filename_to_manuscript_number(filename)
-    convert_xml(doc, tables, manuscript_number)
-
-def convert_xml_files_in_zip(zip_filename, tables):
-  with ZipFile(zip_filename) as zip_archive:
-    pbar = tqdm(zip_archive.namelist(), leave=False)
-    for filename in pbar:
-      pbar.set_description("%40s" % shorten(filename, width=40))
-      with zip_archive.open(filename) as zip_file:
-        doc = parse_xml_string(zip_file.read())
-        manuscript_number = filename_to_manuscript_number(filename)
-        convert_xml(doc, tables, manuscript_number)
-    pbar.set_description("Done")
-
-def write_tables_to_csv(csv_path, tables):
-  makedirs(csv_path, exist_ok=True)
-  pbar = tqdm(tables.keys(), leave=False)
-  for name in pbar:
-    pbar.set_description("%40s" % shorten(name, width=40))
-    write_csv(csv_path + "/" + name + ".csv", tables[name].matrix())
-  pbar.set_description("Done")
+def convert_xml_file_contents(filename, stream, tables):
+  doc = parse_xml_file(stream)
+  manuscript_number = filename_to_manuscript_number(filename)
+  convert_xml(doc, tables, manuscript_number)
 
 def main():
 
@@ -234,14 +207,21 @@ def main():
   for copy_paths in xml_copy_paths.values():
     for table_name in copy_paths.keys():
       table_names.add(table_name)
-  tables = dict((table_name, TableOutput()) for table_name in table_names)
+  tables = dict((table_name, TableOutput(name=table_name)) for table_name in table_names)
+
+  process_file = lambda filename, content:\
+    convert_xml_file_contents(filename, content, tables)
 
   # csv_path = "csv-small"
-  # convert_xml_files_in_directory('../local', tables)
+  # source = "../local"
+
+  # csv_path = "../csv"
+  # source = "../downloads/ejp_eLife_2000_01_01_00_00_00_2017_01_01_23_59_59.zip"
 
   csv_path = "../csv"
-  convert_xml_files_in_zip(
-    '../downloads/ejp_eLife_2000_01_01_00_00_00_2017_01_01_23_59_59.zip', tables)
+  source = "../downloads"
+
+  process_files_in_directory_or_zip(source, process_file)
 
   write_tables_to_csv(csv_path, tables)
 
