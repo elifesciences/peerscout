@@ -1,9 +1,8 @@
 import pandas as pd
 
-from convertUtils import flatten
 from lda_utils import train_lda
 
-def process_csv_file(input_filename, output_filename, column_name):
+def process_csv_file(input_filename, output_filename, column_name, n_topics=10):
   print("input_filename:", input_filename)
   df = pd.read_csv(input_filename, low_memory=False)
   df[column_name + '-docvecs'] = list(train_lda(df[column_name].values).docvecs)
@@ -15,7 +14,8 @@ def process_article_abstracts(csv_path):
   process_csv_file(
     input_filename=csv_path + '/manuscript-abstracts-spacy.csv',
     output_filename=csv_path + '/manuscript-abstracts-spacy-docvecs.pickle',
-    column_name='abstract-spacy'
+    column_name='abstract-spacy',
+    n_topics=20
   )
 
 def process_article_contents(csv_path):

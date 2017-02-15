@@ -4,19 +4,35 @@ from collections import namedtuple
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 
 LdaResult = namedtuple('LdaResult', ['docvecs', 'vectorized', 'vectorizer', 'lda'])
 
 def isstr(s):
   return isinstance(s, str)
 
-def train_lda(data, vectorizer=None, lda=None, n_features=1000, n_topics=10):
+def get_default_stop_words():
+  return ENGLISH_STOP_WORDS
+
+def train_lda(
+  data,
+  vectorizer=None,
+  lda=None,
+  n_features=100,
+  n_topics=10,
+  max_df=0.90,
+  min_df=10,
+  stop_words='english',
+  max_iter=10,
+  learning_offset=50,
+  learning_method='batch'):
+
   if vectorizer is None:
     vectorizer = TfidfVectorizer(
-      max_df=0.95,
-      min_df=2,
+      max_df=max_df,
+      min_df=min_df,
       max_features=n_features,
-      stop_words='english')
+      stop_words=stop_words)
   t0 = time()
   indices = [x is not None and isstr(x) and len(x) > 0 for x in data]
   indices = np.arange(len(data))[indices]
@@ -26,9 +42,9 @@ def train_lda(data, vectorizer=None, lda=None, n_features=1000, n_topics=10):
   if lda is None:
     lda = LatentDirichletAllocation(
       n_topics=n_topics,
-      max_iter=5,
-      learning_method='online',
-      learning_offset=50.,
+      max_iter=max_iter,
+      learning_method=learning_method,
+      learning_offset=learning_offset,
       random_state=0)
   t0 = time()
   matching_docvecs = list(lda.fit_transform(vectorized))
