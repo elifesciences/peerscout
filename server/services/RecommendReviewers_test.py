@@ -49,6 +49,18 @@ MANUSCRIPT_HISTORY = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + ['stage-affective-person-id', 'stage-name', 'start-date'])
 
+ABSTRACT_DOCVEC_COLUMN = 'abstract-spacy-docvecs'
+
+ABSTRACT_DOCVECS = pd.DataFrame(
+  [],
+  columns=MANUSCRIPT_ID_COLUMNS + [ABSTRACT_DOCVEC_COLUMN])
+
+CONTENT_DOCVECS = pd.DataFrame(
+  [],
+  columns=MANUSCRIPT_ID_COLUMNS + ['content-spacy-docvecs'])
+
+ABSTRACT_DOCVEC_DATASET = 'manuscript-abstracts-spacy-docvecs'
+
 DATASETS = {
   'authors': AUTHORS,
   'persons': PERSONS,
@@ -57,7 +69,9 @@ DATASETS = {
   'manuscripts': MANUSCRIPTS,
   'manuscript-versions': MANUSCRIPT_VERSIONS,
   'manuscript-keywords': MANUSCRIPT_KEYWORDS,
-  'manuscript-history': MANUSCRIPT_HISTORY
+  'manuscript-history': MANUSCRIPT_HISTORY,
+  ABSTRACT_DOCVEC_DATASET: ABSTRACT_DOCVECS,
+  'article-content-spacy-docvecs': CONTENT_DOCVECS
 }
 
 PERSON_ID1 = 'person1'
@@ -143,6 +157,19 @@ MANUSCRIPT_KEYWORD1 = {
   'word': KEYWORD1
 }
 
+DOCVEC1 = [1, 1]
+DOCVEC2 = [2, 2]
+
+ABSTRACT_DOCVEC1 = {
+  **MANUSCRIPT_ID_FIELDS1,
+  ABSTRACT_DOCVEC_COLUMN: DOCVEC1
+}
+
+ABSTRACT_DOCVEC2 = {
+  **MANUSCRIPT_ID_FIELDS2,
+  ABSTRACT_DOCVEC_COLUMN: DOCVEC2
+}
+
 AUTHOR1 = {
   **MANUSCRIPT_ID_FIELDS1,
   'author-person-id': PERSON_ID1
@@ -160,7 +187,8 @@ MANUSCRIPT_HISTORY_REVIEW_COMPLETE1 = {
 POTENTIAL_REVIEWER1 = {
   'person': PERSON1_RESULT,
   'scores': {
-    'keyword': 1.0
+    'keyword': 1.0,
+    'similarity': None
   }
 }
 
@@ -218,6 +246,44 @@ def test_matching_manuscript_should_return_manuscript_only_once():
       'reviewers': []
     }]
   }
+
+def test_matching_manuscript_with_docvecs():
+  datasets = dict(DATASETS)
+  datasets['persons'] = pd.DataFrame([
+    PERSON1
+  ], columns=PERSONS.columns)
+  datasets['manuscript-versions'] = pd.DataFrame([
+    MANUSCRIPT_VERSION1
+  ], columns=MANUSCRIPT_VERSIONS.columns)
+  datasets['manuscript-keywords'] = pd.DataFrame([
+    MANUSCRIPT_KEYWORD1
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
+  datasets[ABSTRACT_DOCVEC_DATASET] = pd.DataFrame([
+    ABSTRACT_DOCVEC1
+  ], columns=ABSTRACT_DOCVECS.columns)
+  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
+
+def test_matching_manuscript_with_none_docvecs():
+  datasets = dict(DATASETS)
+  datasets['persons'] = pd.DataFrame([
+    PERSON1
+  ], columns=PERSONS.columns)
+  datasets['manuscript-versions'] = pd.DataFrame([
+    MANUSCRIPT_VERSION1
+  ], columns=MANUSCRIPT_VERSIONS.columns)
+  datasets['manuscript-keywords'] = pd.DataFrame([
+    MANUSCRIPT_KEYWORD1
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
+  datasets[ABSTRACT_DOCVEC_DATASET] = pd.DataFrame([
+    ABSTRACT_DOCVEC1,
+    {
+      **ABSTRACT_DOCVEC2,
+      ABSTRACT_DOCVEC_COLUMN: None
+    }
+  ], columns=ABSTRACT_DOCVECS.columns)
+  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
 
 def test_matching_manuscript_should_return_draft_version_with_authors():
   datasets = dict(DATASETS)

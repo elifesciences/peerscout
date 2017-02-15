@@ -5,7 +5,9 @@ from flask import Flask, request, send_from_directory, jsonify, url_for
 from flask_cors import CORS
 # from intend_matchers.simple_intend_matcher import SimpleIntendMatcher
 
-from datasets import CsvDatasetLoader
+from datasets import\
+  CsvDatasetLoader, PickleDatasetLoader,\
+  RoutingDatasetLoader, CachedDatasetLoader
 from services import RecommendReviewers
 
 CLIENT_FOLDER = '../client/dist'
@@ -14,7 +16,13 @@ port = 8080
 
 with open('config.json') as config_file:
   config = json.load(config_file)
-  datasets = CsvDatasetLoader(abspath(config['csv']['path']))
+  csv_path = abspath(config['csv']['path'])
+  csv_datasets = CsvDatasetLoader(csv_path)
+  pickle_datasets = PickleDatasetLoader(csv_path)
+  routing_datasets = RoutingDatasetLoader({
+    'manuscript-abstracts-spacy-docvecs': pickle_datasets
+  }, csv_datasets)
+  datasets = CachedDatasetLoader(routing_datasets)
   recommend_reviewers = RecommendReviewers(datasets)
   if 'port' in config:
     port = config['port']

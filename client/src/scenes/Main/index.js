@@ -270,11 +270,18 @@ const PotentialReviewer = ({
         <View  style={ styles.potentialReviewer.subSection }>
           <Text style={ styles.potentialReviewer.label }>Scores: </Text>
           <View style={ styles.potentialReviewer.value }>
-            {
-              scores && (
-                <Text>{ `${scores['keyword']} keyword match (higher is better)` }</Text>
-              )
-            }
+            <FlexColumn>
+              {
+                (scores && scores['keyword'] && (
+                  <Text>{ `${scores['keyword'].toFixed(2)} keyword match (higher is better)` }</Text>
+                )) || null
+              }
+              {
+                (scores && scores['similarity'] && (
+                  <Text>{ `${scores['similarity'].toFixed(2)} similarity (max across articles)` }</Text>
+                )) || null
+              }
+            </FlexColumn>
           </View>
         </View>
       </CardText>

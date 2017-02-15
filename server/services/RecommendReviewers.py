@@ -1,7 +1,9 @@
 from itertools import groupby
 import html
 
+import numpy as np
 import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
 
 debug_enabled = False
 
@@ -31,6 +33,9 @@ def is_null(x):
 
 def nat_to_none(x):
   return None if is_nat(x) else x
+
+def null_to_none(x):
+  return None if is_null(x) else x
 
 def remove_none(d):
   return dict((k, v) for k, v in d.items() if not is_null(v))
@@ -97,6 +102,9 @@ MANUSCRIPT_VERSION_ID = 'manuscript-version-id'
 RAW_MANUSCRIPT_ID_COLUMNS = [MANUSCRIPT_NO, VERSION_NO]
 TEMP_MANUSCRIPT_ID_COLUMNS = [MANUSCRIPT_VERSION_ID]
 MANUSCRIPT_ID_COLUMNS = RAW_MANUSCRIPT_ID_COLUMNS + TEMP_MANUSCRIPT_ID_COLUMNS
+
+ABSTRACT_DOCVEC_COLUMN = 'abstract-docvec'
+SIMILARITY_COLUMN = 'similarity'
 
 PERSON_ID = 'person-id'
 
@@ -209,6 +217,16 @@ class RecommendReviewers(object):
       MANUSCRIPT_VERSION_ID,
       valid_version_ids
     )
+
+    self.abstract_docvecs_all_df = add_manuscript_version_id(
+      datasets["manuscript-abstracts-spacy-docvecs"]\
+      .rename(columns={'abstract-spacy-docvecs': ABSTRACT_DOCVEC_COLUMN}).dropna())
+    self.abstract_docvecs_df = filter_by(
+      self.abstract_docvecs_all_df,
+      MANUSCRIPT_VERSION_ID,
+      valid_version_ids
+    )
+    print("valid docvecs:", len(self.abstract_docvecs_df))
 
     self.persons_df = datasets["persons"].copy()
     memberships_df = datasets["person-memberships"].rename(columns={
@@ -372,6 +390,35 @@ class RecommendReviewers(object):
       return []
     return [keyword.strip() for keyword in keywords.split(',')]
 
+  def __find_similar_manuscripts(self, version_ids):
+    to_docvecs = self.abstract_docvecs_all_df[
+      self.abstract_docvecs_all_df[MANUSCRIPT_VERSION_ID].isin(
+        version_ids
+      )
+    ][ABSTRACT_DOCVEC_COLUMN].values
+    if len(to_docvecs) == 0:
+      print("no docvecs for:", version_ids)
+      return pd.DataFrame({
+        MANUSCRIPT_VERSION_ID: [],
+        SIMILARITY_COLUMN: []
+      })
+    all_docvecs = self.abstract_docvecs_df[ABSTRACT_DOCVEC_COLUMN].values
+    to_docvecs = to_docvecs.tolist()
+    all_docvecs = all_docvecs.tolist()
+    similarity = pd.DataFrame({
+      MANUSCRIPT_VERSION_ID: self.abstract_docvecs_df[MANUSCRIPT_VERSION_ID],
+      SIMILARITY_COLUMN: cosine_similarity(
+        all_docvecs,\
+        to_docvecs
+      )[:, 0]
+    })
+    similarity = similarity[
+      ~similarity[MANUSCRIPT_VERSION_ID].isin(
+        version_ids
+      )
+    ]
+    return similarity
+
   def recommend(self, keywords, manuscript_no):
     keyword_list = self.__parse_keywords(keywords)
     if manuscript_no is not None and manuscript_no != '':
@@ -386,12 +433,30 @@ class RecommendReviewers(object):
       keyword_list
     )
     print("other_manuscripts:", other_manuscripts)
+    similar_manuscripts = self.__find_similar_manuscripts(
+      matching_manuscripts[MANUSCRIPT_VERSION_ID]
+    )
+    similarity_threshold = 0.5
+    max_similarity_count = 50
+    most_similar_manuscripts = similar_manuscripts[
+      similar_manuscripts[SIMILARITY_COLUMN] >= similarity_threshold
+    ]
+    print("found {}/{} similar manuscripts beyond threshold {}".format(
+      len(most_similar_manuscripts), len(similar_manuscripts),
+      similarity_threshold
+    ))
+    if len(most_similar_manuscripts) > max_similarity_count:
+      most_similar_manuscripts = most_similar_manuscripts\
+      .sort_values(SIMILARITY_COLUMN, ascending=False)[:max_similarity_count]
+    related_version_ids =\
+      set(other_manuscripts[MANUSCRIPT_VERSION_ID].values) |\
+      set(most_similar_manuscripts[MANUSCRIPT_VERSION_ID].values)
     # TODO add reviewers of papers as well as early career reviewers
     # TODO sort accordingly
     # TODO use topic modelling
     other_manuscripts_dicts = [
       self.manuscripts_by_version_id_map.get(version_id)
-      for version_id in other_manuscripts[MANUSCRIPT_VERSION_ID]
+      for version_id in related_version_ids
     ]
     other_manuscripts_dicts = [m for m in other_manuscripts_dicts if m]
     potential_reviewers_ids = set([
@@ -417,21 +482,21 @@ class RecommendReviewers(object):
         keyword_match_count_by_by_version_key_map.get(manuscript[MANUSCRIPT_VERSION_ID], 0)
         for manuscript in involved_manuscripts
       ]))
+      max_similarity = null_to_none(similar_manuscripts[
+        similar_manuscripts[MANUSCRIPT_VERSION_ID].isin(
+          [m[MANUSCRIPT_VERSION_ID] for m in involved_manuscripts]
+        )
+      ]['similarity'].max())
       if len(keyword_list) > 0:
         total_keyword_match_count = total_keyword_match_count / len(keyword_list)
-      if total_keyword_match_count == 0:
-        print("person_id:", person_id)
-        print("author_of_manuscripts:", [m[MANUSCRIPT_VERSION_ID] for m in author_of_manuscripts])
-        print("reviewer_of_manuscripts:", [m[MANUSCRIPT_VERSION_ID] for m in reviewer_of_manuscripts])
-        print("involved_manuscripts:", [m[MANUSCRIPT_VERSION_ID] for m in involved_manuscripts])
-        print("total_keyword_match_count:", total_keyword_match_count)
 
       return {
         'person': self.persons_map.get(person_id, None),
         'author-of-manuscripts': author_of_manuscripts,
         'reviewer-of-manuscripts': reviewer_of_manuscripts,
         'scores': {
-          'keyword': total_keyword_match_count
+          'keyword': total_keyword_match_count,
+          'similarity': max_similarity
         }
       }
 
@@ -451,6 +516,7 @@ class RecommendReviewers(object):
       potential_reviewers,
       key=lambda potential_reviewer: (
         -potential_reviewer['scores']['keyword'],
+        -(potential_reviewer['scores']['similarity'] or 0),
         (
           potential_reviewer['person']['stats']['review-duration']['mean']
           if potential_reviewer['person']['stats']['review-duration']
