@@ -41,7 +41,7 @@ MANUSCRIPTS = pd.DataFrame(
   columns=[MANUSCRIPT_NO])
 MANUSCRIPT_VERSIONS = pd.DataFrame(
   [],
-  columns=MANUSCRIPT_ID_COLUMNS + ['title', 'decision', 'manuscript-type'])
+  columns=MANUSCRIPT_ID_COLUMNS + ['title', 'decision', 'manuscript-type', 'abstract'])
 MANUSCRIPT_KEYWORDS = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + ['sequence', 'word'])

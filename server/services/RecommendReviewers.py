@@ -184,9 +184,10 @@ class RecommendReviewers(object):
   def __init__(self, datasets):
     self.manuscript_versions_all_df = add_manuscript_version_id(
       datasets['manuscript-versions'].copy())
-    self.manuscript_versions_all_df['title'] = self.manuscript_versions_all_df['title'].apply(
-      unescape_if_string
-    )
+    for c in ['title', 'abstract']:
+      self.manuscript_versions_all_df[c] = self.manuscript_versions_all_df[c].apply(
+        unescape_if_string
+      )
     self.manuscript_versions_df = filter_research_articles(filter_accepted_manuscript_versions(
       self.manuscript_versions_all_df
     ))
@@ -291,7 +292,8 @@ class RecommendReviewers(object):
 
     manuscripts_all_list = clean_result(
       self.manuscript_versions_all_df[
-        MANUSCRIPT_ID_COLUMNS + ['title', 'decision', 'manuscript-type']
+        MANUSCRIPT_ID_COLUMNS +\
+        ['title', 'decision', 'manuscript-type', 'abstract']
       ]\
       .to_dict(orient='records'))
     manuscripts_all_list = [{

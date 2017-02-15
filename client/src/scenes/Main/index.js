@@ -12,6 +12,7 @@ import {
   FlatButton,
   FileInput,
   FontAwesomeIcon,
+  HeaderTitle,
   Link,
   List,
   ListItem,
@@ -19,6 +20,7 @@ import {
   Slider,
   Text,
   TextField,
+  TooltipWrapper,
   Toggle,
   View
 } from '../../components';
@@ -162,9 +164,18 @@ const combinedPersonName = person =>
 
 const quote = s => s && `\u201c${s}\u201d`
 
+const ManuscriptTooltipContent = ({ manuscript: { title, abstract } }) => (
+  <View>
+    <HeaderTitle>{ title }</HeaderTitle>
+    <Text>{ abstract }</Text>
+  </View>
+)
+
 const ManuscriptInlineSummary = ({ manuscript }) => (
   <View style={ styles.inlineContainer }>
-    <Text>{ quote(manuscript['title']) }</Text>
+    <TooltipWrapper content={ <ManuscriptTooltipContent manuscript={ manuscript}/> } style={ styles.inlineContainer }>
+      <Text>{ quote(manuscript['title']) }</Text>
+    </TooltipWrapper>
     <Text>{ ` (${manuscript['manuscript-no']} v${manuscript['version-no']})` }</Text>
   </View>
 );
@@ -289,19 +300,23 @@ const PotentialReviewer = ({
   );
 };
 
+
 const ManuscriptSummary = ({
   manuscript: {
     title,
     'manuscript-no': manuscriptNo,
     'version-no': versionNo,
+    abstract,
     authors,
     reviewers
   }
 }) => (
-  <Card style={ styles.manuscriptSummary.container }>
+  <Card style={ styles.manuscriptSummary.container } initiallyExpanded={ true }>
     <CardHeader
       title={ quote(title) }
       subtitle={ `${manuscriptNo} (v${versionNo})` }
+      actAsExpander={ true }
+      showExpandableButton={ true }
     />
     <CardText>
       <View style={ styles.manuscriptSummary.subSection }>
@@ -319,6 +334,14 @@ const ManuscriptSummary = ({
             <PersonInlineSummary key={ index } person={ reviewer }/>
           ))
         }
+      </View>
+    </CardText>
+    <CardText expandable={ true }>
+      <View  style={ styles.manuscriptSummary.subSection }>
+        <FlexColumn>
+          <Text style={ styles.manuscriptSummary.label }>Abstract:</Text>
+          <Text>{ quote(abstract) }</Text>
+        </FlexColumn>
       </View>
     </CardText>
   </Card>
