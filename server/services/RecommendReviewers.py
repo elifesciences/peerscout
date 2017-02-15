@@ -1,4 +1,5 @@
 from itertools import groupby
+from datetime import datetime, timedelta
 
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
@@ -179,6 +180,14 @@ def duration_stats_between_by_person(stage_pivot, from_stage, to_stage):
     df[c] = df[c] / SECONDS_PER_DAY
   return df
 
+def filter_stage_pivot_by_stage(stage_pivot, stage, condition):
+  if stage in stage_pivot.columns:
+    return stage_pivot[
+      stage_pivot[stage].apply(lambda dt: not is_null(dt) and condition(dt))
+    ]
+  else:
+    return stage_pivot
+
 def add_manuscript_version_id(df):
   df[MANUSCRIPT_VERSION_ID] = df[MANUSCRIPT_NO].str.cat(
     df[VERSION_NO].map(str), sep='-')
@@ -266,13 +275,19 @@ class RecommendReviewers(object):
     stage_pivot = create_stage_pivot(self.manuscript_history_all_df)
     review_durations_map = duration_stats_between_by_person(
       stage_pivot, 'Reviewers Accept', 'Review Received').to_dict(orient='index')
+    today = datetime.today()
+    from_12m = pd.Timestamp(today.replace(year=today.year - 1))
+    review_durations_last12m_map = duration_stats_between_by_person(
+      filter_stage_pivot_by_stage(stage_pivot, 'Review Received', lambda dt: dt >= from_12m),
+      'Reviewers Accept', 'Review Received').to_dict(orient='index')
 
     persons_list = [{
       **person,
       'memberships': temp_memberships_map.get(person['person-id'], []),
       'dates-not-available': dates_not_available_map.get(person['person-id'], []),
       'stats': {
-        'review-duration': review_durations_map.get(person['person-id'], None)
+        'review-duration': review_durations_map.get(person['person-id'], None),
+        'review-duration-12m': review_durations_last12m_map.get(person['person-id'], None)
       }
     } for person in clean_result(self.persons_df[PERSON_COLUMNS].to_dict(orient='records'))]
     self.persons_map = dict((p[PERSON_ID], p) for p in persons_list)

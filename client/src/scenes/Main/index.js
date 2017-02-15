@@ -248,10 +248,21 @@ const PotentialReviewer = ({
           person.stats && person.stats['review-duration'] && (
             <View style={ styles.potentialReviewer.subSection }>
               <Text style={ styles.potentialReviewer.label }>Review Time: </Text>
-              <Text style={ styles.potentialReviewer.value }>
-                { `${person.stats['review-duration']['mean'].toFixed(1)} days
-                  (avg over ${person.stats['review-duration']['count']} reviews)` }
-              </Text>
+              <View style={ styles.potentialReviewer.value }>
+                <Text>
+                  { `${person.stats['review-duration']['mean'].toFixed(1)} days
+                    (avg over ${person.stats['review-duration']['count']} reviews)` }
+                </Text>
+                {
+                  person.stats['review-duration-12m'] && (
+                    <Text>
+                      { `, ${person.stats['review-duration-12m']['mean'].toFixed(1)} days
+                        or ${person.stats['review-duration-12m']['count']}
+                        reviews within the last 12 months` }
+                    </Text>
+                  )
+                }
+              </View>
             </View>
           )
         }

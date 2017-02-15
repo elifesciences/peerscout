@@ -88,7 +88,8 @@ PERSON1_RESULT = {
   'memberships': [],
   'dates-not-available': [],
   'stats': {
-    'review-duration': None
+    'review-duration': None,
+    'review-duration-12m': None
   }
 }
 
@@ -402,15 +403,17 @@ def test_matching_one_keyword_author_should_return_stats():
     'start-date': pd.Timestamp('2017-02-03')
   }], columns=MANUSCRIPT_HISTORY.columns)
   recommend_reviewers = RecommendReviewers(datasets)
+  review_duration = {
+    'min': 1.0,
+    'mean': 1.5,
+    'max': 2,
+    'count': 2
+  }
   person_with_stats = {
     **PERSON1_RESULT,
     'stats': {
-      'review-duration': {
-        'min': 1.0,
-        'mean': 1.5,
-        'max': 2,
-        'count': 2
-      }
+      'review-duration': review_duration,
+      'review-duration-12m': review_duration
     }
   }
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
