@@ -165,7 +165,7 @@ const quote = s => s && `\u201c${s}\u201d`
 const ManuscriptInlineSummary = ({ manuscript }) => (
   <View style={ styles.inlineContainer }>
     <Text>{ quote(manuscript['title']) }</Text>
-    <Text>{ ` (${manuscript['manuscript-number']})` }</Text>
+    <Text>{ ` (${manuscript['manuscript-no']} v${manuscript['version-no']})` }</Text>
   </View>
 );
 
@@ -292,7 +292,8 @@ const PotentialReviewer = ({
 const ManuscriptSummary = ({
   manuscript: {
     title,
-    'manuscript-number': manuscriptNumber,
+    'manuscript-no': manuscriptNo,
+    'version-no': versionNo,
     authors,
     reviewers
   }
@@ -300,7 +301,7 @@ const ManuscriptSummary = ({
   <Card style={ styles.manuscriptSummary.container }>
     <CardHeader
       title={ quote(title) }
-      subtitle={ manuscriptNumber }
+      subtitle={ `${manuscriptNo} (v${versionNo})` }
     />
     <CardText>
       <View style={ styles.manuscriptSummary.subSection }>
