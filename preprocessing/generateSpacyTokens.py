@@ -81,13 +81,17 @@ def main():
       if isinstance(text, str)
     ]
     result = [None] * len(texts)
-    pbar = tqdm(nlp.pipe([text for _, text in valid_strings]))
+    pbar = tqdm(nlp.pipe(
+      [text for _, text in valid_strings],
+      n_threads=2,
+      batch_size=10
+    ), total=len(valid_strings))
     for item, doc in zip(valid_strings, pbar):
       result[item[0]] = extract_keywords_from_doc(doc)
     return result
 
-  csv_path = "./csv-small"
-  # csv_path = "../csv"
+  # csv_path = "./csv-small"
+  csv_path = "../csv"
 
   process_manuscript_versions(csv_path, extract_keywords_from_list)
   process_article_contents(csv_path, extract_keywords_from_list)
