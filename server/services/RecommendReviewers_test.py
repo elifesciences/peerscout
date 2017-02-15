@@ -408,7 +408,8 @@ def test_matching_one_keyword_author_should_return_stats():
       'review-duration': {
         'min': 1.0,
         'mean': 1.5,
-        'max': 2
+        'max': 2,
+        'count': 2
       }
     }
   }

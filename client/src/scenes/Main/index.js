@@ -249,7 +249,8 @@ const PotentialReviewer = ({
             <View style={ styles.potentialReviewer.subSection }>
               <Text style={ styles.potentialReviewer.label }>Review Time: </Text>
               <Text style={ styles.potentialReviewer.value }>
-                { `${person.stats['review-duration']['mean'].toFixed(1)} days (avg)` }
+                { `${person.stats['review-duration']['mean'].toFixed(1)} days
+                  (avg over ${person.stats['review-duration']['count']} reviews)` }
               </Text>
             </View>
           )

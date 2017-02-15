@@ -162,18 +162,22 @@ def duration_stats_between_by_person(stage_pivot, from_stage, to_stage):
   else:
     return pd.DataFrame([])
   duration = duration.astype('timedelta64[s]')
-  return duration.dropna()\
+  SECONDS_PER_DAY = 24 * 60 * 60
+  df = duration.dropna()\
   .to_frame('duration')\
   .reset_index()\
   .rename(columns={'stage-affective-person-id': 'person-id'})\
   .groupby('person-id', as_index=False)\
   .agg([
-    pd.np.min, pd.np.mean, pd.np.max
+    pd.np.min, pd.np.mean, pd.np.max, pd.np.size
   ])['duration'].rename(columns={
     'amin': 'min',
-    'amax': 'max'
-  })\
-  / (24 * 60 * 60)
+    'amax': 'max',
+    'size': 'count'
+  })
+  for c in ['min', 'max', 'mean']:
+    df[c] = df[c] / SECONDS_PER_DAY
+  return df
 
 def add_manuscript_version_id(df):
   df[MANUSCRIPT_VERSION_ID] = df[MANUSCRIPT_NO].str.cat(
