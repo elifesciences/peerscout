@@ -1,9 +1,9 @@
 from itertools import groupby
-import html
 
-import numpy as np
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
+
+from .utils import unescape_and_strip_tags
 
 debug_enabled = False
 
@@ -144,7 +144,7 @@ def filter_by(df, col_name, values):
 
 def unescape_if_string(s):
   if isinstance(s, str):
-    return html.unescape(s)
+    return unescape_and_strip_tags(s)
   return s
 
 def create_stage_pivot(stage_history):
