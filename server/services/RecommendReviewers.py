@@ -442,11 +442,20 @@ class RecommendReviewers(object):
 
   def recommend(self, keywords, manuscript_no):
     keyword_list = self.__parse_keywords(keywords)
+    exclude_person_ids = set()
+    matching_manuscripts_dicts = []
     if manuscript_no is not None and manuscript_no != '':
       matching_manuscripts = self.__find_manuscripts_by_key(manuscript_no)
       manuscript_keywords = self.__find_keywords_by_version_keys(
         matching_manuscripts[MANUSCRIPT_VERSION_ID])
+      matching_manuscripts_dicts = map_to_dict(
+        matching_manuscripts[MANUSCRIPT_VERSION_ID],
+        self.manuscripts_by_version_id_map
+      )
       keyword_list += list(manuscript_keywords.values)
+      authors = flatten([m['authors'] for m in matching_manuscripts_dicts])
+      author_ids = [a[PERSON_ID] for a in authors]
+      exclude_person_ids |= set(author_ids)
     else:
       matching_manuscripts = self.__find_manuscripts_by_key(None)
     print("keyword_list:", keyword_list)
@@ -472,9 +481,6 @@ class RecommendReviewers(object):
     related_version_ids =\
       set(other_manuscripts[MANUSCRIPT_VERSION_ID].values) |\
       set(most_similar_manuscripts[MANUSCRIPT_VERSION_ID].values)
-    # TODO add reviewers of papers as well as early career reviewers
-    # TODO sort accordingly
-    # TODO use topic modelling
     other_manuscripts_dicts = [
       self.manuscripts_by_version_id_map.get(version_id)
       for version_id in related_version_ids
@@ -483,7 +489,7 @@ class RecommendReviewers(object):
     potential_reviewers_ids = set([
       person[PERSON_ID] for person in
       flatten([(m['authors'] + m['reviewers']) for m in other_manuscripts_dicts])
-    ])
+    ]) - exclude_person_ids
     # print("potential_reviewers_ids", potential_reviewers_ids)
     # for m in other_manuscripts_dicts:
     #   print("author_ids", m[VERSION_KEY], [p[PERSON_ID] for p in m['authors']])

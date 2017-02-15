@@ -75,9 +75,10 @@ DATASETS = {
 }
 
 PERSON_ID1 = 'person1'
+PERSON_ID2 = 'person2'
 
 PERSON1 = {
-  'person-id': 'person1',
+  'person-id': PERSON_ID1,
   'first-name': 'John',
   'last-name': 'Smith',
   'status': 'Active'
@@ -91,6 +92,18 @@ PERSON1_RESULT = {
     'review-duration': None,
     'review-duration-12m': None
   }
+}
+
+PERSON2 = {
+  **PERSON1,
+  'person-id': PERSON_ID2,
+  'first-name': 'Laura',
+  'last-name': 'Laudson'
+}
+
+PERSON2_RESULT = {
+  **PERSON1_RESULT,
+  **PERSON2
 }
 
 MEMBERSHIP1_RESULT = {
@@ -176,6 +189,11 @@ AUTHOR1 = {
   'author-person-id': PERSON_ID1
 }
 
+AUTHOR2 = {
+  **MANUSCRIPT_ID_FIELDS1,
+  'author-person-id': PERSON_ID2
+}
+
 STAGE_REVIEW_ACCEPTED = 'Reviewers Accept'
 STAGE_REVIEW_COMPLETE = 'Review Received'
 
@@ -191,6 +209,11 @@ POTENTIAL_REVIEWER1 = {
     'keyword': 1.0,
     'similarity': None
   }
+}
+
+POTENTIAL_REVIEWER2 = {
+  **POTENTIAL_REVIEWER1,
+  'person': PERSON2_RESULT
 }
 
 PP = pprint.PrettyPrinter(indent=2, width=40)
@@ -313,6 +336,56 @@ def test_matching_manuscript_should_return_draft_version_with_authors():
       'reviewers': []
     }]
   }
+
+def test_matching_manuscript_should_not_recommend_authors():
+  datasets = dict(DATASETS)
+  datasets['persons'] = pd.DataFrame([
+    PERSON1,
+    PERSON2
+  ], columns=PERSONS.columns)
+  datasets['manuscript-versions'] = pd.DataFrame([
+    MANUSCRIPT_VERSION1,
+    MANUSCRIPT_VERSION2
+  ], columns=MANUSCRIPT_VERSIONS.columns)
+  datasets['manuscript-keywords'] = pd.DataFrame([
+    MANUSCRIPT_KEYWORD1,
+    {
+      **MANUSCRIPT_KEYWORD1,
+      **MANUSCRIPT_ID_FIELDS2
+    }
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
+  datasets['authors'] = pd.DataFrame([
+    AUTHOR1,
+    {
+      **AUTHOR1,
+      **MANUSCRIPT_ID_FIELDS2
+    },
+    {
+      **AUTHOR2,
+      **MANUSCRIPT_ID_FIELDS2
+    }
+  ], columns=AUTHORS.columns)
+  recommend_reviewers = RecommendReviewers(datasets)
+  result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
+  print("result:", PP.pformat(result))
+  recommended_person_ids = [r['person']['person-id'] for r in result['potential-reviewers']]
+  assert recommended_person_ids == [PERSON_ID2]
+  # assert result == {
+  #   'potential-reviewers': [{
+  #     **POTENTIAL_REVIEWER2,
+  #     'author-of-manuscripts': [{
+  #       **MANUSCRIPT_VERSION2_RESULT,
+  #       'authors': [PERSON1_RESULT, PERSON2_RESULT],
+  #       'reviewers': []
+  #     }],
+  #     'reviewer-of-manuscripts': []      
+  #   }],
+  #   'matching-manuscripts': [{
+  #     **MANUSCRIPT_VERSION1_RESULT,
+  #     'authors': [],
+  #     'reviewers': []
+  #   }]
+  # }
 
 def test_matching_one_keyword_author():
   datasets = dict(DATASETS)
