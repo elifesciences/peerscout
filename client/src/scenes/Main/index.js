@@ -326,7 +326,7 @@ const ManuscriptSummary = ({
   <Card style={ styles.manuscriptSummary.container } initiallyExpanded={ true }>
     <CardHeader
       title={ quote(title) }
-      subtitle={ `${manuscriptNo} (v${versionNo})` }
+      subtitle={ `${manuscriptNo} v${versionNo}` }
       actAsExpander={ true }
       showExpandableButton={ true }
     />
