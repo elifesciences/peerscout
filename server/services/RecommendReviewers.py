@@ -193,6 +193,12 @@ def add_manuscript_version_id(df):
     df[VERSION_NO].map(str), sep='-')
   return df
 
+def select_dict_keys(d, keys):
+  return { k: d[k] for k in keys }
+
+def manuscript_id_fields(manuscript):
+  return select_dict_keys(manuscript, MANUSCRIPT_ID_COLUMNS)
+
 class RecommendReviewers(object):
   def __init__(self, datasets):
     self.manuscript_versions_all_df = add_manuscript_version_id(
@@ -505,15 +511,35 @@ class RecommendReviewers(object):
       author_of_manuscripts = self.manuscripts_by_author_map.get(person_id, [])
       reviewer_of_manuscripts = self.manuscripts_by_reviewer_map.get(person_id, [])
       involved_manuscripts = author_of_manuscripts + reviewer_of_manuscripts
+
       total_keyword_match_count = float(sum([
         keyword_match_count_by_by_version_key_map.get(manuscript[MANUSCRIPT_VERSION_ID], 0)
         for manuscript in involved_manuscripts
       ]))
+
       max_similarity = null_to_none(similar_manuscripts[
         similar_manuscripts[MANUSCRIPT_VERSION_ID].isin(
           [m[MANUSCRIPT_VERSION_ID] for m in involved_manuscripts]
         )
-      ]['similarity'].max())
+      ][SIMILARITY_COLUMN].max())
+
+      similarity_by_manuscript_version_id = similar_manuscripts[
+        similar_manuscripts[MANUSCRIPT_VERSION_ID].isin(
+          [m[MANUSCRIPT_VERSION_ID] for m in involved_manuscripts]
+        )
+      ].set_index(MANUSCRIPT_VERSION_ID)[SIMILARITY_COLUMN].to_dict()
+
+      scores_by_manuscript = [
+        {
+          **manuscript_id_fields(manuscript),
+          'keyword': keyword_match_count_by_by_version_key_map.get(
+            manuscript[MANUSCRIPT_VERSION_ID], 0) / len(keyword_list),
+          'similarity': similarity_by_manuscript_version_id.get(
+            manuscript[MANUSCRIPT_VERSION_ID], None)
+        }
+        for manuscript in involved_manuscripts
+      ]
+
       if len(keyword_list) > 0:
         total_keyword_match_count = total_keyword_match_count / len(keyword_list)
 
@@ -523,7 +549,8 @@ class RecommendReviewers(object):
         'reviewer-of-manuscripts': reviewer_of_manuscripts,
         'scores': {
           'keyword': total_keyword_match_count,
-          'similarity': max_similarity
+          'similarity': max_similarity,
+          'by-manuscript': scores_by_manuscript
         }
       }
 

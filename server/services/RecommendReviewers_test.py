@@ -207,7 +207,12 @@ POTENTIAL_REVIEWER1 = {
   'person': PERSON1_RESULT,
   'scores': {
     'keyword': 1.0,
-    'similarity': None
+    'similarity': None,
+    'by-manuscript': [{
+      **MANUSCRIPT_ID_FIELDS1,
+      'keyword': 1.0,
+      'similarity': None
+    }]
   }
 }
 

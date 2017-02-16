@@ -25,7 +25,7 @@ import {
   View
 } from '../../components';
 
-import { range } from '../../utils';
+import { range, groupBy } from '../../utils';
 
 const KEY_NAME = 'mrkvy_file';
 const KEY_DATA = 'mrkvy_data';
@@ -171,12 +171,28 @@ const ManuscriptTooltipContent = ({ manuscript: { title, abstract } }) => (
   </View>
 )
 
-const ManuscriptInlineSummary = ({ manuscript }) => (
+const formatManuscriptId = manuscript =>
+  `${manuscript['manuscript-no']} v${manuscript['version-no']}`
+
+const formatKeywordScoreInline = keyword =>
+  keyword ? keyword + ' keyword match' : '';
+
+const formatSimilarityScoreInline = similarity =>
+  similarity ? similarity.toFixed(2) + ' similarity' : '';
+
+const formatScoresInline = ({ keyword, similarity }) =>
+  [
+    formatKeywordScoreInline(keyword),
+    formatSimilarityScoreInline(similarity)
+  ].filter(s => !!s).join(', ');
+
+const ManuscriptInlineSummary = ({ manuscript, scores = {} }) => (
   <View style={ styles.inlineContainer }>
     <TooltipWrapper content={ <ManuscriptTooltipContent manuscript={ manuscript}/> } style={ styles.inlineContainer }>
       <Text>{ quote(manuscript['title']) }</Text>
     </TooltipWrapper>
-    <Text>{ ` (${manuscript['manuscript-no']} v${manuscript['version-no']})` }</Text>
+    <Text>{ ` (${formatManuscriptId(manuscript)})` }</Text>
+    <Text>{ ` - ${formatScoresInline(scores)}` }</Text>
   </View>
 );
 
@@ -216,6 +232,7 @@ const PotentialReviewer = ({
     scores
   }
 }) => {
+  const manuscriptScoresByManuscriptNo = groupBy(scores['by-manuscript'] || [], s => s['manuscript-no']);
   return (
     <Card style={ styles.potentialReviewer.card }>
       <CardHeader
@@ -272,7 +289,11 @@ const PotentialReviewer = ({
             <FlexColumn>
               {
                 authorOfManuscripts && authorOfManuscripts.map((manuscript, index) => (
-                  <ManuscriptInlineSummary key={ index } manuscript={ manuscript }/>
+                  <ManuscriptInlineSummary
+                    key={ index }
+                    manuscript={ manuscript }
+                    scores={ manuscriptScoresByManuscriptNo[manuscript['manuscript-no']] }
+                  />
                 ))
               }
             </FlexColumn>
@@ -284,7 +305,11 @@ const PotentialReviewer = ({
             <FlexColumn>
               {
                 reviewerOfManuscripts && reviewerOfManuscripts.map((manuscript, index) => (
-                  <ManuscriptInlineSummary key={ index } manuscript={ manuscript }/>
+                  <ManuscriptInlineSummary
+                    key={ index }
+                    manuscript={ manuscript }
+                    scores={ manuscriptScoresByManuscriptNo[manuscript['manuscript-no']] }
+                  />
                 ))
               }
             </FlexColumn>
