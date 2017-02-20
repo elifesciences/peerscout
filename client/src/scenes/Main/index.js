@@ -264,13 +264,22 @@ const Membership = ({ membership }) => {
     );
   }
   return (
-    <Link
-      style={ styles.membershipLink }
-      target="_blank"
-      href={ `http://orcid.org/${membership['member-id']}` }
-    >
-      <Text>ORCID</Text>
-    </Link>
+    <View style={ styles.inlineContainer }>
+      <Link
+        style={ styles.membershipLink }
+        target="_blank"
+        href={ `http://orcid.org/${membership['member-id']}` }
+      >
+        <Text>ORCID</Text>
+      </Link>
+      <Link
+        style={ styles.membershipLink }
+        target="_blank"
+        href={ `http://search.crossref.org/?q=${membership['member-id']}` }
+      >
+        <Text>Crossref</Text>
+      </Link>
+    </View>
   );
 };
 
