@@ -209,8 +209,8 @@ def main():
       table_names.add(table_name)
   tables = dict((table_name, TableOutput(name=table_name)) for table_name in table_names)
 
-  process_file = lambda filename, content:\
-    convert_xml_file_contents(filename, content, tables)
+  process_file = lambda filename, stream:\
+    convert_xml_file_contents(filename, stream, tables)
 
   # csv_path = "csv-small"
   # source = "../local"
