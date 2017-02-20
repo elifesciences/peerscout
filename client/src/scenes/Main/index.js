@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardText,
   Chip,
+  Comment,
   FlatButton,
   FileInput,
   FontAwesomeIcon,
@@ -159,7 +160,7 @@ const combinedPersonName = person =>
     person['first-name'],
     person['middle-name'],
     person['last-name'],
-    `(${person['person-id']}/${person['status']})`
+    `(${person['status']})`
   ].filter(s => !!s).join(' ');
 
 const quote = s => s && `\u201c${s}\u201d`
@@ -235,6 +236,7 @@ const PotentialReviewer = ({
   const manuscriptScoresByManuscriptNo = groupBy(scores['by-manuscript'] || [], s => s['manuscript-no']);
   return (
     <Card style={ styles.potentialReviewer.card }>
+      <Comment text={ `Person id: ${person['person-id']}` }/>
       <CardHeader
         title={ combinedPersonName(person) }
         subtitle={ person['institution'] }
