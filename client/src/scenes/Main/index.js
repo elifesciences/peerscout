@@ -32,6 +32,13 @@ const KEY_NAME = 'mrkvy_file';
 const KEY_DATA = 'mrkvy_data';
 const KEY_SETTINGS = 'mrkvy_settings';
 
+const commonStyles = {
+  link: {
+    textDecoration: 'none',
+    cursor: 'hand'
+  }
+}
+
 const styles = {
   card: {
     marginBottom: 20
@@ -79,10 +86,6 @@ const styles = {
   },
   paragraph: {
     marginBottom: 10
-  },
-  link: {
-    textDecoration: 'none',
-    cursor: 'hand'
   },
   potentialReviewer: {
     container: {
@@ -137,6 +140,15 @@ const styles = {
   flexColumn: {
     display: 'flex',
     flexDirection: 'column'
+  },
+  unrecognisedMembership: {
+    display: 'inline-block',
+    marginLeft: 10
+  },
+  membershipLink: {
+    ...commonStyles.link,
+    display: 'inline-block',
+    marginLeft: 10
   }
 }
 
@@ -206,12 +218,14 @@ const PersonInlineSummary = ({ person }) => (
 const Membership = ({ membership }) => {
   if (membership['member-type'] != 'ORCID') {
     return (
-      <Text>{ `${membership['member-type']}: ${membership['member-id']}` }</Text>
+      <Text style={ styles.unrecognisedMembership }>
+        { `${membership['member-type']}: ${membership['member-id']}` }
+      </Text>
     );
   }
   return (
     <Link
-      style={ styles.link }
+      style={ styles.membershipLink }
       target="_blank"
       href={ `http://orcid.org/${membership['member-id']}` }
     >
@@ -234,25 +248,24 @@ const PotentialReviewer = ({
   }
 }) => {
   const manuscriptScoresByManuscriptNo = groupBy(scores['by-manuscript'] || [], s => s['manuscript-no']);
+  const titleComponent = (
+    <View style={ styles.inlineContainer }>
+      <Text>{ combinedPersonName(person) }</Text>
+      {
+        person.memberships && person.memberships.map((membership, index) => (
+          <Membership key={ index } membership={ membership }/>
+        ))
+      }
+    </View>
+  )
   return (
     <Card style={ styles.potentialReviewer.card }>
       <Comment text={ `Person id: ${person['person-id']}` }/>
       <CardHeader
-        title={ combinedPersonName(person) }
+        title={ titleComponent }
         subtitle={ person['institution'] }
       />
       <CardText>
-        {
-          person.memberships && (
-            <View style={ styles.potentialReviewer.subSection }>
-              {
-                person.memberships && person.memberships.map((membership, index) => (
-                  <Membership key={ index } membership={ membership }/>
-                ))
-              }
-            </View>
-          )
-        }
         {
           person['dates-not-available'] && person['dates-not-available'].length > 0 && (
             <View style={ styles.potentialReviewer.subSection }>
