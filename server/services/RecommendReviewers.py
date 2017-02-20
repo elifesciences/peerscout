@@ -249,6 +249,7 @@ class RecommendReviewers(object):
     print("valid docvecs:", len(self.abstract_docvecs_df))
 
     self.persons_df = datasets["persons"].copy()
+    early_career_reviewers_df = datasets["early-career-reviewers"]
     memberships_df = datasets["person-memberships"].rename(columns={
       'person-key': PERSON_ID
     })
@@ -277,6 +278,7 @@ class RecommendReviewers(object):
 
     temp_memberships_map = groupby_column_to_dict(memberships_df, PERSON_ID)
     dates_not_available_map = groupby_column_to_dict(dates_not_available_df, PERSON_ID)
+    early_career_reviewers_person_ids = set(early_career_reviewers_df[PERSON_ID].values)
 
     stage_pivot = create_stage_pivot(self.manuscript_history_all_df)
     review_durations_map = duration_stats_between_by_person(
@@ -289,6 +291,7 @@ class RecommendReviewers(object):
 
     persons_list = [{
       **person,
+      'is-early-career-reviewer': person['person-id'] in early_career_reviewers_person_ids,
       'memberships': temp_memberships_map.get(person['person-id'], []),
       'dates-not-available': dates_not_available_map.get(person['person-id'], []),
       'stats': {

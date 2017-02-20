@@ -172,6 +172,7 @@ const combinedPersonName = person =>
     person['first-name'],
     person['middle-name'],
     person['last-name'],
+    person['is-early-career-reviewer'] ? '(ECR)': undefined,
     person['status'] !== 'Active' && `(${person['status']})`
   ].filter(s => !!s).join(' ');
 

@@ -24,6 +24,10 @@ PERSONS = pd.DataFrame(
   columns=PERSON_ID_COLUMNS + [
     'title', 'first-name', 'middle-name', 'last-name', 'institution', 'status'
   ])
+EARLY_CAREER_REVIEWERS = pd.DataFrame(
+  [],
+  columns=PERSON_ID_COLUMNS
+)
 PERSON_MEMBERSHIPS = pd.DataFrame(
   [],
   columns=PERSON_ID_COLUMNS + [
@@ -64,6 +68,7 @@ ABSTRACT_DOCVEC_DATASET = 'manuscript-abstracts-spacy-docvecs'
 DATASETS = {
   'authors': AUTHORS,
   'persons': PERSONS,
+  'early-career-reviewers': EARLY_CAREER_REVIEWERS,
   'person-memberships': PERSON_MEMBERSHIPS,
   'person-dates-not-available': PERSON_DATES_NOT_AVAILABLE,
   'manuscripts': MANUSCRIPTS,
@@ -86,6 +91,7 @@ PERSON1 = {
 
 PERSON1_RESULT = {
   **PERSON1,
+  'is-early-career-reviewer': False,
   'memberships': [],
   'dates-not-available': [],
   'stats': {
