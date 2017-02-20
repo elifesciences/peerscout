@@ -20,7 +20,7 @@ const api = baseUrl => {
     })
     .then(response => response.text())
     .then(text => text.replace(/NaN/g, null)) // TODO hack
-    .then(text => { console.log('text:', text); return text; })
+    // .then(text => { console.log('text:', text); return text; })
     .then(text => JSON.parse(text))
     // .then(response => response.json ? response.json() : response)
   };
