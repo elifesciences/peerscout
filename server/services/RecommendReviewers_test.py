@@ -185,25 +185,24 @@ MANUSCRIPT_VERSION1_RESULT = {
   **MANUSCRIPT_ID_FIELDS1,
   'title': MANUSCRIPT_TITLE1,
   'decision': DECISSION_ACCEPTED,
-  'manuscript-type': TYPE_RESEARCH_ARTICLE
+  'manuscript-type': TYPE_RESEARCH_ARTICLE,
+  'subject-areas': []
 }
 
 MANUSCRIPT_VERSION1 = MANUSCRIPT_VERSION1_RESULT
 
 MANUSCRIPT_VERSION2_RESULT = {
+  **MANUSCRIPT_VERSION1_RESULT,
   **MANUSCRIPT_ID_FIELDS2,
-  'title': MANUSCRIPT_TITLE2,
-  'decision': DECISSION_ACCEPTED,
-  'manuscript-type': TYPE_RESEARCH_ARTICLE
+  'title': MANUSCRIPT_TITLE2
 }
 
 MANUSCRIPT_VERSION2 = MANUSCRIPT_VERSION2_RESULT
 
 MANUSCRIPT_VERSION3_RESULT = {
+  **MANUSCRIPT_VERSION1_RESULT,
   **MANUSCRIPT_ID_FIELDS3,
-  'title': MANUSCRIPT_TITLE3,
-  'decision': DECISSION_ACCEPTED,
-  'manuscript-type': TYPE_RESEARCH_ARTICLE
+  'title': MANUSCRIPT_TITLE3
 }
 
 MANUSCRIPT_VERSION3 = MANUSCRIPT_VERSION3_RESULT
@@ -337,6 +336,26 @@ def test_matching_manuscript_should_return_manuscript_only_once():
       'reviewers': []
     }]
   }
+
+def test_matching_manuscript_should_include_subject_areas():
+  datasets = dict(DATASETS)
+  datasets['persons'] = pd.DataFrame([
+    PERSON1
+  ], columns=PERSONS.columns)
+  datasets['manuscript-versions'] = pd.DataFrame([
+    MANUSCRIPT_VERSION1
+  ], columns=MANUSCRIPT_VERSIONS.columns)
+  datasets['manuscript-keywords'] = pd.DataFrame([
+    MANUSCRIPT_KEYWORD1
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
+  datasets[SUBJECT_AREAS_DATASET] = pd.DataFrame([
+    MANUSCRIPT_SUBJECT_AREA1,
+    MANUSCRIPT_SUBJECT_AREA2
+  ], columns=MANUSCRIPT_SUBJECT_AREAS.columns)
+  recommend_reviewers = RecommendReviewers(datasets)
+  result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
+  subject_areas = result['matching-manuscripts'][0]['subject-areas']
+  assert subject_areas == [SUBJECT_AREA1, SUBJECT_AREA2]
 
 def test_matching_manuscript_with_docvecs():
   datasets = dict(DATASETS)

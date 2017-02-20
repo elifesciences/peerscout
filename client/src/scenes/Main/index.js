@@ -130,6 +130,17 @@ const styles = {
       fontWeight: 'bold'
     }
   },
+  tooltipContent: {
+    header: {
+      margin: 0
+    },
+    label: {
+      fontWeight: 'bold'
+    },
+    abstract: {
+      marginTop: 5
+    }
+  },
   inlineContainer: {
     display: 'inline-block'
   },
@@ -178,10 +189,18 @@ const combinedPersonName = person =>
 
 const quote = s => s && `\u201c${s}\u201d`
 
-const ManuscriptTooltipContent = ({ manuscript: { title, abstract } }) => (
+const ManuscriptTooltipContent = ({
+  manuscript: { title, abstract, 'subject-areas': subjectAreas }
+}) => (
   <View>
-    <HeaderTitle>{ title }</HeaderTitle>
-    <Text>{ abstract }</Text>
+    <HeaderTitle style={ styles.tooltipContent.header }>{ title }</HeaderTitle>
+    <View>
+      <Text style={ styles.tooltipContent.label }>{ 'Subject Areas: ' }</Text>
+      <Text>{ subjectAreas.join(', ')}</Text>
+    </View>
+    <View style={ styles.tooltipContent.abstract }>
+      <Text>{ abstract }</Text>
+    </View>
   </View>
 )
 
@@ -361,7 +380,8 @@ const ManuscriptSummary = ({
     'version-no': versionNo,
     abstract,
     authors,
-    reviewers
+    reviewers,
+    'subject-areas': subjectAreas
   }
 }) => (
   <Card style={ styles.manuscriptSummary.container } initiallyExpanded={ true }>
@@ -390,6 +410,10 @@ const ManuscriptSummary = ({
       </View>
     </CardText>
     <CardText expandable={ true }>
+      <View  style={ styles.manuscriptSummary.subSection }>
+        <Text style={ styles.manuscriptSummary.label }>Subject areas:</Text>
+        <Text>{ subjectAreas.join(', ') }</Text>
+      </View>
       <View  style={ styles.manuscriptSummary.subSection }>
         <FlexColumn>
           <Text style={ styles.manuscriptSummary.label }>Abstract:</Text>

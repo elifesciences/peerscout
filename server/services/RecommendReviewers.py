@@ -77,10 +77,14 @@ def groupby_columns_to_dict(groupby_keys, version_keys, vf):
 def filter_dict_keys(d, f):
   return {k: v for k, v in d.items() if f(k)}
 
-def groupby_column_to_dict(df, groupby_col):
+def groupby_column_to_dict(df, groupby_col, value_col=None):
+  if value_col is None:
+    value_f = lambda item: filter_dict_keys(item, lambda col: col != groupby_col)
+  else:
+    value_f = lambda item: item[value_col]
   a = df.to_dict(orient='records')
   return {
-    k: [filter_dict_keys(item, lambda col: col != groupby_col) for item in v]
+    k: [value_f(item) for item in v]
     for k, v in groupby(a, lambda item: item[groupby_col])
   }
 
@@ -328,6 +332,12 @@ class RecommendReviewers(object):
     debug("temp_authors_map:", temp_authors_map)
     debug("temp_reviewers_map:", temp_reviewers_map)
 
+    temp_subject_areas_map = groupby_column_to_dict(
+      self.manuscript_subject_areas_all_df,
+      MANUSCRIPT_VERSION_ID,
+      'subject-area'
+    )
+
     manuscripts_all_list = clean_result(
       self.manuscript_versions_all_df[
         MANUSCRIPT_ID_COLUMNS +\
@@ -337,7 +347,8 @@ class RecommendReviewers(object):
     manuscripts_all_list = [{
       **manuscript,
       'authors': temp_authors_map.get(manuscript[MANUSCRIPT_VERSION_ID], []),
-      'reviewers': temp_reviewers_map.get(manuscript[MANUSCRIPT_VERSION_ID], [])
+      'reviewers': temp_reviewers_map.get(manuscript[MANUSCRIPT_VERSION_ID], []),
+      'subject-areas': temp_subject_areas_map.get(manuscript[MANUSCRIPT_VERSION_ID], []),
     } for manuscript in manuscripts_all_list]
     self.manuscripts_by_version_id_map = dict((
       m[MANUSCRIPT_VERSION_ID], m) for m in manuscripts_all_list)
