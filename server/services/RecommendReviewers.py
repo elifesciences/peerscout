@@ -194,7 +194,7 @@ def add_manuscript_version_id(df):
   return df
 
 def select_dict_keys(d, keys):
-  return { k: d[k] for k in keys }
+  return {k: d[k] for k in keys}
 
 def manuscript_id_fields(manuscript):
   return select_dict_keys(manuscript, MANUSCRIPT_ID_COLUMNS)
