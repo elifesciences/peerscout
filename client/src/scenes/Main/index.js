@@ -160,6 +160,15 @@ const styles = {
     ...commonStyles.link,
     display: 'inline-block',
     marginLeft: 10
+  },
+  manuscriptInlineSummary: {
+    matchingSubjectAreas: {
+      display: 'inline-block'
+    },
+    notMatchingSubjectAreas: {
+      display: 'inline-block',
+      color: '#888'
+    }
   }
 }
 
@@ -219,8 +228,19 @@ const formatScoresInline = ({ keyword, similarity }) =>
     formatSimilarityScoreInline(similarity)
   ].filter(s => !!s).join(', ');
 
-const ManuscriptInlineSummary = ({ manuscript, scores = {} }) => (
-  <View style={ styles.inlineContainer }>
+const hasMatchingSubjectAreas = (manuscript, requestedSubjectAreas) =>
+  requestedSubjectAreas.length === 0 || !!manuscript['subject-areas'].filter(
+    subjectArea => requestedSubjectAreas.has(subjectArea)
+  )[0];
+
+const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectAreas }) => (
+  <View
+    style={
+      hasMatchingSubjectAreas(manuscript, requestedSubjectAreas) ?
+      styles.manuscriptInlineSummary.matchingSubjectAreas :
+      styles.manuscriptInlineSummary.notMatchingSubjectAreas
+    }
+  >
     <TooltipWrapper content={ <ManuscriptTooltipContent manuscript={ manuscript}/> } style={ styles.inlineContainer }>
       <Text>{ quote(manuscript['title']) }</Text>
     </TooltipWrapper>
@@ -265,7 +285,8 @@ const PotentialReviewer = ({
     'author-of-manuscripts': authorOfManuscripts = [],
     'reviewer-of-manuscripts': reviewerOfManuscripts = [],
     scores
-  }
+  },
+  requestedSubjectAreas
 }) => {
   const manuscriptScoresByManuscriptNo = groupBy(scores['by-manuscript'] || [], s => s['manuscript-no']);
   const titleComponent = (
@@ -277,7 +298,15 @@ const PotentialReviewer = ({
         ))
       }
     </View>
-  )
+  );
+  const renderManuscripts = manuscripts => manuscripts && manuscripts.map((manuscript, index) => (
+    <ManuscriptInlineSummary
+      key={ index }
+      manuscript={ manuscript }
+      scores={ manuscriptScoresByManuscriptNo[manuscript['manuscript-no']] }
+      requestedSubjectAreas={ requestedSubjectAreas }
+    />
+  ));
   return (
     <Card style={ styles.potentialReviewer.card }>
       <Comment text={ `Person id: ${person['person-id']}` }/>
@@ -322,15 +351,7 @@ const PotentialReviewer = ({
           <Text style={ styles.potentialReviewer.label }>Author of: </Text>
           <View style={ styles.potentialReviewer.value }>
             <FlexColumn>
-              {
-                authorOfManuscripts && authorOfManuscripts.map((manuscript, index) => (
-                  <ManuscriptInlineSummary
-                    key={ index }
-                    manuscript={ manuscript }
-                    scores={ manuscriptScoresByManuscriptNo[manuscript['manuscript-no']] }
-                  />
-                ))
-              }
+              { renderManuscripts(authorOfManuscripts) }
             </FlexColumn>
           </View>
         </View>
@@ -338,15 +359,7 @@ const PotentialReviewer = ({
           <Text style={ styles.potentialReviewer.label }>Reviewer of: </Text>
           <View style={ styles.potentialReviewer.value }>
             <FlexColumn>
-              {
-                reviewerOfManuscripts && reviewerOfManuscripts.map((manuscript, index) => (
-                  <ManuscriptInlineSummary
-                    key={ index }
-                    manuscript={ manuscript }
-                    scores={ manuscriptScoresByManuscriptNo[manuscript['manuscript-no']] }
-                  />
-                ))
-              }
+              { renderManuscripts(reviewerOfManuscripts) }
             </FlexColumn>
           </View>
         </View>
@@ -493,6 +506,18 @@ class Main extends React.Component {
     this.setState(state);
   }
 
+  extractAllSubjectAreas(manuscripts) {
+    const subjectAreas = new Set();
+    if (manuscripts) {
+      manuscripts.forEach(m => {
+        m['subject-areas'].forEach(subjectArea => {
+          subjectAreas.add(subjectArea);
+        })
+      });
+    };
+    return subjectAreas;
+  }
+
   render() {
     const {
       loading,
@@ -501,6 +526,7 @@ class Main extends React.Component {
     } = this.state;
     const { manuscriptNumber, keywords } = searchOptions;
     const { potentialReviewers = [], matchingManuscripts = [] } = results;
+    const requestedSubjectAreas = this.extractAllSubjectAreas(matchingManuscripts);
     return (
       <View>
         <Card style={ styles.card } initiallyExpanded={ true }>
@@ -554,6 +580,7 @@ class Main extends React.Component {
                     <PotentialReviewer
                       key={ index }
                       potentialReviewer={ potentialReviewer }
+                      requestedSubjectAreas={ requestedSubjectAreas }
                     />
                   ))
                 }
