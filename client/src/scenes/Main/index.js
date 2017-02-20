@@ -273,9 +273,9 @@ const PotentialReviewer = ({
                 {
                   person.stats['review-duration-12m'] && (
                     <Text>
-                      { `, ${person.stats['review-duration-12m']['mean'].toFixed(1)} days
-                        or ${person.stats['review-duration-12m']['count']}
-                        reviews within the last 12 months` }
+                      { `, with ${person.stats['review-duration-12m']['count']}
+                        review(s) within the last 12 months
+                        (avg ${person.stats['review-duration-12m']['mean'].toFixed(1)} days)` }
                     </Text>
                   )
                 }
