@@ -49,6 +49,9 @@ MANUSCRIPT_VERSIONS = pd.DataFrame(
 MANUSCRIPT_KEYWORDS = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + ['sequence', 'word'])
+MANUSCRIPT_SUBJECT_AREAS = pd.DataFrame(
+  [],
+  columns=MANUSCRIPT_ID_COLUMNS + ['subject-area'])
 MANUSCRIPT_HISTORY = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + ['stage-affective-person-id', 'stage-name', 'start-date'])
@@ -64,6 +67,7 @@ CONTENT_DOCVECS = pd.DataFrame(
   columns=MANUSCRIPT_ID_COLUMNS + ['content-spacy-docvecs'])
 
 ABSTRACT_DOCVEC_DATASET = 'manuscript-abstracts-spacy-docvecs'
+SUBJECT_AREAS_DATASET = 'manuscript-themes'
 
 DATASETS = {
   'authors': AUTHORS,
@@ -74,6 +78,7 @@ DATASETS = {
   'manuscripts': MANUSCRIPTS,
   'manuscript-versions': MANUSCRIPT_VERSIONS,
   'manuscript-keywords': MANUSCRIPT_KEYWORDS,
+  SUBJECT_AREAS_DATASET: MANUSCRIPT_SUBJECT_AREAS,
   'manuscript-history': MANUSCRIPT_HISTORY,
   ABSTRACT_DOCVEC_DATASET: ABSTRACT_DOCVECS,
   'article-content-spacy-docvecs': CONTENT_DOCVECS
@@ -81,6 +86,7 @@ DATASETS = {
 
 PERSON_ID1 = 'person1'
 PERSON_ID2 = 'person2'
+PERSON_ID3 = 'person3'
 
 PERSON1 = {
   'person-id': PERSON_ID1,
@@ -112,6 +118,18 @@ PERSON2_RESULT = {
   **PERSON2
 }
 
+PERSON3 = {
+  **PERSON1,
+  'person-id': PERSON_ID3,
+  'first-name': 'Mike',
+  'last-name': 'Michelson'
+}
+
+PERSON3_RESULT = {
+  **PERSON1_RESULT,
+  **PERSON3
+}
+
 MEMBERSHIP1_RESULT = {
   'member-type': 'memberme',
   'member-id': '12345'
@@ -135,6 +153,11 @@ VERSION_NO2 = 2
 MANUSCRIPT_VERSION_ID2 = version_id(MANUSCRIPT_NO2, VERSION_NO2)
 MANUSCRIPT_TITLE2 = 'Manuscript Title2'
 
+MANUSCRIPT_NO3 = '33333'
+VERSION_NO3 = 3
+MANUSCRIPT_VERSION_ID3 = version_id(MANUSCRIPT_NO3, VERSION_NO3)
+MANUSCRIPT_TITLE3 = 'Manuscript Title3'
+
 MANUSCRIPT_ID_FIELDS1 = {
   MANUSCRIPT_NO: MANUSCRIPT_NO1,
   VERSION_NO: VERSION_NO1,
@@ -145,6 +168,12 @@ MANUSCRIPT_ID_FIELDS2 = {
   MANUSCRIPT_NO: MANUSCRIPT_NO2,
   VERSION_NO: VERSION_NO2,
   MANUSCRIPT_VERSION_ID: MANUSCRIPT_VERSION_ID2
+}
+
+MANUSCRIPT_ID_FIELDS3 = {
+  MANUSCRIPT_NO: MANUSCRIPT_NO3,
+  VERSION_NO: VERSION_NO3,
+  MANUSCRIPT_VERSION_ID: MANUSCRIPT_VERSION_ID3
 }
 
 DECISSION_ACCEPTED = 'Accept Full Submission'
@@ -170,11 +199,33 @@ MANUSCRIPT_VERSION2_RESULT = {
 
 MANUSCRIPT_VERSION2 = MANUSCRIPT_VERSION2_RESULT
 
+MANUSCRIPT_VERSION3_RESULT = {
+  **MANUSCRIPT_ID_FIELDS3,
+  'title': MANUSCRIPT_TITLE3,
+  'decision': DECISSION_ACCEPTED,
+  'manuscript-type': TYPE_RESEARCH_ARTICLE
+}
+
+MANUSCRIPT_VERSION3 = MANUSCRIPT_VERSION3_RESULT
+
 KEYWORD1 = 'keyword1'
 
 MANUSCRIPT_KEYWORD1 = {
   **MANUSCRIPT_ID_FIELDS1,
   'word': KEYWORD1
+}
+
+SUBJECT_AREA1 = 'subject area1'
+SUBJECT_AREA2 = 'subject area2'
+
+MANUSCRIPT_SUBJECT_AREA1 = {
+  **MANUSCRIPT_ID_FIELDS1,
+  'subject-area': SUBJECT_AREA1
+}
+
+MANUSCRIPT_SUBJECT_AREA2 = {
+  **MANUSCRIPT_ID_FIELDS1,
+  'subject-area': SUBJECT_AREA2
 }
 
 DOCVEC1 = [1, 1]
@@ -198,6 +249,11 @@ AUTHOR1 = {
 AUTHOR2 = {
   **MANUSCRIPT_ID_FIELDS1,
   'author-person-id': PERSON_ID2
+}
+
+AUTHOR3 = {
+  **MANUSCRIPT_ID_FIELDS1,
+  'author-person-id': PERSON_ID3
 }
 
 STAGE_REVIEW_ACCEPTED = 'Reviewers Accept'
@@ -348,7 +404,7 @@ def test_matching_manuscript_should_return_draft_version_with_authors():
     }]
   }
 
-def test_matching_manuscript_should_not_recommend_authors():
+def test_matching_manuscript_should_not_recommend_its_authors():
   datasets = dict(DATASETS)
   datasets['persons'] = pd.DataFrame([
     PERSON1,
@@ -381,22 +437,57 @@ def test_matching_manuscript_should_not_recommend_authors():
   print("result:", PP.pformat(result))
   recommended_person_ids = [r['person']['person-id'] for r in result['potential-reviewers']]
   assert recommended_person_ids == [PERSON_ID2]
-  # assert result == {
-  #   'potential-reviewers': [{
-  #     **POTENTIAL_REVIEWER2,
-  #     'author-of-manuscripts': [{
-  #       **MANUSCRIPT_VERSION2_RESULT,
-  #       'authors': [PERSON1_RESULT, PERSON2_RESULT],
-  #       'reviewers': []
-  #     }],
-  #     'reviewer-of-manuscripts': []      
-  #   }],
-  #   'matching-manuscripts': [{
-  #     **MANUSCRIPT_VERSION1_RESULT,
-  #     'authors': [],
-  #     'reviewers': []
-  #   }]
-  # }
+
+def test_matching_manuscript_should_only_recommend_authors_of_matching_subject_areas():
+  datasets = dict(DATASETS)
+  datasets['persons'] = pd.DataFrame([
+    PERSON1,
+    PERSON2,
+    PERSON3
+  ], columns=PERSONS.columns)
+  datasets['manuscript-versions'] = pd.DataFrame([
+    MANUSCRIPT_VERSION1,
+    MANUSCRIPT_VERSION2,
+    MANUSCRIPT_VERSION3
+  ], columns=MANUSCRIPT_VERSIONS.columns)
+  datasets['manuscript-keywords'] = pd.DataFrame([
+    MANUSCRIPT_KEYWORD1,
+    {
+      **MANUSCRIPT_KEYWORD1,
+      **MANUSCRIPT_ID_FIELDS2
+    },
+    {
+      **MANUSCRIPT_KEYWORD1,
+      **MANUSCRIPT_ID_FIELDS3
+    }
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
+  datasets[SUBJECT_AREAS_DATASET] = pd.DataFrame([
+    MANUSCRIPT_SUBJECT_AREA1,
+    {
+      **MANUSCRIPT_SUBJECT_AREA2,
+      **MANUSCRIPT_ID_FIELDS2
+    },
+    {
+      **MANUSCRIPT_SUBJECT_AREA1,
+      **MANUSCRIPT_ID_FIELDS3
+    }
+  ], columns=MANUSCRIPT_SUBJECT_AREAS.columns)
+  datasets['authors'] = pd.DataFrame([
+    AUTHOR1,
+    {
+      **AUTHOR2,
+      **MANUSCRIPT_ID_FIELDS2
+    },
+    {
+      **AUTHOR3,
+      **MANUSCRIPT_ID_FIELDS3
+    }
+  ], columns=AUTHORS.columns)
+  recommend_reviewers = RecommendReviewers(datasets)
+  result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
+  print("result:", PP.pformat(result))
+  recommended_person_ids = [r['person']['person-id'] for r in result['potential-reviewers']]
+  assert recommended_person_ids == [PERSON_ID3]
 
 def test_matching_one_keyword_author():
   datasets = dict(DATASETS)

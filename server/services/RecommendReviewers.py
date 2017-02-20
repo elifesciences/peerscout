@@ -238,6 +238,16 @@ class RecommendReviewers(object):
       valid_version_ids
     )
 
+    self.manuscript_subject_areas_all_df = add_manuscript_version_id(
+      datasets['manuscript-themes']
+      .rename(columns={'theme': 'subject-area'})
+    )
+    self.manuscript_subject_areas_df = filter_by(
+      self.manuscript_subject_areas_all_df,
+      MANUSCRIPT_VERSION_ID,
+      valid_version_ids
+    )
+
     self.abstract_docvecs_all_df = add_manuscript_version_id(
       datasets["manuscript-abstracts-spacy-docvecs"]\
       .rename(columns={'abstract-spacy-docvecs': ABSTRACT_DOCVEC_COLUMN}).dropna())
@@ -449,9 +459,25 @@ class RecommendReviewers(object):
     ]
     return similarity
 
+  def _filter_manuscripts_by_subject_areas(self, manuscripts_df, subject_areas):
+    df = manuscripts_df.merge(
+      self.manuscript_subject_areas_df,
+      how='inner',
+      on=MANUSCRIPT_VERSION_ID
+    )[[MANUSCRIPT_VERSION_ID, 'subject-area']]
+    df = df[
+      df['subject-area'].isin(subject_areas)
+    ]
+    return manuscripts_df[
+      manuscripts_df[MANUSCRIPT_VERSION_ID].isin(
+        df[MANUSCRIPT_VERSION_ID]
+      )
+    ]
+
   def recommend(self, keywords, manuscript_no):
     keyword_list = self.__parse_keywords(keywords)
     exclude_person_ids = set()
+    subject_areas = set()
     matching_manuscripts_dicts = []
     if manuscript_no is not None and manuscript_no != '':
       matching_manuscripts = self.__find_manuscripts_by_key(manuscript_no)
@@ -462,6 +488,12 @@ class RecommendReviewers(object):
         self.manuscripts_by_version_id_map
       )
       keyword_list += list(manuscript_keywords.values)
+      subject_areas = set(self.manuscript_subject_areas_all_df[
+        self.manuscript_subject_areas_all_df[MANUSCRIPT_VERSION_ID].isin(
+          matching_manuscripts[MANUSCRIPT_VERSION_ID]
+        )
+      ]['subject-area'])
+      print("subject_areas:", subject_areas)
       authors = flatten([m['authors'] for m in matching_manuscripts_dicts])
       author_ids = [a[PERSON_ID] for a in authors]
       exclude_person_ids |= set(author_ids)
@@ -471,10 +503,17 @@ class RecommendReviewers(object):
     other_manuscripts = self.__find_manuscripts_by_keywords(
       keyword_list
     )
-    print("other_manuscripts:", other_manuscripts)
+    if len(subject_areas) > 0:
+      other_manuscripts = self._filter_manuscripts_by_subject_areas(
+        other_manuscripts, subject_areas
+      )
     similar_manuscripts = self.__find_similar_manuscripts(
       matching_manuscripts[MANUSCRIPT_VERSION_ID]
     )
+    if len(subject_areas) > 0:
+      similar_manuscripts = self._filter_manuscripts_by_subject_areas(
+        similar_manuscripts, subject_areas
+      )
     similarity_threshold = 0.5
     max_similarity_count = 50
     most_similar_manuscripts = similar_manuscripts[
