@@ -160,7 +160,7 @@ const combinedPersonName = person =>
     person['first-name'],
     person['middle-name'],
     person['last-name'],
-    `(${person['status']})`
+    person['status'] !== 'Active' && `(${person['status']})`
   ].filter(s => !!s).join(' ');
 
 const quote = s => s && `\u201c${s}\u201d`
