@@ -365,22 +365,6 @@ class RecommendReviewers(object):
           self.manuscripts_by_reviewer_map.setdefault(reviewer[PERSON_ID], [])\
           .append(m)
 
-    # manuscripts_by_columns = lambda groupby_keys, version_keys:\
-    #   groupby_columns_to_dict(
-    #     groupby_keys, version_keys,
-    #     lambda version_key: self.manuscripts_by_version_key_map.get(version_key, None)
-    #   )
-
-    # self.manuscripts_by_author_map = manuscripts_by_columns(
-    #   self.authors_df['author-person-id'].values,
-    #   self.authors_df[VERSION_KEY].values
-    # )
-
-    # self.manuscripts_by_reviewer_map = manuscripts_by_columns(
-    #   self.manuscript_history_review_received_df['stage-affective-person-id'].values,
-    #   self.manuscript_history_review_received_df[VERSION_KEY].values
-    # )
-
   def __find_manuscripts_by_keywords(self, keywords, manuscript_no=None):
     other_manuscripts = self.manuscript_keywords_df[
       self.manuscript_keywords_df['word'].isin(keywords)
