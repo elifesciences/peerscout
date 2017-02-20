@@ -8,24 +8,36 @@ from tqdm import tqdm
 # Prerequisites:
 # * Credentials setup in user profile
 
-bucket_name = "elife-ejp-ftp-db-xml-dump"
+def download_objects(client, obj_list, download_path):
+  makedirs(download_path, exist_ok=True)
 
-s3 = boto3.resource('s3')
+  pbar = tqdm(list(obj_list), leave=False)
+  for obj in pbar:
+    remote_file = obj.key
+    pbar.set_description("%40s" % shorten(remote_file, width=40))
+    local_file = download_path + '/' + remote_file
+    if not isfile(local_file):
+      client.download_file(obj.bucket_name, remote_file, local_file)
 
-client = boto3.client('s3')
 
-bucket = s3.Bucket(bucket_name)
+def main():
+  s3 = boto3.resource('s3')
 
-download_path = "../downloads"
+  client = boto3.client('s3')
 
-makedirs(download_path, exist_ok=True)
+  download_objects(
+    client,
+    s3.Bucket("elife-ejp-ftp-db-xml-dump").objects.all(),
+    "../downloads")
 
-pbar = tqdm(list(bucket.objects.all()), leave=False)
-for obj in pbar:
-  remote_file = obj.key
-  pbar.set_description("%40s" % shorten(remote_file, width=40))
-  local_file = download_path + '/' + remote_file
-  if not isfile(local_file):
-    client.download_file(bucket_name, remote_file, local_file)
+  download_objects(
+    client,
+    s3.Bucket("elife-ejp-ftp").objects.filter(
+      Prefix="ejp_query_tool_query_id_380_DataScience:_Early_Career_Researchers"
+    ),
+    "../downloads-ftp")
 
-print("Done")
+  print("Done")
+
+if __name__ == "__main__":
+  main()
