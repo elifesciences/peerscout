@@ -392,13 +392,39 @@ const extractAllSubjectAreas = manuscripts => {
   return subjectAreas;
 }
 
+const filterReviewsByEarlyCareerReviewerStatus = (potentialReviewers, earlyCareerReviewer) =>
+  potentialReviewers.filter(potentialReviewer =>
+    potentialReviewer.person['is-early-career-reviewer'] === earlyCareerReviewer
+  );
+
+const shufflePotentialReviewers = potentialReviewers => {
+  const nonEarlyCareerReviewers = filterReviewsByEarlyCareerReviewerStatus(
+    potentialReviewers, false
+  );
+  const earlyCareerReviewers = filterReviewsByEarlyCareerReviewerStatus(
+    potentialReviewers, true
+  );
+  const maxLength = Math.max(nonEarlyCareerReviewers.length, earlyCareerReviewers.length);
+  const result = [];
+  for (let i = 0; i < maxLength; i++) {
+    if (nonEarlyCareerReviewers[i]) {
+      result.push(nonEarlyCareerReviewers[i]);
+    }
+    if (earlyCareerReviewers[i]) {
+      result.push(earlyCareerReviewers[i]);
+    }
+  }
+  return result;
+}
+
 const SearchResult = ({ searchResult }) => {
   const { potentialReviewers = [], matchingManuscripts = [] } = searchResult;
   const requestedSubjectAreas = extractAllSubjectAreas(matchingManuscripts);
+  const sortedPotentialReviewers = shufflePotentialReviewers(potentialReviewers);
   return (
     <View>
       {
-        matchingManuscripts && matchingManuscripts.map((matchingManuscript, index) => (
+        matchingManuscripts.map((matchingManuscript, index) => (
           <ManuscriptSummary
             key={ index }
             manuscript={ matchingManuscript }
@@ -406,7 +432,7 @@ const SearchResult = ({ searchResult }) => {
         ))
       }
       {
-        potentialReviewers && potentialReviewers.map((potentialReviewer, index) => (
+        sortedPotentialReviewers.map((potentialReviewer, index) => (
           <PotentialReviewer
             key={ index }
             potentialReviewer={ potentialReviewer }
