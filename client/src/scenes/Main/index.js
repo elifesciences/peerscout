@@ -580,7 +580,7 @@ class Main extends React.Component {
     return (
       <View>
         <Headroom>
-          <Paper>
+          <Paper style={{ overflow: 'hidden' }}>
             <View style={ styles.header }>
               <FlexRow>
                 <View style={ styles.inlineContainer }>
