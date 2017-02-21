@@ -607,37 +607,27 @@ class Main extends React.Component {
           </Paper>
         </Headroom>
         <View style={ styles.containerWithMargin }>
-          <Card style={ styles.card } initiallyExpanded={ true }>
-            <CardHeader
-              style={ styles.cardHeader }
-              title="Results"
-              actAsExpander={ true }
-              showExpandableButton={ true }
-            />
-            <CardText expandable={ true }>
-              <LoadingIndicator loading={ loading }>
-                <View>
-                  {
-                    matchingManuscripts && matchingManuscripts.map((matchingManuscript, index) => (
-                      <ManuscriptSummary
-                        key={ index }
-                        manuscript={ matchingManuscript }
-                      />
-                    ))
-                  }
-                  {
-                    potentialReviewers && potentialReviewers.map((potentialReviewer, index) => (
-                      <PotentialReviewer
-                        key={ index }
-                        potentialReviewer={ potentialReviewer }
-                        requestedSubjectAreas={ requestedSubjectAreas }
-                      />
-                    ))
-                  }
-                </View>
-              </LoadingIndicator>
-            </CardText>
-          </Card>
+          <LoadingIndicator loading={ loading }>
+            <View>
+              {
+                matchingManuscripts && matchingManuscripts.map((matchingManuscript, index) => (
+                  <ManuscriptSummary
+                    key={ index }
+                    manuscript={ matchingManuscript }
+                  />
+                ))
+              }
+              {
+                potentialReviewers && potentialReviewers.map((potentialReviewer, index) => (
+                  <PotentialReviewer
+                    key={ index }
+                    potentialReviewer={ potentialReviewer }
+                    requestedSubjectAreas={ requestedSubjectAreas }
+                  />
+                ))
+              }
+            </View>
+          </LoadingIndicator>
         </View>
       </View>
     );
