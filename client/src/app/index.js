@@ -7,6 +7,7 @@ import Root from './Root';
 import '../polyfills';
 
 import 'font-awesome/css/font-awesome.css';
+import '../styles/web.css';
 
 injectTapEventPlugin();
 

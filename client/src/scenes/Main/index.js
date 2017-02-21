@@ -2,6 +2,7 @@ import React from 'react';
 import { createSelector } from 'reselect';
 import debounce from 'debounce';
 import clipboard from 'clipboard-js';
+import Headroom from 'react-headroom';
 
 import {
   Card,
@@ -18,6 +19,7 @@ import {
   List,
   ListItem,
   LoadingIndicator,
+  Paper,
   Slider,
   Text,
   TextField,
@@ -56,7 +58,7 @@ const styles = {
     marginRight: 10
   },
   field: {
-    marginBottom: 10
+    marginLeft: 20
   },
   slider: {
     container: {
@@ -152,6 +154,10 @@ const styles = {
     display: 'flex',
     flexDirection: 'column'
   },
+  flexRow: {
+    display: 'flex',
+    flexDirection: 'row'
+  },
   unrecognisedMembership: {
     display: 'inline-block',
     marginLeft: 10
@@ -169,6 +175,16 @@ const styles = {
       display: 'inline-block',
       color: '#888'
     }
+  },
+  containerWithMargin: {
+    margin: 8
+  },
+  header: {
+    padding: 8,
+    paddingTop: 0,
+    backgroundColor: '#fff',
+    marginTop: -10,
+    overflow: 'hidden'
   }
 }
 
@@ -452,6 +468,12 @@ const FlexColumn = props => (
   </View>
 );
 
+const FlexRow = props => (
+  <View style={ styles.flexRow }>
+    { props.children }
+  </View>
+);
+
 class Main extends React.Component {
   constructor(props) {
     super(props);
@@ -538,65 +560,66 @@ class Main extends React.Component {
     const requestedSubjectAreas = this.extractAllSubjectAreas(matchingManuscripts);
     return (
       <View>
-        <Card style={ styles.card } initiallyExpanded={ true }>
-          <CardHeader
-            style={ styles.cardHeader }
-            title="Find reviewers"
-            actAsExpander={ true }
-            showExpandableButton={ true }
-          />
-          <CardText style={ styles.controlPanel } expandable={ true }>
-            <View style={ styles.step }>
-              <View style={ styles.field }>
-                <TextField
-                  floatingLabelText="Manuscript number"
-                  value={ manuscriptNumber }
-                  onChange={ (event, newValue) => this.updateSearchOption('manuscriptNumber', newValue) }
-                  style={ styles.textField }
-                />
-              </View>
-              <View style={ styles.field }>
-                <TextField
-                  floatingLabelText="Keywords (comma separated)"
-                  value={ keywords }
-                  onChange={ (event, newValue) => this.updateSearchOption('keywords', newValue) }
-                  style={ styles.textField }
-                />
-              </View>
+        <Headroom>
+          <Paper>
+            <View style={ styles.header }>
+              <FlexRow>
+                <View style={ styles.inlineContainer }>
+                  <FontAwesomeIcon style={{ paddingTop: 40 }} name="search"/>
+                </View>
+                <View style={ styles.field }>
+                  <TextField
+                    floatingLabelText="Manuscript number"
+                    value={ manuscriptNumber }
+                    onChange={ (event, newValue) => this.updateSearchOption('manuscriptNumber', newValue) }
+                    style={ styles.textField }
+                  />
+                </View>
+                <View style={ styles.field }>
+                  <TextField
+                    floatingLabelText="Keywords (comma separated)"
+                    value={ keywords }
+                    onChange={ (event, newValue) => this.updateSearchOption('keywords', newValue) }
+                    style={ styles.textField }
+                  />
+                </View>
+              </FlexRow>
             </View>
-          </CardText>
-        </Card>
-        <Card style={ styles.card } initiallyExpanded={ true }>
-          <CardHeader
-            style={ styles.cardHeader }
-            title="Results"
-            actAsExpander={ true }
-            showExpandableButton={ true }
-          />
-          <CardText expandable={ true }>
-            <LoadingIndicator loading={ loading }>
-              <View>
-                {
-                  matchingManuscripts && matchingManuscripts.map((matchingManuscript, index) => (
-                    <ManuscriptSummary
-                      key={ index }
-                      manuscript={ matchingManuscript }
-                    />
-                  ))
-                }
-                {
-                  potentialReviewers && potentialReviewers.map((potentialReviewer, index) => (
-                    <PotentialReviewer
-                      key={ index }
-                      potentialReviewer={ potentialReviewer }
-                      requestedSubjectAreas={ requestedSubjectAreas }
-                    />
-                  ))
-                }
-              </View>
-            </LoadingIndicator>
-          </CardText>
-        </Card>
+          </Paper>
+        </Headroom>
+        <View style={ styles.containerWithMargin }>
+          <Card style={ styles.card } initiallyExpanded={ true }>
+            <CardHeader
+              style={ styles.cardHeader }
+              title="Results"
+              actAsExpander={ true }
+              showExpandableButton={ true }
+            />
+            <CardText expandable={ true }>
+              <LoadingIndicator loading={ loading }>
+                <View>
+                  {
+                    matchingManuscripts && matchingManuscripts.map((matchingManuscript, index) => (
+                      <ManuscriptSummary
+                        key={ index }
+                        manuscript={ matchingManuscript }
+                      />
+                    ))
+                  }
+                  {
+                    potentialReviewers && potentialReviewers.map((potentialReviewer, index) => (
+                      <PotentialReviewer
+                        key={ index }
+                        potentialReviewer={ potentialReviewer }
+                        requestedSubjectAreas={ requestedSubjectAreas }
+                      />
+                    ))
+                  }
+                </View>
+              </LoadingIndicator>
+            </CardText>
+          </Card>
+        </View>
       </View>
     );
   }
