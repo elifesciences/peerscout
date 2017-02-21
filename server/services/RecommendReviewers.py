@@ -203,6 +203,22 @@ def select_dict_keys(d, keys):
 def manuscript_id_fields(manuscript):
   return select_dict_keys(manuscript, MANUSCRIPT_ID_COLUMNS)
 
+def person_by_early_career_reviewer(early_career_reviewer):
+  memberships = []
+  if len(early_career_reviewer['ORCID']) > 0:
+    memberships.append({
+      'member-type': 'ORCID',
+      'member-id': early_career_reviewer['ORCID']
+    })
+  return {
+    'first-name': early_career_reviewer['first-name'],
+    'last-name': early_career_reviewer['last-name'],
+    'is-early-career-reviewer': True,
+    'memberships': memberships,
+    'dates-not-available': [],
+    'stats': {}
+  }
+
 class RecommendReviewers(object):
   def __init__(self, datasets):
     self.manuscript_versions_all_df = add_manuscript_version_id(
@@ -264,6 +280,8 @@ class RecommendReviewers(object):
 
     self.persons_df = datasets["persons"].copy()
     early_career_reviewers_df = datasets["early-career-reviewers"]
+    self.early_career_reviewers_df = early_career_reviewers_df
+
     memberships_df = datasets["person-memberships"].rename(columns={
       'person-key': PERSON_ID
     })
@@ -313,7 +331,13 @@ class RecommendReviewers(object):
         'review-duration-12m': review_durations_last12m_map.get(person['person-id'], None)
       }
     } for person in clean_result(self.persons_df[PERSON_COLUMNS].to_dict(orient='records'))]
+
     self.persons_map = dict((p[PERSON_ID], p) for p in persons_list)
+
+    for row in early_career_reviewers_df.to_dict(orient='records'):
+      if row[PERSON_ID] not in self.persons_map:
+        self.persons_map[PERSON_ID] = person_by_early_career_reviewer(row)
+
     debug("self.persons_df:", self.persons_df)
     debug("persons_map:", self.persons_map)
 
@@ -469,6 +493,16 @@ class RecommendReviewers(object):
       )
     ]
 
+  def _get_early_career_reviewer_ids_by_subject_areas(self, subject_areas):
+    result = set(self.early_career_reviewers_df[
+      (
+        self.early_career_reviewers_df['First subject area'].isin(subject_areas) |
+        self.early_career_reviewers_df['Second subject area'].isin(subject_areas)
+      ) &
+      self.early_career_reviewers_df[PERSON_ID].isin(self.persons_map)
+    ][PERSON_ID].values)
+    return result
+
   def recommend(self, keywords, manuscript_no):
     keyword_list = self.__parse_keywords(keywords)
     exclude_person_ids = set()
@@ -529,10 +563,14 @@ class RecommendReviewers(object):
       for version_id in related_version_ids
     ]
     other_manuscripts_dicts = [m for m in other_manuscripts_dicts if m]
-    potential_reviewers_ids = set([
-      person[PERSON_ID] for person in
-      flatten([(m['authors'] + m['reviewers']) for m in other_manuscripts_dicts])
-    ]) - exclude_person_ids
+    potential_reviewers_ids = (
+      (set([
+        person[PERSON_ID] for person in
+        flatten([(m['authors'] + m['reviewers']) for m in other_manuscripts_dicts])
+      ]) | self._get_early_career_reviewer_ids_by_subject_areas(
+        subject_areas
+      )) - exclude_person_ids
+    )
     # print("potential_reviewers_ids", potential_reviewers_ids)
     # for m in other_manuscripts_dicts:
     #   print("author_ids", m[VERSION_KEY], [p[PERSON_ID] for p in m['authors']])

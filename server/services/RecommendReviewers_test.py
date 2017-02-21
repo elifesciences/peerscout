@@ -26,7 +26,7 @@ PERSONS = pd.DataFrame(
   ])
 EARLY_CAREER_REVIEWERS = pd.DataFrame(
   [],
-  columns=PERSON_ID_COLUMNS
+  columns=PERSON_ID_COLUMNS + ['First subject area', 'Second subject area', 'ORCID']
 )
 PERSON_MEMBERSHIPS = pd.DataFrame(
   [],
