@@ -21,11 +21,11 @@ def convert_xml_file_to(filename, stream, csv_path):
   df.to_csv(out_filename, index=False)
 
 def convert_last_csv_files_in_directory(root_dir, process_file, prefix):
-  files = [
+  files = sorted([
     fn
     for fn in filter_filenames_by_ext(listdir(root_dir), '.csv')
     if fn.startswith(prefix)
-  ]
+  ])
   filename = files[-1]
   if filename is not None:
     with open(os.path.join(root_dir, filename), 'rb') as f:
