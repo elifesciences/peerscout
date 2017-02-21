@@ -299,6 +299,22 @@ const Membership = ({ membership }) => {
   );
 };
 
+const personFullName = person => [
+  person['first-name'],
+  person['middle-name'],
+  person['last-name']
+].filter(s => !!s).join(' ');
+
+const PersonWebSearchLink = ({ person }) => (
+  <Link
+    style={ styles.membershipLink }
+    target="_blank"
+    href={ `http://search.crossref.org/?q=${personFullName(person)}` }
+  >
+    <Text>Crossref</Text>
+  </Link>
+);
+
 const formatDate = date => new Date(date).toLocaleDateString();
 
 const formatPeriodNotAvailable = periodNotAvailable =>
@@ -314,14 +330,17 @@ const PotentialReviewer = ({
   requestedSubjectAreas
 }) => {
   const manuscriptScoresByManuscriptNo = groupBy(scores['by-manuscript'] || [], s => s['manuscript-no']);
+  const memberships = person.memberships || [];
+  const membershipComponents = memberships.map((membership, index) => (
+    <Membership key={ index } membership={ membership }/>
+  ));
+  if (membershipComponents.length === 0) {
+    membershipComponents.push((<PersonWebSearchLink key="search" person={ person }/>));
+  }
   const titleComponent = (
     <View style={ styles.inlineContainer }>
       <Text>{ combinedPersonName(person) }</Text>
-      {
-        person.memberships && person.memberships.map((membership, index) => (
-          <Membership key={ index } membership={ membership }/>
-        ))
-      }
+      { membershipComponents }
     </View>
   );
   const renderManuscripts = manuscripts => manuscripts && manuscripts.map((manuscript, index) => (
