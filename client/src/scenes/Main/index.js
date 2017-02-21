@@ -309,9 +309,9 @@ const PersonWebSearchLink = ({ person }) => (
   <Link
     style={ styles.membershipLink }
     target="_blank"
-    href={ `http://search.crossref.org/?q=${personFullName(person)}` }
+    href={ `http://search.crossref.org/?q=${encodeURIComponent(personFullName(person))}` }
   >
-    <Text>Crossref</Text>
+    <Text><FontAwesomeIcon name="search"/></Text>
   </Link>
 );
 
