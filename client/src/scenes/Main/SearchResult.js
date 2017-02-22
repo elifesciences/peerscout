@@ -127,8 +127,10 @@ const combinedPersonName = person =>
 
 const quote = s => s && `\u201c${s}\u201d`
 
-const formatManuscriptId = manuscript =>
-  `${manuscript['manuscript-no']} v${manuscript['version-no']}`
+const formatManuscriptId = manuscript => [
+  manuscript['manuscript-no'],
+  manuscript['version-no'] && `v${manuscript['version-no']}`
+].filter(s => !!s).join(' ');
 
 const formatKeywordScoreInline = keyword =>
   keyword ? keyword + ' keyword match' : '';
@@ -143,7 +145,7 @@ const formatScoresInline = ({ keyword, similarity }) =>
   ].filter(s => !!s).join(', ');
 
 const hasMatchingSubjectAreas = (manuscript, requestedSubjectAreas) =>
-  requestedSubjectAreas.length === 0 || !!manuscript['subject-areas'].filter(
+  requestedSubjectAreas.length === 0 || !!(manuscript['subject-areas'] || []).filter(
     subjectArea => requestedSubjectAreas.has(subjectArea)
   )[0];
 
@@ -384,7 +386,7 @@ const extractAllSubjectAreas = manuscripts => {
   const subjectAreas = new Set();
   if (manuscripts) {
     manuscripts.forEach(m => {
-      m['subject-areas'].forEach(subjectArea => {
+      (m['subject-areas'] || []).forEach(subjectArea => {
         subjectAreas.add(subjectArea);
       })
     });

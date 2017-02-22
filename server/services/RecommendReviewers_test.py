@@ -28,6 +28,10 @@ EARLY_CAREER_REVIEWERS = pd.DataFrame(
   [],
   columns=PERSON_ID_COLUMNS + ['First subject area', 'Second subject area', 'ORCID']
 )
+CROSSREF_PERSON_EXTRA = pd.DataFrame(
+  [],
+  columns=PERSON_ID_COLUMNS + ['DOI', 'title', 'abstract', 'subject-areas']
+)
 PERSON_MEMBERSHIPS = pd.DataFrame(
   [],
   columns=PERSON_ID_COLUMNS + [
@@ -73,6 +77,7 @@ DATASETS = {
   'authors': AUTHORS,
   'persons': PERSONS,
   'early-career-reviewers': EARLY_CAREER_REVIEWERS,
+  'crossref-person-extra': CROSSREF_PERSON_EXTRA,
   'person-memberships': PERSON_MEMBERSHIPS,
   'person-dates-not-available': PERSON_DATES_NOT_AVAILABLE,
   'manuscripts': MANUSCRIPTS,
@@ -183,6 +188,7 @@ TYPE_RESEARCH_ARTICLE = 'Research Article'
 
 MANUSCRIPT_VERSION1_RESULT = {
   **MANUSCRIPT_ID_FIELDS1,
+  'doi': None,
   'title': MANUSCRIPT_TITLE1,
   'decision': DECISSION_ACCEPTED,
   'manuscript-type': TYPE_RESEARCH_ARTICLE,

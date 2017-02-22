@@ -1,5 +1,6 @@
 from itertools import groupby
-from datetime import datetime, timedelta
+import ast
+from datetime import datetime
 
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
@@ -17,6 +18,9 @@ def debug(*args):
     print(*args)
 
 flatten = lambda l: [item for sublist in l for item in sublist]
+
+def get_first(l, default_value=None):
+  return l[0] if l else default_value
 
 def column_astype(df, col_name, col_type):
   df = df.copy()
@@ -219,6 +223,18 @@ def person_by_early_career_reviewer(early_career_reviewer):
     'stats': {}
   }
 
+def manuscript_by_crossref_person_extra(crossref_person_extra):
+  doi = crossref_person_extra['DOI']
+  return {
+    MANUSCRIPT_VERSION_ID: doi,
+    MANUSCRIPT_NO: doi,
+    VERSION_NO: None,
+    'doi': doi,
+    'title': crossref_person_extra['title'],
+    'abstract': crossref_person_extra['abstract'],
+    'subject-areas': ast.literal_eval(crossref_person_extra['subject-areas'])
+  }
+
 class RecommendReviewers(object):
   def __init__(self, datasets):
     self.manuscript_versions_all_df = add_manuscript_version_id(
@@ -268,6 +284,8 @@ class RecommendReviewers(object):
       valid_version_ids
     )
 
+    manuscripts_df = datasets["manuscripts"]
+
     self.abstract_docvecs_all_df = add_manuscript_version_id(
       datasets["manuscript-abstracts-spacy-docvecs"]\
       .rename(columns={'abstract-spacy-docvecs': ABSTRACT_DOCVEC_COLUMN}).dropna())
@@ -281,6 +299,7 @@ class RecommendReviewers(object):
     self.persons_df = datasets["persons"].copy()
     early_career_reviewers_df = datasets["early-career-reviewers"]
     self.early_career_reviewers_df = early_career_reviewers_df
+    crossref_person_extras_df = datasets["crossref-person-extra"]
 
     memberships_df = datasets["person-memberships"].rename(columns={
       'person-key': PERSON_ID
@@ -356,6 +375,11 @@ class RecommendReviewers(object):
     debug("temp_authors_map:", temp_authors_map)
     debug("temp_reviewers_map:", temp_reviewers_map)
 
+    temp_doi_by_manuscript_no_map = groupby_column_to_dict(
+      manuscripts_df,
+      MANUSCRIPT_NO,
+      'production-data-doi')
+
     temp_subject_areas_map = groupby_column_to_dict(
       self.manuscript_subject_areas_all_df,
       MANUSCRIPT_VERSION_ID,
@@ -370,12 +394,15 @@ class RecommendReviewers(object):
       .to_dict(orient='records'))
     manuscripts_all_list = [{
       **manuscript,
+      'doi': get_first(temp_doi_by_manuscript_no_map.get(manuscript[MANUSCRIPT_NO], [])),
       'authors': temp_authors_map.get(manuscript[MANUSCRIPT_VERSION_ID], []),
       'reviewers': temp_reviewers_map.get(manuscript[MANUSCRIPT_VERSION_ID], []),
       'subject-areas': temp_subject_areas_map.get(manuscript[MANUSCRIPT_VERSION_ID], []),
     } for manuscript in manuscripts_all_list]
     self.manuscripts_by_version_id_map = dict((
       m[MANUSCRIPT_VERSION_ID], m) for m in manuscripts_all_list)
+    manuscripts_by_doi_map = dict((
+      m['doi'], m) for m in manuscripts_all_list)
     debug("manuscripts_by_version_id_map:", self.manuscripts_by_version_id_map)
 
     self.manuscripts_by_author_map = {}
@@ -388,6 +415,19 @@ class RecommendReviewers(object):
         for reviewer in m['reviewers']:
           self.manuscripts_by_reviewer_map.setdefault(reviewer[PERSON_ID], [])\
           .append(m)
+
+    for row in crossref_person_extras_df.to_dict(orient='records'):
+      person_id = row[PERSON_ID]
+      doi = row['DOI']
+      manuscript = manuscripts_by_doi_map.get(doi, None)
+      if manuscript is None:
+        manuscript = manuscript_by_crossref_person_extra(row)
+        manuscripts_by_doi_map[doi] = manuscript
+        self.manuscripts_by_version_id_map[
+          manuscript[MANUSCRIPT_VERSION_ID]
+        ] = manuscript
+        self.manuscripts_by_author_map.setdefault(person_id, [])\
+        .append(manuscript)
 
   def __find_manuscripts_by_keywords(self, keywords, manuscript_no=None):
     other_manuscripts = self.manuscript_keywords_df[
