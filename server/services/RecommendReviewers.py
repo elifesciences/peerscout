@@ -224,7 +224,7 @@ def person_by_early_career_reviewer(early_career_reviewer):
   }
 
 def manuscript_by_crossref_person_extra(crossref_person_extra):
-  doi = crossref_person_extra['DOI']
+  doi = crossref_person_extra['doi']
   return {
     MANUSCRIPT_VERSION_ID: doi,
     MANUSCRIPT_NO: doi,
@@ -418,7 +418,7 @@ class RecommendReviewers(object):
 
     for row in crossref_person_extras_df.to_dict(orient='records'):
       person_id = row[PERSON_ID]
-      doi = row['DOI']
+      doi = row['doi']
       manuscript = manuscripts_by_doi_map.get(doi, None)
       if manuscript is None:
         manuscript = manuscript_by_crossref_person_extra(row)

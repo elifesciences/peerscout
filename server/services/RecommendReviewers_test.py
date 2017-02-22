@@ -30,7 +30,7 @@ EARLY_CAREER_REVIEWERS = pd.DataFrame(
 )
 CROSSREF_PERSON_EXTRA = pd.DataFrame(
   [],
-  columns=PERSON_ID_COLUMNS + ['DOI', 'title', 'abstract', 'subject-areas']
+  columns=PERSON_ID_COLUMNS + ['doi', 'title', 'abstract', 'subject-areas']
 )
 PERSON_MEMBERSHIPS = pd.DataFrame(
   [],
