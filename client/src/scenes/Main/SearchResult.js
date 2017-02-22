@@ -149,21 +149,29 @@ const hasMatchingSubjectAreas = (manuscript, requestedSubjectAreas) =>
     subjectArea => requestedSubjectAreas.has(subjectArea)
   )[0];
 
-const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectAreas }) => (
-  <View
-    style={
-      hasMatchingSubjectAreas(manuscript, requestedSubjectAreas) ?
-      styles.manuscriptInlineSummary.matchingSubjectAreas :
-      styles.manuscriptInlineSummary.notMatchingSubjectAreas
-    }
-  >
-    <TooltipWrapper content={ <ManuscriptTooltipContent manuscript={ manuscript}/> } style={ styles.inlineContainer }>
-      <Text>{ quote(manuscript['title']) }</Text>
-    </TooltipWrapper>
-    <Text>{ ` (${formatManuscriptId(manuscript)})` }</Text>
-    <Text>{ ` - ${formatScoresInline(scores)}` }</Text>
-  </View>
-);
+const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectAreas }) => {
+  const formattedManuscriptRef = formatManuscriptId(scores);
+  const formattedScores = formatScoresInline(scores);
+  return (
+    <View
+      style={
+        hasMatchingSubjectAreas(manuscript, requestedSubjectAreas) ?
+        styles.manuscriptInlineSummary.matchingSubjectAreas :
+        styles.manuscriptInlineSummary.notMatchingSubjectAreas
+      }
+    >
+      <TooltipWrapper content={ <ManuscriptTooltipContent manuscript={ manuscript}/> } style={ styles.inlineContainer }>
+        <Text>{ quote(manuscript['title']) }</Text>
+      </TooltipWrapper>
+      <Text>{ ` (${formattedManuscriptRef})` }</Text>
+      {
+        formattedScores && (
+          <Text>{ ` - ${formattedScores}` }</Text>
+        )
+      }
+    </View>
+  );
+};
 
 const PersonInlineSummary = ({ person }) => (
   <Chip style={ styles.personChip }>
