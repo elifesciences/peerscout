@@ -138,6 +138,8 @@ const formatKeywordScoreInline = keyword =>
 const formatSimilarityScoreInline = similarity =>
   similarity ? similarity.toFixed(2) + ' similarity' : '';
 
+const doiUrl = doi => doi && 'http://dx.doi.org/' + doi;
+
 const formatScoresInline = ({ keyword, similarity }) =>
   [
     formatKeywordScoreInline(keyword),
@@ -149,8 +151,17 @@ const hasMatchingSubjectAreas = (manuscript, requestedSubjectAreas) =>
     subjectArea => requestedSubjectAreas.has(subjectArea)
   )[0];
 
+const ManuscriptRefLink = ({ manuscript }) => (
+  <Link
+    style={ styles.manuscriptLink }
+    target="_blank"
+    href={ doiUrl(manuscript['doi']) }
+  >
+    <Text>{ formatManuscriptId(manuscript) }</Text>
+  </Link>
+);
+
 const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectAreas }) => {
-  const formattedManuscriptRef = formatManuscriptId(scores);
   const formattedScores = formatScoresInline(scores);
   return (
     <View
@@ -163,7 +174,9 @@ const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectArea
       <TooltipWrapper content={ <ManuscriptTooltipContent manuscript={ manuscript}/> } style={ styles.inlineContainer }>
         <Text>{ quote(manuscript['title']) }</Text>
       </TooltipWrapper>
-      <Text>{ ` (${formattedManuscriptRef})` }</Text>
+      <Text>{ ' (' }</Text>
+      <ManuscriptRefLink manuscript={ manuscript }/>
+      <Text>{ ')' }</Text>
       {
         formattedScores && (
           <Text>{ ` - ${formattedScores}` }</Text>
