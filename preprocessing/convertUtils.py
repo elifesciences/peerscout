@@ -46,6 +46,9 @@ def strip_tags(text):
 def unescape_and_strip_tags(text):
   return strip_tags(html.unescape(text))
 
+def unescape_and_strip_tags_if_not_none(text):
+  return strip_tags(html.unescape(text)) if text else None
+
 flatten = lambda l: [item for sublist in l for item in sublist]
 
 def groupby_to_dict(l, kf, vf):
