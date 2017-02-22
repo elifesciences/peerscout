@@ -25,13 +25,26 @@ def process_article_contents(csv_path):
     column_name='content-spacy'
   )
 
+def process_crossref_person_extra_abstracts(csv_path):
+  process_csv_file(
+    input_filename=csv_path + '/crossref-person-extra-spacy.csv',
+    output_filename=csv_path + '/crossref-person-extra-spacy-docvecs.pickle',
+    column_name='abstract-spacy'
+  )
+
 def main():
+
+  include_contents = False
 
   # csv_path = "./csv-small"
   csv_path = "../csv"
 
   process_article_abstracts(csv_path)
-  process_article_contents(csv_path)
+
+  if include_contents:
+    process_article_contents(csv_path)
+
+  process_crossref_person_extra_abstracts(csv_path)
 
 
 if __name__ == "__main__":

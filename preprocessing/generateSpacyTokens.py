@@ -45,6 +45,19 @@ def process_article_contents(csv_path, extract_keywords_from_list):
   print("writing csv to:", output_filename)
   df.to_csv(output_filename, index=False)
 
+def process_crossref_person_extra_abstracts(csv_path, extract_keywords_from_list):
+  input_filename = csv_path + '/crossref-person-extra.csv'
+  output_filename = csv_path + '/crossref-person-extra-spacy.csv'
+  df = pd.read_csv(input_filename, low_memory=False)
+  df = df[
+    df['abstract'].notnull()
+  ]
+  df['abstract-spacy'] = extract_keywords_from_list(df['abstract'].values)
+  df = df[['doi', 'abstract-spacy']]
+  # print("keywords:", extract_unique_keywords(df['content-spacy']))
+  print("writing csv to:", output_filename)
+  df.to_csv(output_filename, index=False)
+
 def main():
   tqdm.pandas()
 
@@ -90,11 +103,18 @@ def main():
       result[item[0]] = extract_keywords_from_doc(doc)
     return result
 
+  include_contents = False
+
   # csv_path = "./csv-small"
   csv_path = "../csv"
 
-  process_manuscript_versions(csv_path, extract_keywords_from_list)
-  process_article_contents(csv_path, extract_keywords_from_list)
+  # process_manuscript_versions(csv_path, extract_keywords_from_list)
+  if include_contents:
+    process_article_contents(csv_path, extract_keywords_from_list)
+
+  process_crossref_person_extra_abstracts(
+    csv_path, extract_keywords_from_list
+  )
 
 
 if __name__ == "__main__":
