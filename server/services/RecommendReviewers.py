@@ -402,7 +402,7 @@ class RecommendReviewers(object):
     self.manuscripts_by_version_id_map = dict((
       m[MANUSCRIPT_VERSION_ID], m) for m in manuscripts_all_list)
     manuscripts_by_doi_map = dict((
-      m['doi'], m) for m in manuscripts_all_list)
+      m['doi'].lower(), m) for m in manuscripts_all_list if not is_null(m['doi']))
     debug("manuscripts_by_version_id_map:", self.manuscripts_by_version_id_map)
 
     self.manuscripts_by_author_map = {}
@@ -418,7 +418,7 @@ class RecommendReviewers(object):
 
     for row in crossref_person_extras_df.to_dict(orient='records'):
       person_id = row[PERSON_ID]
-      doi = row['doi']
+      doi = row['doi'].lower()
       manuscript = manuscripts_by_doi_map.get(doi, None)
       if manuscript is None:
         manuscript = manuscript_by_crossref_person_extra(row)
