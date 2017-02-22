@@ -5,6 +5,7 @@ import json
 import csv
 from textwrap import shorten
 
+import dateutil
 import requests
 import pandas as pd
 from tqdm import tqdm
@@ -49,12 +50,18 @@ def str_deserializer(b):
 def create_str_cache(*args, **kwargs):
   return create_cache(*args, **kwargs, serializer=str_serializer, deserializer=str_deserializer)
 
+def parse_datetime_object(datetime_obj):
+  if datetime_obj is None:
+    return None
+  return dateutil.parser.parse(datetime_obj.get('date-time'))
+
 def extract_manuscript(item):
   return {
     'title': unescape_and_strip_tags_if_not_none(' '.join(item.get('title', []))),
     'abstract': unescape_and_strip_tags_if_not_none(item.get('abstract', None)),
     'doi': item.get('DOI', None),
-    'subject-areas': item.get('subject', [])
+    'subject-areas': item.get('subject', []),
+    'created-date': parse_datetime_object(item.get('created', None))
   }
 
 def contains_author_with_orcid(item, orcid):
