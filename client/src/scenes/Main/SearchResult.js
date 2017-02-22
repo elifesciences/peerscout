@@ -1,4 +1,5 @@
 import React from 'react';
+import More from 'react-more';
 
 import {
   Card,
@@ -315,16 +316,20 @@ const PotentialReviewer = ({
         <View style={ styles.potentialReviewer.subSection }>
           <Text style={ styles.potentialReviewer.label }>Author of: </Text>
           <View style={ styles.potentialReviewer.value }>
-            <FlexColumn>
-              { renderManuscripts(authorOfManuscripts) }
-            </FlexColumn>
+            <More lines={ 5 }>
+              <FlexColumn>
+                { renderManuscripts(authorOfManuscripts) }
+              </FlexColumn>
+            </More>
           </View>
         </View>
         <View  style={ styles.potentialReviewer.subSection }>
           <Text style={ styles.potentialReviewer.label }>Reviewer of: </Text>
           <View style={ styles.potentialReviewer.value }>
             <FlexColumn>
-              { renderManuscripts(reviewerOfManuscripts) }
+              <More lines={ 5 }>
+                { renderManuscripts(reviewerOfManuscripts) }
+              </More>
             </FlexColumn>
           </View>
         </View>
