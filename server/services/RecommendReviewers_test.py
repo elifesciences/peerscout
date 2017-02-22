@@ -33,7 +33,7 @@ EARLY_CAREER_REVIEWERS = pd.DataFrame(
 )
 CROSSREF_PERSON_EXTRA = pd.DataFrame(
   [],
-  columns=PERSON_ID_COLUMNS + ['doi', 'title', 'abstract', 'subject-areas']
+  columns=PERSON_ID_COLUMNS + ['doi', 'title', 'abstract', 'subject-areas', 'created-date']
 )
 PERSON_MEMBERSHIPS = pd.DataFrame(
   [],
@@ -52,7 +52,11 @@ MANUSCRIPTS = pd.DataFrame(
   columns=[MANUSCRIPT_NO])
 MANUSCRIPT_VERSIONS = pd.DataFrame(
   [],
-  columns=MANUSCRIPT_ID_COLUMNS + ['title', 'decision', 'manuscript-type', 'abstract'])
+  columns=MANUSCRIPT_ID_COLUMNS + [
+    'title', 'decision', 'manuscript-type', 'abstract',
+    'decision-date'
+  ]
+)
 MANUSCRIPT_KEYWORDS = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + ['sequence', 'word'])

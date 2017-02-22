@@ -5,6 +5,11 @@ const urlWithParams = (url, params) => {
   )
 };
 
+const datetimeReviver = (key, value) =>
+  key.endsWith('-date') && (typeof value === 'string') ?
+  new Date(value) :
+  value;
+
 const api = baseUrl => {
   const recommendReviewersUrl = baseUrl + '/recommend-reviewers';
   return {
@@ -21,7 +26,7 @@ const api = baseUrl => {
     .then(response => response.text())
     .then(text => text.replace(/NaN/g, null)) // TODO hack
     // .then(text => { console.log('text:', text); return text; })
-    .then(text => JSON.parse(text))
+    .then(text => JSON.parse(text, datetimeReviver))
     // .then(response => response.json ? response.json() : response)
   };
 };

@@ -175,6 +175,8 @@ const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectArea
       <TooltipWrapper content={ <ManuscriptTooltipContent manuscript={ manuscript}/> } style={ styles.inlineContainer }>
         <Text>{ quote(manuscript['title']) }</Text>
       </TooltipWrapper>
+      <Text>{ ' ' }</Text>
+      <Text>{ formatDate(manuscript['published-date']) }</Text>
       <Text>{ ' (' }</Text>
       <ManuscriptRefLink manuscript={ manuscript }/>
       <Text>{ ')' }</Text>
@@ -237,7 +239,7 @@ const PersonWebSearchLink = ({ person }) => (
   </Link>
 );
 
-const formatDate = date => new Date(date).toLocaleDateString();
+const formatDate = date => date && new Date(date).toLocaleDateString();
 
 const formatPeriodNotAvailable = periodNotAvailable =>
   `${formatDate(periodNotAvailable['dna-start-date'])} - ${formatDate(periodNotAvailable['dna-end-date'])}`;

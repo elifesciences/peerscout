@@ -1,7 +1,9 @@
 from os.path import abspath
+import datetime
 
 import json
 from flask import Flask, request, send_from_directory, jsonify, url_for
+from flask.json import JSONEncoder
 from flask_cors import CORS
 # from intend_matchers.simple_intend_matcher import SimpleIntendMatcher
 
@@ -28,7 +30,17 @@ with open('config.json') as config_file:
   if 'port' in config:
     port = config['port']
 
+class CustomJSONEncoder(JSONEncoder):
+  def default(self, obj):
+    try:
+      if isinstance(obj, datetime.datetime) or isinstance(obj, datetime.date):
+        return obj.isoformat()
+    except TypeError:
+      pass
+    return JSONEncoder.default(self, obj)
+
 app = Flask(__name__, static_folder=CLIENT_FOLDER)
+app.json_encoder = CustomJSONEncoder
 CORS(app)
 
 @app.route("/api/")

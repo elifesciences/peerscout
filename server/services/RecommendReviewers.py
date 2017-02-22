@@ -235,7 +235,8 @@ def manuscript_by_crossref_person_extra(crossref_person_extra):
     'doi': doi,
     'title': crossref_person_extra['title'],
     'abstract': crossref_person_extra['abstract'],
-    'subject-areas': ast.literal_eval(crossref_person_extra['subject-areas'])
+    'subject-areas': ast.literal_eval(crossref_person_extra['subject-areas']),
+    'published-date': crossref_person_extra['created-date']
   }
 
 class RecommendReviewers(object):
@@ -409,8 +410,8 @@ class RecommendReviewers(object):
     manuscripts_all_list = clean_result(
       self.manuscript_versions_all_df[
         MANUSCRIPT_ID_COLUMNS +\
-        ['title', 'decision', 'manuscript-type', 'abstract']
-      ]\
+        ['title', 'decision', 'manuscript-type', 'abstract', 'decision-date']
+      ].rename(columns={'decision-date': 'published-date'})
       .to_dict(orient='records'))
     manuscripts_all_list = [{
       **manuscript,
