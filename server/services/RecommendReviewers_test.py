@@ -26,7 +26,10 @@ PERSONS = pd.DataFrame(
   ])
 EARLY_CAREER_REVIEWERS = pd.DataFrame(
   [],
-  columns=PERSON_ID_COLUMNS + ['First subject area', 'Second subject area', 'ORCID']
+  columns=PERSON_ID_COLUMNS + [
+    'First subject area', 'Second subject area', 'ORCID',
+    'first-name', 'last-name'
+  ]
 )
 CROSSREF_PERSON_EXTRA = pd.DataFrame(
   [],
@@ -66,11 +69,17 @@ ABSTRACT_DOCVECS = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + [ABSTRACT_DOCVEC_COLUMN])
 
+CROSSREF_PERSON_EXTRA_SPACY_DOCVECS = pd.DataFrame(
+  [],
+  columns=['doi', ABSTRACT_DOCVEC_COLUMN]
+)
+
 CONTENT_DOCVECS = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + ['content-spacy-docvecs'])
 
 ABSTRACT_DOCVEC_DATASET = 'manuscript-abstracts-spacy-docvecs'
+CROSSREF_PERSON_EXTRA_DOCVEC_DATASET = 'crossref-person-extra-spacy-docvecs'
 SUBJECT_AREAS_DATASET = 'manuscript-themes'
 
 DATASETS = {
@@ -86,7 +95,8 @@ DATASETS = {
   SUBJECT_AREAS_DATASET: MANUSCRIPT_SUBJECT_AREAS,
   'manuscript-history': MANUSCRIPT_HISTORY,
   ABSTRACT_DOCVEC_DATASET: ABSTRACT_DOCVECS,
-  'article-content-spacy-docvecs': CONTENT_DOCVECS
+  'article-content-spacy-docvecs': CONTENT_DOCVECS,
+  CROSSREF_PERSON_EXTRA_DOCVEC_DATASET: CROSSREF_PERSON_EXTRA_SPACY_DOCVECS
 }
 
 PERSON_ID1 = 'person1'
@@ -246,6 +256,18 @@ ABSTRACT_DOCVEC2 = {
   ABSTRACT_DOCVEC_COLUMN: DOCVEC2
 }
 
+DOI1 = 'doi/1'
+
+CROSSREF_ABSTRACT_DOCVEC1 = {
+  'doi': DOI1,
+  ABSTRACT_DOCVEC_COLUMN: DOCVEC1
+}
+
+CROSSREF_ABSTRACT_DOCVEC2 = {
+  'doi': DOI1,
+  ABSTRACT_DOCVEC_COLUMN: DOCVEC1
+}
+
 AUTHOR1 = {
   **MANUSCRIPT_ID_FIELDS1,
   'author-person-id': PERSON_ID1
@@ -400,6 +422,49 @@ def test_matching_manuscript_with_none_docvecs():
   ], columns=ABSTRACT_DOCVECS.columns)
   recommend_reviewers = RecommendReviewers(datasets)
   recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
+
+def test_matching_manuscript_should_recommend_early_career_reviewer_and_return_similarity():
+  datasets = dict(DATASETS)
+  datasets['persons'] = pd.DataFrame([
+    PERSON1
+  ], columns=PERSONS.columns)
+  datasets['manuscript-versions'] = pd.DataFrame([
+    MANUSCRIPT_VERSION1
+  ], columns=MANUSCRIPT_VERSIONS.columns)
+  datasets['manuscript-keywords'] = pd.DataFrame([
+    MANUSCRIPT_KEYWORD1
+  ], columns=MANUSCRIPT_KEYWORDS.columns)
+  datasets[SUBJECT_AREAS_DATASET] = pd.DataFrame([{
+    **MANUSCRIPT_ID_FIELDS1,
+    'subject-area': SUBJECT_AREA1
+  }], columns=MANUSCRIPT_SUBJECT_AREAS.columns)
+  datasets[ABSTRACT_DOCVEC_DATASET] = pd.DataFrame([
+    ABSTRACT_DOCVEC1
+  ], columns=ABSTRACT_DOCVECS.columns)
+  datasets[CROSSREF_PERSON_EXTRA_DOCVEC_DATASET] = pd.DataFrame([
+    CROSSREF_ABSTRACT_DOCVEC1
+  ], columns=CROSSREF_PERSON_EXTRA_SPACY_DOCVECS.columns)
+  datasets['early-career-reviewers'] = pd.DataFrame([{
+    'person-id': PERSON_ID2,
+    'first-name': 'Early',
+    'last-name': 'Bird',
+    'ORCID': '',
+    'First subject area': SUBJECT_AREA1,
+    'Second subject area': ''
+  }], columns=EARLY_CAREER_REVIEWERS.columns)
+  datasets['crossref-person-extra'] = pd.DataFrame([{
+    'person-id': PERSON_ID2,
+    'doi': DOI1,
+    'subject-areas': str([])
+  }], columns=CROSSREF_PERSON_EXTRA.columns)
+  recommend_reviewers = RecommendReviewers(datasets)
+  result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
+  print("result:", PP.pformat(result))
+  recommended_person_ids = [r['person']['person-id'] for r in result['potential-reviewers']]
+  assert recommended_person_ids == [PERSON_ID2]
+  similarities = [r['scores']['similarity'] for r in result['potential-reviewers']]
+  assert len(similarities) == 1
+  assert abs(similarities[0] - 1) < 0.01
 
 def test_matching_manuscript_should_return_draft_version_with_authors():
   datasets = dict(DATASETS)

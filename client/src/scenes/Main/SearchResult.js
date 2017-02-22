@@ -291,7 +291,7 @@ const PotentialReviewer = ({
           )
         }
         {
-          person.stats && person.stats['review-duration'] && (
+          person.stats && person.stats['review-duration'] && person.stats['review-duration']['mean'] && (
             <View style={ styles.potentialReviewer.subSection }>
               <Text style={ styles.potentialReviewer.label }>Review Time: </Text>
               <View style={ styles.potentialReviewer.value }>

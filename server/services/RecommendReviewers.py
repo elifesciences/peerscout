@@ -215,12 +215,15 @@ def person_by_early_career_reviewer(early_career_reviewer):
       'member-id': early_career_reviewer['ORCID']
     })
   return {
+    PERSON_ID: early_career_reviewer[PERSON_ID],
     'first-name': early_career_reviewer['first-name'],
     'last-name': early_career_reviewer['last-name'],
     'is-early-career-reviewer': True,
     'memberships': memberships,
     'dates-not-available': [],
-    'stats': {}
+    'stats': {
+      'review-duration': {}
+    }
   }
 
 def manuscript_by_crossref_person_extra(crossref_person_extra):
@@ -296,6 +299,22 @@ class RecommendReviewers(object):
     )
     print("valid docvecs:", len(self.abstract_docvecs_df))
 
+    crossref_abstract_docvecs_df = (
+      datasets["crossref-person-extra-spacy-docvecs"]
+      .rename(columns={
+        'abstract-spacy-docvecs': ABSTRACT_DOCVEC_COLUMN,
+        'doi': MANUSCRIPT_VERSION_ID
+      }).dropna()
+    )
+    crossref_abstract_docvecs_df[MANUSCRIPT_VERSION_ID] = (
+      crossref_abstract_docvecs_df[MANUSCRIPT_VERSION_ID].str.lower()
+    )
+    self.abstract_docvecs_df = pd.concat([
+      self.abstract_docvecs_df,
+      crossref_abstract_docvecs_df
+    ])
+    print("docvecs incl crossref:", len(self.abstract_docvecs_df))
+
     self.persons_df = datasets["persons"].copy()
     early_career_reviewers_df = datasets["early-career-reviewers"]
     self.early_career_reviewers_df = early_career_reviewers_df
@@ -354,8 +373,9 @@ class RecommendReviewers(object):
     self.persons_map = dict((p[PERSON_ID], p) for p in persons_list)
 
     for row in early_career_reviewers_df.to_dict(orient='records'):
-      if row[PERSON_ID] not in self.persons_map:
-        self.persons_map[PERSON_ID] = person_by_early_career_reviewer(row)
+      person_id = row[PERSON_ID]
+      if person_id not in self.persons_map:
+        self.persons_map[person_id] = person_by_early_career_reviewer(row)
 
     debug("self.persons_df:", self.persons_df)
     debug("persons_map:", self.persons_map)
@@ -576,9 +596,13 @@ class RecommendReviewers(object):
       other_manuscripts = self._filter_manuscripts_by_subject_areas(
         other_manuscripts, subject_areas
       )
-    similar_manuscripts = self.__find_similar_manuscripts(
+    all_similar_manuscripts = self.__find_similar_manuscripts(
       matching_manuscripts[MANUSCRIPT_VERSION_ID]
     )
+    print("all_similar_manuscripts:", len(all_similar_manuscripts), all_similar_manuscripts[
+      all_similar_manuscripts[MANUSCRIPT_VERSION_ID].isin(["10.1155/2013/435093"])
+    ])
+    similar_manuscripts = all_similar_manuscripts
     if len(subject_areas) > 0:
       similar_manuscripts = self._filter_manuscripts_by_subject_areas(
         similar_manuscripts, subject_areas
@@ -632,14 +656,14 @@ class RecommendReviewers(object):
         for manuscript in involved_manuscripts
       ]))
 
-      max_similarity = null_to_none(similar_manuscripts[
-        similar_manuscripts[MANUSCRIPT_VERSION_ID].isin(
+      max_similarity = null_to_none(all_similar_manuscripts[
+        all_similar_manuscripts[MANUSCRIPT_VERSION_ID].isin(
           [m[MANUSCRIPT_VERSION_ID] for m in involved_manuscripts]
         )
       ][SIMILARITY_COLUMN].max())
 
-      similarity_by_manuscript_version_id = similar_manuscripts[
-        similar_manuscripts[MANUSCRIPT_VERSION_ID].isin(
+      similarity_by_manuscript_version_id = all_similar_manuscripts[
+        all_similar_manuscripts[MANUSCRIPT_VERSION_ID].isin(
           [m[MANUSCRIPT_VERSION_ID] for m in involved_manuscripts]
         )
       ].set_index(MANUSCRIPT_VERSION_ID)[SIMILARITY_COLUMN].to_dict()
@@ -648,7 +672,7 @@ class RecommendReviewers(object):
         {
           **manuscript_id_fields(manuscript),
           'keyword': keyword_match_count_by_by_version_key_map.get(
-            manuscript[MANUSCRIPT_VERSION_ID], 0) / len(keyword_list),
+            manuscript[MANUSCRIPT_VERSION_ID], 0) / max(1, len(keyword_list)),
           'similarity': similarity_by_manuscript_version_id.get(
             manuscript[MANUSCRIPT_VERSION_ID], None)
         }

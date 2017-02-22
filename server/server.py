@@ -20,7 +20,8 @@ with open('config.json') as config_file:
   csv_datasets = CsvDatasetLoader(csv_path)
   pickle_datasets = PickleDatasetLoader(csv_path)
   routing_datasets = RoutingDatasetLoader({
-    'manuscript-abstracts-spacy-docvecs': pickle_datasets
+    'manuscript-abstracts-spacy-docvecs': pickle_datasets,
+    'crossref-person-extra-spacy-docvecs': pickle_datasets
   }, csv_datasets)
   datasets = CachedDatasetLoader(routing_datasets)
   recommend_reviewers = RecommendReviewers(datasets)
