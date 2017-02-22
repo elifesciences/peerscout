@@ -53,8 +53,7 @@ def extract_manuscript(item):
   return {
     'title': unescape_and_strip_tags_if_not_none(' '.join(item.get('title', []))),
     'abstract': unescape_and_strip_tags_if_not_none(item.get('abstract', None)),
-    'DOI': item.get('DOI', None),
-    'URL': item.get('URL', None),
+    'doi': item.get('DOI', None),
     'subject-areas': item.get('subject', [])
   }
 
