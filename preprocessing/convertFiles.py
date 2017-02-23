@@ -221,7 +221,7 @@ def main():
   csv_path = "../csv"
   source = "../downloads"
 
-  process_files_in_directory_or_zip(source, process_file)
+  process_files_in_directory_or_zip(source, process_file, ext=".xml")
 
   write_tables_to_csv(csv_path, tables)
 
