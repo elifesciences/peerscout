@@ -120,8 +120,8 @@ PERSON1_RESULT = {
   'memberships': [],
   'dates-not-available': [],
   'stats': {
-    'review-duration': None,
-    'review-duration-12m': None
+    'overall': None,
+    'last-12m': None
   }
 }
 
@@ -678,17 +678,16 @@ def test_matching_one_keyword_author_should_return_stats():
     'max': 2,
     'count': 2
   }
-  person_with_stats = {
-    **PERSON1_RESULT,
-    'stats': {
-      'review-duration': review_duration,
-      'review-duration-12m': review_duration
-    }
+  overall_stats = {
+    'review-duration': review_duration
   }
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   result_person = result['potential-reviewers'][0]['person']
   print("result_person:", PP.pformat(result_person))
-  assert result_person == person_with_stats
+  assert result_person['stats'] == {
+    'overall': overall_stats,
+    'last-12m': overall_stats
+  }
 
 def test_matching_one_keyword_author_should_return_memberships():
   datasets = dict(DATASETS)

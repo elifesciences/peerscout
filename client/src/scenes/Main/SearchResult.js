@@ -244,6 +244,23 @@ const formatDate = date => date && new Date(date).toLocaleDateString();
 const formatPeriodNotAvailable = periodNotAvailable =>
   `${formatDate(periodNotAvailable['dna-start-date'])} - ${formatDate(periodNotAvailable['dna-end-date'])}`;
 
+const formatStats = stats => {
+  // some values are null rather than undefined
+  const {mean: overall_mean, count: overall_count} =
+    ((stats || {})['overall'] || {})['review-duration'] || {};
+  const {mean: last12m_mean, count: last12m_count} =
+    ((stats || {})['last-12m'] || {})['review-duration'] || {};
+  if (!overall_mean) {
+    return '';
+  }
+  let result = `${overall_mean.toFixed(1)} days (avg over ${overall_count} reviews)`;
+  if (last12m_mean) {
+    result += `, with ${last12m_count} review(s) within the last 12 months
+        (avg ${last12m_mean.toFixed(1)} days)`
+  }
+  return result;
+};
+
 const PotentialReviewer = ({
   potentialReviewer: {
     person = {},
@@ -275,6 +292,7 @@ const PotentialReviewer = ({
       requestedSubjectAreas={ requestedSubjectAreas }
     />
   ));
+  const formattedStats = formatStats(person['stats']);
   return (
     <Card style={ styles.potentialReviewer.card }>
       <Comment text={ `Person id: ${person['person-id']}` }/>
@@ -294,23 +312,13 @@ const PotentialReviewer = ({
           )
         }
         {
-          person.stats && person.stats['review-duration'] && person.stats['review-duration']['mean'] && (
+          formattedStats && (
             <View style={ styles.potentialReviewer.subSection }>
               <Text style={ styles.potentialReviewer.label }>Review Time: </Text>
               <View style={ styles.potentialReviewer.value }>
                 <Text>
-                  { `${person.stats['review-duration']['mean'].toFixed(1)} days
-                    (avg over ${person.stats['review-duration']['count']} reviews)` }
+                  { formattedStats }
                 </Text>
-                {
-                  person.stats['review-duration-12m'] && (
-                    <Text>
-                      { `, with ${person.stats['review-duration-12m']['count']}
-                        review(s) within the last 12 months
-                        (avg ${person.stats['review-duration-12m']['mean'].toFixed(1)} days)` }
-                    </Text>
-                  )
-                }
               </View>
             </View>
           )

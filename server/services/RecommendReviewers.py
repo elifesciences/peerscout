@@ -7,6 +7,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from .utils import unescape_and_strip_tags
 
+from .collection_utils import flatten, filter_none, deep_get, deep_get_list
+
 debug_enabled = False
 
 def set_debug_enabled(enabled):
@@ -16,8 +18,6 @@ def set_debug_enabled(enabled):
 def debug(*args):
   if debug_enabled:
     print(*args)
-
-flatten = lambda l: [item for sublist in l for item in sublist]
 
 def get_first(l, default_value=None):
   return l[0] if l else default_value
@@ -192,12 +192,22 @@ def duration_stats_between_by_person(stage_pivot, from_stage, to_stage):
   return df
 
 def filter_stage_pivot_by_stage(stage_pivot, stage, condition):
-  if stage in stage_pivot.columns:
+  if condition is not None and stage in stage_pivot.columns:
     return stage_pivot[
       stage_pivot[stage].apply(lambda dt: not is_null(dt) and condition(dt))
     ]
   else:
     return stage_pivot
+
+def stats_by_person_for_period(stage_pivot, condition=None):
+  review_duration_by_person_map = duration_stats_between_by_person(
+    filter_stage_pivot_by_stage(stage_pivot, 'Review Received', condition),
+    'Reviewers Accept', 'Review Received'
+  ).to_dict(orient='index')
+  return dict((k, {
+    'review-duration': review_duration_by_person_map.get(k)
+  }) for k in review_duration_by_person_map.keys())
+
 
 def add_manuscript_version_id(df):
   df[MANUSCRIPT_VERSION_ID] = df[MANUSCRIPT_NO].str.cat(
@@ -225,7 +235,6 @@ def person_by_early_career_reviewer(early_career_reviewer):
     'memberships': memberships,
     'dates-not-available': [],
     'stats': {
-      'review-duration': {}
     }
   }
 
@@ -362,13 +371,16 @@ class RecommendReviewers(object):
     early_career_reviewers_person_ids = set(early_career_reviewers_df[PERSON_ID].values)
 
     stage_pivot = create_stage_pivot(self.manuscript_history_all_df)
-    review_durations_map = duration_stats_between_by_person(
-      stage_pivot, 'Reviewers Accept', 'Review Received').to_dict(orient='index')
+    overall_stats_map = stats_by_person_for_period(stage_pivot)
+
+    # review_durations_map = duration_stats_between_by_person(
+    #   stage_pivot, 'Reviewers Accept', 'Review Received').to_dict(orient='index')
     today = datetime.today()
     from_12m = pd.Timestamp(today.replace(year=today.year - 1))
-    review_durations_last12m_map = duration_stats_between_by_person(
-      filter_stage_pivot_by_stage(stage_pivot, 'Review Received', lambda dt: dt >= from_12m),
-      'Reviewers Accept', 'Review Received').to_dict(orient='index')
+    last12m_stats_map = stats_by_person_for_period(stage_pivot, lambda dt: dt >= from_12m)
+    # review_durations_last12m_map = duration_stats_between_by_person(
+    #   filter_stage_pivot_by_stage(stage_pivot, 'Review Received', lambda dt: dt >= from_12m),
+    #   'Reviewers Accept', 'Review Received').to_dict(orient='index')
 
     persons_list = [{
       **person,
@@ -376,8 +388,8 @@ class RecommendReviewers(object):
       'memberships': temp_memberships_map.get(person['person-id'], []),
       'dates-not-available': dates_not_available_map.get(person['person-id'], []),
       'stats': {
-        'review-duration': review_durations_map.get(person['person-id'], None),
-        'review-duration-12m': review_durations_last12m_map.get(person['person-id'], None)
+        'overall': overall_stats_map.get(person['person-id'], None),
+        'last-12m': last12m_stats_map.get(person['person-id'], None)
       }
     } for person in clean_result(self.persons_df[PERSON_COLUMNS].to_dict(orient='records'))]
 
@@ -715,11 +727,10 @@ class RecommendReviewers(object):
       populate_potential_reviewer(person_id)
       for person_id in potential_reviewers_ids]
 
-    available_potential_reviewer_mean_durations = [
-      potential_reviewer['person']['stats']['review-duration']['mean']
-      for potential_reviewer in potential_reviewers
-      if potential_reviewer['person']['stats']['review-duration']
-    ]
+    review_duration_mean_keys = ['person', 'stats', 'overall', 'review-duration', 'mean']
+    available_potential_reviewer_mean_durations = filter_none(deep_get_list(
+      potential_reviewers, review_duration_mean_keys
+    ))
     potential_reviewer_mean_duration = float(pd.np.mean(
       available_potential_reviewer_mean_durations))
 
@@ -728,11 +739,7 @@ class RecommendReviewers(object):
       key=lambda potential_reviewer: (
         -potential_reviewer['scores']['keyword'],
         -(potential_reviewer['scores']['similarity'] or 0),
-        (
-          potential_reviewer['person']['stats']['review-duration']['mean']
-          if potential_reviewer['person']['stats']['review-duration']
-          else potential_reviewer_mean_duration
-        ),
+        deep_get(potential_reviewer, review_duration_mean_keys, potential_reviewer_mean_duration),
         potential_reviewer['person']['first-name'],
         potential_reviewer['person']['last-name']
       )
