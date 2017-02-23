@@ -244,21 +244,46 @@ const formatDate = date => date && new Date(date).toLocaleDateString();
 const formatPeriodNotAvailable = periodNotAvailable =>
   `${formatDate(periodNotAvailable['dna-start-date'])} - ${formatDate(periodNotAvailable['dna-end-date'])}`;
 
-const formatStats = stats => {
-  // some values are null rather than undefined
-  const {mean: overall_mean, count: overall_count} =
-    ((stats || {})['overall'] || {})['review-duration'] || {};
-  const {mean: last12m_mean, count: last12m_count} =
-    ((stats || {})['last-12m'] || {})['review-duration'] || {};
-  if (!overall_mean) {
-    return '';
+const formatCount = (count, singular, plural, suffix) =>
+  (count !== undefined) && `${count} ${count === 1 ? singular : plural} ${suffix || ''}`.trim();
+
+const formatDays = days =>
+  (days !== undefined) && `${days.toFixed(1)} ${days === 1.0 ? 'day' : 'days'}`;
+
+const formatPeriodStats = periodStats => {
+  const {
+    mean,
+    count
+  } = periodStats['review-duration'] || {};
+  return [
+    mean && `${formatDays(mean)} (avg over ${formatCount(count, 'review', 'reviews')})`,
+    formatCount(periodStats['reviews-in-progress'], 'review', 'reviews', 'in progress'),
+    formatCount(periodStats['waiting-to-be-accepted'], 'review', 'reviews', 'awaiting response')
+  ].filter(s => !!s).join(', ');
+}
+
+const renderStats = stats => {
+  const overallStats = formatPeriodStats((stats || {})['overall'] || {});
+  const last12mStats = formatPeriodStats((stats || {})['last-12m'] || {});
+  if (!overallStats && !last12mStats) {
+    return;
   }
-  let result = `${overall_mean.toFixed(1)} days (avg over ${overall_count} reviews)`;
-  if (last12m_mean) {
-    result += `, with ${last12m_count} review(s) within the last 12 months
-        (avg ${last12m_mean.toFixed(1)} days)`
-  }
-  return result;
+  return (
+    <FlexColumn>
+      {
+        <View>
+          <Text>{ 'Overall: ' }</Text>
+          <Text>{ overallStats }</Text>
+        </View>
+      }
+      {
+        <View>
+          <Text>{ 'Last 12 months: ' }</Text>
+          <Text>{ last12mStats === overallStats ? 'see above' : last12mStats || 'n/a' }</Text>
+        </View>
+      }
+    </FlexColumn>
+  );
 };
 
 const PotentialReviewer = ({
@@ -292,7 +317,7 @@ const PotentialReviewer = ({
       requestedSubjectAreas={ requestedSubjectAreas }
     />
   ));
-  const formattedStats = formatStats(person['stats']);
+  const renderedStats = renderStats(person['stats']);
   return (
     <Card style={ styles.potentialReviewer.card }>
       <Comment text={ `Person id: ${person['person-id']}` }/>
@@ -312,13 +337,11 @@ const PotentialReviewer = ({
           )
         }
         {
-          formattedStats && (
+          renderedStats && (
             <View style={ styles.potentialReviewer.subSection }>
               <Text style={ styles.potentialReviewer.label }>Review Time: </Text>
               <View style={ styles.potentialReviewer.value }>
-                <Text>
-                  { formattedStats }
-                </Text>
+                { renderedStats }
               </View>
             </View>
           )

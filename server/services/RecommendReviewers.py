@@ -19,6 +19,8 @@ def debug(*args):
   if debug_enabled:
     print(*args)
 
+to_int = lambda x, default_value=None: int(x) if x is not None else default_value
+
 def get_first(l, default_value=None):
   return l[0] if l else default_value
 
@@ -49,7 +51,10 @@ def remove_none(d):
   return dict((k, v) for k, v in d.items() if not is_null(v))
 
 def clean_result(result):
-  return [remove_none(x) for x in applymap_dict_list(result, nat_to_none)]
+  if isinstance(result, list):
+    return [clean_result(x) for x in result]
+  else:
+    return remove_none(applymap_dict(result, nat_to_none))
 
 def droplevel_keep_non_blanks(columns):
   return [c[-1] if c[-1] != '' else c[0] for c in columns]
@@ -199,14 +204,38 @@ def filter_stage_pivot_by_stage(stage_pivot, stage, condition):
   else:
     return stage_pivot
 
+def get_stage(stage_pivot, stage_name):
+  return (
+    stage_pivot[stage_name]
+    if stage_name in stage_pivot.columns
+    else [pd.NaT] * len(stage_pivot)
+  )
+
 def stats_by_person_for_period(stage_pivot, condition=None):
   review_duration_by_person_map = duration_stats_between_by_person(
     filter_stage_pivot_by_stage(stage_pivot, 'Review Received', condition),
     'Reviewers Accept', 'Review Received'
   ).to_dict(orient='index')
-  return dict((k, {
-    'review-duration': review_duration_by_person_map.get(k)
-  }) for k in review_duration_by_person_map.keys())
+  reviews_in_progress_map = stage_pivot[
+    pd.notnull(get_stage(stage_pivot, 'Reviewers Accept')) &
+    pd.isnull(get_stage(stage_pivot, 'Review Received'))
+  ].reset_index().groupby('stage-affective-person-id').size().to_dict()
+  waiting_to_be_accepted_map = stage_pivot[
+    pd.notnull(get_stage(stage_pivot, 'Contacting Reviewers')) &
+    (
+      pd.isnull(get_stage(stage_pivot, 'Reviewers Accept')) &
+      pd.isnull(get_stage(stage_pivot, 'Reviewers Decline'))
+    )
+  ].reset_index().groupby('stage-affective-person-id').size().to_dict()
+  return clean_result(dict((k, {
+    'review-duration': review_duration_by_person_map.get(k),
+    'reviews-in-progress': int(reviews_in_progress_map.get(k, 0)),
+    'waiting-to-be-accepted': int(waiting_to_be_accepted_map.get(k, 0))
+  }) for k in (
+    set(review_duration_by_person_map.keys()) |
+    set(reviews_in_progress_map.keys()) |
+    set(waiting_to_be_accepted_map.keys())
+  )))
 
 
 def add_manuscript_version_id(df):

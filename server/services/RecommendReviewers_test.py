@@ -195,6 +195,15 @@ MANUSCRIPT_ID_FIELDS3 = {
   MANUSCRIPT_VERSION_ID: MANUSCRIPT_VERSION_ID3
 }
 
+create_manuscript_id_fields = lambda i: ({
+  MANUSCRIPT_NO: str(i),
+  VERSION_NO: 1,
+  MANUSCRIPT_VERSION_ID: version_id(str(i), 1)
+})
+
+MANUSCRIPT_ID_FIELDS4 = create_manuscript_id_fields(4)
+MANUSCRIPT_ID_FIELDS5 = create_manuscript_id_fields(5)
+
 DECISSION_ACCEPTED = 'Accept Full Submission'
 DECISSION_REJECTED = 'Reject Full Submission'
 
@@ -287,7 +296,9 @@ AUTHOR3 = {
   'author-person-id': PERSON_ID3
 }
 
+STAGE_CONTACTING_REVIEWERS = 'Contacting Reviewers'
 STAGE_REVIEW_ACCEPTED = 'Reviewers Accept'
+STAGE_REVIEW_DECLINE = 'Reviewers Decline'
 STAGE_REVIEW_COMPLETE = 'Review Received'
 
 MANUSCRIPT_HISTORY_REVIEW_COMPLETE1 = {
@@ -650,6 +661,8 @@ def test_matching_one_keyword_author_should_return_stats():
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1
   ], columns=MANUSCRIPT_KEYWORDS.columns)
+  # add two review durations (two stages each)
+  # also add an open review (accepted)
   datasets['manuscript-history'] = pd.DataFrame([{
     **MANUSCRIPT_ID_FIELDS1,
     'stage-affective-person-id': PERSON_ID1,
@@ -670,6 +683,16 @@ def test_matching_one_keyword_author_should_return_stats():
     'stage-affective-person-id': PERSON_ID1,
     'stage-name': STAGE_REVIEW_COMPLETE,
     'start-date': pd.Timestamp('2017-02-03')
+  }, {
+    **MANUSCRIPT_ID_FIELDS3,
+    'stage-affective-person-id': PERSON_ID1,
+    'stage-name': STAGE_REVIEW_ACCEPTED,
+    'start-date': pd.Timestamp('2017-02-01')
+  }, {
+    **MANUSCRIPT_ID_FIELDS4,
+    'stage-affective-person-id': PERSON_ID1,
+    'stage-name': STAGE_CONTACTING_REVIEWERS,
+    'start-date': pd.Timestamp('2017-02-01')
   }], columns=MANUSCRIPT_HISTORY.columns)
   recommend_reviewers = RecommendReviewers(datasets)
   review_duration = {
@@ -679,7 +702,9 @@ def test_matching_one_keyword_author_should_return_stats():
     'count': 2
   }
   overall_stats = {
-    'review-duration': review_duration
+    'review-duration': review_duration,
+    'reviews-in-progress': 1,
+    'waiting-to-be-accepted': 1
   }
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   result_person = result['potential-reviewers'][0]['person']
