@@ -500,11 +500,18 @@ const shufflePotentialReviewers = potentialReviewers => {
 }
 
 const SearchResult = ({ searchResult }) => {
-  const { potentialReviewers = [], matchingManuscripts = [] } = searchResult;
+  const { potentialReviewers = [], matchingManuscripts = [], manuscriptsNotFound } = searchResult;
   const requestedSubjectAreas = extractAllSubjectAreas(matchingManuscripts);
   const sortedPotentialReviewers = shufflePotentialReviewers(potentialReviewers);
   return (
     <View>
+      {
+        manuscriptsNotFound && manuscriptsNotFound.length > 0 && (
+          <View>
+            <Text>{ `Manuscript not found: ${manuscriptsNotFound.join(', ')}` }</Text>
+          </View>
+        )
+      }
       {
         matchingManuscripts.map((matchingManuscript, index) => (
           <ManuscriptSummary

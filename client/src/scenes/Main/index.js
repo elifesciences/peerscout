@@ -65,7 +65,8 @@ class Main extends React.Component {
         this.setState({
           results: {
             potentialReviewers: resultsResponse['potential-reviewers'],
-            matchingManuscripts: resultsResponse['matching-manuscripts']
+            matchingManuscripts: resultsResponse['matching-manuscripts'],
+            manuscriptsNotFound: resultsResponse['manuscripts-not-found']
           },
           resultsSearchOptions,
           shouldLoad: false,

@@ -632,8 +632,11 @@ class RecommendReviewers(object):
     exclude_person_ids = set()
     subject_areas = set()
     matching_manuscripts_dicts = []
+    manuscripts_not_found = None
     if manuscript_no is not None and manuscript_no != '':
       matching_manuscripts = self.__find_manuscripts_by_key(manuscript_no)
+      if (len(matching_manuscripts) == 0):
+        manuscripts_not_found = [manuscript_no]
       manuscript_keywords = self.__find_keywords_by_version_keys(
         matching_manuscripts[MANUSCRIPT_VERSION_ID])
       matching_manuscripts_dicts = map_to_dict(
@@ -779,10 +782,13 @@ class RecommendReviewers(object):
       )
     )
 
-    return {
+    result = {
       'potential-reviewers': potential_reviewers,
       'matching-manuscripts': map_to_dict(
         matching_manuscripts[MANUSCRIPT_VERSION_ID],
         self.manuscripts_by_version_id_map
       )
     }
+    if manuscripts_not_found is not None:
+      result['manuscripts-not-found'] = manuscripts_not_found
+    return result
