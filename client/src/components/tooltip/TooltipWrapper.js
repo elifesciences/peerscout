@@ -1,19 +1,29 @@
 import React from 'react';
-import Tooltip from 'material-ui/internal/Tooltip';
+import ReactPortalTooltip from 'react-portal-tooltip'
 
 import { View } from '../core';
 
 const styles = {
-  containerStyle: {
-    maxWidth: 600
-  },
-  labelStyle: {
-    whiteSpace: 'normal',
-    lineHeight: 1.5,
-    paddingTop: 5,
-    paddingBottom: 5
+  tooltip: {
+    style: {
+      background: 'rgba(0,0,0,.8)',
+      color: '#ccc',
+      padding: 10,
+      paddingTop: 5,
+      paddingBottom: 5,
+      boxShadow: '5px 5px 3px rgba(0,0,0,.5)',
+      maxWidth: 800,
+      whiteSpace: 'normal',
+      lineHeight: 1.5,
+    },
+    arrowStyle: {
+      color: 'rgba(0,0,0,.8)',
+      borderColor: false
+    },
   }
 };
+
+let idCounter = 1;
 
 class TooltipWrapper extends React.Component {
   constructor(props) {
@@ -28,22 +38,32 @@ class TooltipWrapper extends React.Component {
     }
     this.handleMouseEnter = this.handleMouseEnter.bind(this);
     this.handleMouseLeave = this.handleMouseLeave.bind(this);
+    this.id = 'tooltip-' + idCounter++;
   }
 
   handleMouseEnter(event) {
     this.setState({
-      hoveredTooltip: true,
+      hoveredTooltipNow: true,
       hoverStyle: {
         ...this.state.hoverStyle,
         left: event.pageX + 10,
         top: event.pageY + 10
       }
     });
+    // bug in ReactPortalTooltip requires trigger to happen a bit later (could be 0ms)
+    // but it is good to delay it anyway to not get into the way all the time
+    setTimeout(() => {
+      this.setState(state => ({
+        ...state,
+        hoveredTooltip: state.hoveredTooltipNow
+      }));
+    }, 300);
   }
 
   handleMouseLeave(event) {
     this.setState({
-      hoveredTooltip: false
+      hoveredTooltipNow: false,
+      hoveredTooltip: false,
     });
   }
 
@@ -51,7 +71,7 @@ class TooltipWrapper extends React.Component {
     const { content, children, style } = this.props;
     const label = (
       <View style={ styles.labelStyle }>
-        { this.state.hoveredTooltip && content }
+        { content }
       </View>
     )
     return (
@@ -59,16 +79,23 @@ class TooltipWrapper extends React.Component {
         onMouseEnter={ this.handleMouseEnter }
         onMouseLeave={ this.handleMouseLeave }
         style={ style }
+        className={ this.state.hoveredTooltip ? 'tooltip-active' : 'tooltip-inactive' }
       >
-        { children }
-        <Tooltip
-          show={this.state.hoveredTooltip}
-          style={ this.state.hoverStyle }
-          label={ label }
-          horizontalPosition="left"
-          verticalPosition="top"
-          touch={true}
-          />
+        <View
+          id={ this.id }
+        >
+          { children }
+        </View>
+        <ReactPortalTooltip
+          active={this.state.hoveredTooltip}
+          arrow="top"
+          position="bottom"
+          parent={ `#${this.id}` }
+          style={ styles.tooltip }
+          tooltipTimeout={ 100 }
+        >
+          { content }
+        </ReactPortalTooltip>
       </View>
     );
   }
