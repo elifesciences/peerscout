@@ -196,8 +196,10 @@ def process_files_in_directory(root_dir, process_file, ext=None):
       process_files_in_zip(full_filename, process_file, ext)
     else:
       with open(full_filename, 'rb') as f:
-        # contents = f.read()
-        process_file(filename, f)
+        try:
+          process_file(filename, f)
+        except Exception as e:
+          raise Exception('failed to process ' + full_filename) from e
 
 def process_files_in_directory_or_zip(root_dir_or_zip, process_file, ext=None):
   if get_filename_ext(root_dir_or_zip) == '.zip':
