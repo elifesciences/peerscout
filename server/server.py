@@ -16,19 +16,23 @@ CLIENT_FOLDER = '../client/dist'
 
 port = 8080
 
-with open('config.json') as config_file:
-  config = json.load(config_file)
-  csv_path = abspath(config['csv']['path'])
-  csv_datasets = CsvDatasetLoader(csv_path)
-  pickle_datasets = PickleDatasetLoader(csv_path)
-  routing_datasets = RoutingDatasetLoader({
-    'manuscript-abstracts-spacy-docvecs': pickle_datasets,
-    'crossref-person-extra-spacy-docvecs': pickle_datasets
-  }, csv_datasets)
-  datasets = CachedDatasetLoader(routing_datasets)
-  recommend_reviewers = RecommendReviewers(datasets)
-  if 'port' in config:
-    port = config['port']
+def load_recommender():
+  with open('config.json') as config_file:
+    config = json.load(config_file)
+    csv_path = abspath(config['csv']['path'])
+    csv_datasets = CsvDatasetLoader(csv_path)
+    pickle_datasets = PickleDatasetLoader(csv_path)
+    routing_datasets = RoutingDatasetLoader({
+      'manuscript-abstracts-spacy-docvecs': pickle_datasets,
+      'crossref-person-extra-spacy-docvecs': pickle_datasets
+    }, csv_datasets)
+    datasets = CachedDatasetLoader(routing_datasets)
+    recommend_reviewers = RecommendReviewers(datasets)
+    if 'port' in config:
+      port = config['port']
+  return recommend_reviewers
+
+recommend_reviewers = load_recommender()
 
 class CustomJSONEncoder(JSONEncoder):
   def default(self, obj):
@@ -67,6 +71,15 @@ def recommend_reviewers_api():
 @app.route("/api/hello")
 def run():
   return "Hello!"
+
+@app.route("/control/reload", methods=['POST'])
+def control_reload():
+  global recommend_reviewers
+  if request.remote_addr != '127.0.0.1':
+    return jsonify({'ip': request.remote_addr}), 403
+  print("reloading...")
+  recommend_reviewers = load_recommender()
+  return jsonify({'status': 'OK'})
 
 @app.route('/')
 def send_index():
