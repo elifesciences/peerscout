@@ -47,7 +47,7 @@ class Main extends React.Component {
       () => this.state.searchOptions,
       (searchOptions) => {
         if (!searchOptions.keywords && !searchOptions.manuscriptNumber) {
-          return Promise.resolve({});
+          return Promise.resolve();
         }
         return this.props.reviewerRecommendationApi.recommendReviewers({
           keywords: searchOptions.keywords,
@@ -63,7 +63,7 @@ class Main extends React.Component {
         console.log("resultsResponse:", resultsResponse);
         this.actuallyLoading = false;
         this.setState({
-          results: {
+          results: resultsResponse && {
             potentialReviewers: resultsResponse['potential-reviewers'],
             matchingManuscripts: resultsResponse['matching-manuscripts'],
             manuscriptsNotFound: resultsResponse['manuscripts-not-found']
@@ -156,7 +156,7 @@ class Main extends React.Component {
     const {
       loading,
       searchOptions,
-      results = {}
+      results
     } = this.state;
     return (
       <View>
@@ -166,7 +166,13 @@ class Main extends React.Component {
         />
         <View style={ styles.containerWithMargin }>
           <LoadingIndicator loading={ loading }>
-            <SearchResult searchResult={ results }/>
+            <View>
+              {
+                results && (
+                  <SearchResult searchResult={ results }/>
+                )
+              }
+            </View>
           </LoadingIndicator>
         </View>
       </View>

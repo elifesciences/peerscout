@@ -503,10 +503,11 @@ const SearchResult = ({ searchResult }) => {
   const { potentialReviewers = [], matchingManuscripts = [], manuscriptsNotFound } = searchResult;
   const requestedSubjectAreas = extractAllSubjectAreas(matchingManuscripts);
   const sortedPotentialReviewers = shufflePotentialReviewers(potentialReviewers);
+  const hasManuscriptsNotFound = manuscriptsNotFound && manuscriptsNotFound.length > 0;
   return (
     <View>
       {
-        manuscriptsNotFound && manuscriptsNotFound.length > 0 && (
+        hasManuscriptsNotFound && (
           <View>
             <Text>{ `Manuscript not found: ${manuscriptsNotFound.join(', ')}` }</Text>
           </View>
@@ -528,6 +529,13 @@ const SearchResult = ({ searchResult }) => {
             requestedSubjectAreas={ requestedSubjectAreas }
           />
         ))
+      }
+      {
+        !hasManuscriptsNotFound && sortedPotentialReviewers.length === 0 && (
+          <View>
+            <Text>{ 'No potential reviewers found' }</Text>
+          </View>
+        )
       }
     </View>
   );
