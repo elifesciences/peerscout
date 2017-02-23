@@ -1,16 +1,22 @@
 import itertools
 from os.path import basename, splitext
 
+import pandas as pd
+
 from convertUtils import\
   process_files_in_directory_or_zip, has_children, parse_xml_file, TableOutput, write_tables_to_csv
 
+def auto_convert(name, value):
+  if name.endswith('-date'):
+    return pd.to_datetime(value)
+  return value
 
 def collect_props(node, props = {}, xpaths = ['*'], exclude=[]):
   node_props = dict(props)
   for xp in xpaths:
     for e in node.findall(xp):
       if not has_children(e) and e.tag not in exclude:
-        node_props[e.tag] = e.text
+        node_props[e.tag] = auto_convert(e.tag, e.text)
   return node_props
 
 def populate_and_append_to_table(table, nodes, props = {}, xpaths = ['*'], exclude=[]):
@@ -223,7 +229,7 @@ def main():
 
   process_files_in_directory_or_zip(source, process_file, ext=".xml")
 
-  write_tables_to_csv(csv_path, tables)
+  write_tables_to_csv(csv_path, tables, pickle=True)
 
   print("done")
 

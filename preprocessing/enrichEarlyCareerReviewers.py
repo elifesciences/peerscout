@@ -85,6 +85,7 @@ def contains_author_with_name(item, first_name, last_name):
 def enrich_early_career_reviewers(csv_path):
   in_filename = os.path.join(csv_path, 'early-career-reviewers.csv')
   out_filename = os.path.join(csv_path, 'crossref-person-extra.csv')
+  out_filename_pickle = os.path.join(csv_path, 'crossref-person-extra.pickle')
   print("converting:", in_filename)
   df = pd.read_csv(os.path.join(csv_path, 'early-career-reviewers.csv'))
   print("shape:", df.shape)
@@ -135,19 +136,26 @@ def enrich_early_career_reviewers(csv_path):
         'last-name': last_name
       })
 
-  fieldnames = set()
-  for out_row in out_list:
-    fieldnames |= out_row.keys()
-  fieldnames = sorted(fieldnames)
-  print("fieldnames:", fieldnames)
+  # fieldnames = set()
+  # for out_row in out_list:
+  #   fieldnames |= out_row.keys()
+  # fieldnames = sorted(fieldnames)
+  # print("fieldnames:", fieldnames)
 
-  with open(out_filename, 'w') as csvfile:
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+  # with open(out_filename, 'w') as csvfile:
+  #   writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-    writer.writeheader()
+  #   writer.writeheader()
 
-    for out_row in out_list:
-      writer.writerow(out_row)
+  #   for out_row in out_list:
+  #     writer.writerow(out_row)
+
+  df = pd.DataFrame.from_records(out_list)
+  for c in df.columns.values:
+    if c.endswith('-date'):
+      df[c] = pd.to_datetime(df[c])
+  df.to_csv(out_filename, index=False)
+  df.to_pickle(out_filename_pickle)
 
 def main():
   csv_path = "../csv"

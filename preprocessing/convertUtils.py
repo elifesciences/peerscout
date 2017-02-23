@@ -10,6 +10,7 @@ from html.parser import HTMLParser
 
 from tqdm import tqdm
 import numpy as np
+import pandas as pd
 
 debug_enabled = False
 
@@ -140,12 +141,22 @@ def write_csv(filename, matrix):
     for row in matrix:
       csvwriter.writerow(row)
 
-def write_tables_to_csv(csv_path, tables):
+def write_pickle(filename, matrix):
+  columns = matrix[0]
+  df = pd.DataFrame(matrix[1:], columns=columns)
+  for c in columns:
+    if c.endswith('-date'):
+      df[c] = pd.to_datetime(df[c])
+  df.to_pickle(filename)
+
+def write_tables_to_csv(csv_path, tables, pickle=False):
   makedirs(csv_path, exist_ok=True)
   pbar = tqdm(tables.keys(), leave=False)
   for name in pbar:
     pbar.set_description("%40s" % shorten(name, width=40))
     write_csv(csv_path + "/" + name + ".csv", tables[name].matrix())
+    if pickle:
+      write_pickle(csv_path + "/" + name + ".pickle", tables[name].matrix())
   pbar.set_description("Done")
 
 def get_basename(filename):
