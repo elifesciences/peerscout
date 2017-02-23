@@ -27,8 +27,11 @@ def column_astype(df, col_name, col_type):
   df[col_name] = df[col_name].astype(col_type)
   return df
 
+def applymap_dict(d, f):
+  return dict((k, f(v)) for k, v in d.items())
+
 def applymap_dict_list(dict_list, f):
-  return [dict((k, f(v)) for k, v in row.items()) for row in dict_list]
+  return [applymap_dict(row, f) for row in dict_list]
 
 def is_nat(x):
   return isinstance(x, type(pd.NaT))
@@ -225,6 +228,13 @@ def person_by_early_career_reviewer(early_career_reviewer):
       'review-duration': {}
     }
   }
+
+def sort_manuscripts_by_date(manuscripts):
+  return sorted(manuscripts, key=lambda m: (
+    m.get('published-date', None),
+    m.get('title', None),
+    m.get(MANUSCRIPT_VERSION_ID, None)
+  ), reverse=True)
 
 def manuscript_by_crossref_person_extra(crossref_person_extra):
   doi = crossref_person_extra['doi']
@@ -449,6 +459,13 @@ class RecommendReviewers(object):
         ] = manuscript
         self.manuscripts_by_author_map.setdefault(person_id, [])\
         .append(manuscript)
+
+    self.manuscripts_by_author_map = applymap_dict(
+      self.manuscripts_by_author_map, sort_manuscripts_by_date
+    )
+    self.manuscripts_by_reviewer_map = applymap_dict(
+      self.manuscripts_by_reviewer_map, sort_manuscripts_by_date
+    )
 
   def __find_manuscripts_by_keywords(self, keywords, manuscript_no=None):
     other_manuscripts = self.manuscript_keywords_df[
