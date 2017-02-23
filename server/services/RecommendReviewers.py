@@ -640,7 +640,7 @@ class RecommendReviewers(object):
     manuscripts_not_found = None
     if manuscript_no is not None and manuscript_no != '':
       matching_manuscripts = self.__find_manuscripts_by_key(manuscript_no)
-      if (len(matching_manuscripts) == 0):
+      if len(matching_manuscripts) == 0:
         manuscripts_not_found = [manuscript_no]
       manuscript_keywords = self.__find_keywords_by_version_keys(
         matching_manuscripts[MANUSCRIPT_VERSION_ID])
