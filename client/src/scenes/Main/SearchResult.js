@@ -258,7 +258,8 @@ const formatPeriodStats = periodStats => {
   return [
     mean && `${formatDays(mean)} (avg over ${formatCount(count, 'review', 'reviews')})`,
     formatCount(periodStats['reviews-in-progress'], 'review', 'reviews', 'in progress'),
-    formatCount(periodStats['waiting-to-be-accepted'], 'review', 'reviews', 'awaiting response')
+    formatCount(periodStats['waiting-to-be-accepted'], 'review', 'reviews', 'awaiting response'),
+    formatCount(periodStats['declined'], 'review', 'reviews', 'declined')
   ].filter(s => !!s).join(', ');
 }
 

@@ -704,7 +704,8 @@ def test_matching_one_keyword_author_should_return_stats():
   overall_stats = {
     'review-duration': review_duration,
     'reviews-in-progress': 1,
-    'waiting-to-be-accepted': 1
+    'waiting-to-be-accepted': 1,
+    'declined': 0
   }
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   result_person = result['potential-reviewers'][0]['person']

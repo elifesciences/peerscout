@@ -227,14 +227,19 @@ def stats_by_person_for_period(stage_pivot, condition=None):
       pd.isnull(get_stage(stage_pivot, 'Reviewers Decline'))
     )
   ].reset_index().groupby('stage-affective-person-id').size().to_dict()
+  declined_map = stage_pivot[
+    pd.notnull(get_stage(stage_pivot, 'Reviewers Decline'))
+  ].reset_index().groupby('stage-affective-person-id').size().to_dict()
   return clean_result(dict((k, {
     'review-duration': review_duration_by_person_map.get(k),
     'reviews-in-progress': int(reviews_in_progress_map.get(k, 0)),
-    'waiting-to-be-accepted': int(waiting_to_be_accepted_map.get(k, 0))
+    'waiting-to-be-accepted': int(waiting_to_be_accepted_map.get(k, 0)),
+    'declined': int(declined_map.get(k, 0))
   }) for k in (
     set(review_duration_by_person_map.keys()) |
     set(reviews_in_progress_map.keys()) |
-    set(waiting_to_be_accepted_map.keys())
+    set(waiting_to_be_accepted_map.keys()) |
+    set(declined_map.keys())
   )))
 
 
