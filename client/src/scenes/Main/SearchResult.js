@@ -100,6 +100,11 @@ const styles = {
     display: 'inline-block',
     marginLeft: 10
   },
+  emailLink: {
+    ...commonStyles.link,
+    display: 'inline-block',
+    marginLeft: 10
+  },
   membershipLink: {
     ...commonStyles.link,
     display: 'inline-block',
@@ -239,6 +244,16 @@ const PersonWebSearchLink = ({ person }) => (
   </Link>
 );
 
+const PersonEmailLink = ({ person: { email } }) => (
+  <Link
+    style={ styles.emailLink }
+    target="_blank"
+    href={ `mailto:${email}` }
+  >
+    <Text><FontAwesomeIcon name="envelope"/></Text>
+  </Link>
+);
+
 const formatDate = date => date && new Date(date).toLocaleDateString();
 
 const formatPeriodNotAvailable = periodNotAvailable =>
@@ -307,6 +322,11 @@ const PotentialReviewer = ({
   const titleComponent = (
     <View style={ styles.inlineContainer }>
       <Text>{ combinedPersonName(person) }</Text>
+      {
+        person['email'] && (
+          <PersonEmailLink person={ person } />
+        )
+      }
       { membershipComponents }
     </View>
   );

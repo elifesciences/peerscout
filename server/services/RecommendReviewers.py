@@ -127,7 +127,7 @@ PERSON_ID = 'person-id'
 
 PERSON_COLUMNS = [
   'person-id',
-  'title', 'first-name', 'middle-name', 'last-name', 'institution', 'status'
+  'title', 'first-name', 'middle-name', 'last-name', 'institution', 'status', 'email'
 ]
 
 DECISIONS_ACCEPTED = set(['Accept Full Submission', 'Auto-Accept'])

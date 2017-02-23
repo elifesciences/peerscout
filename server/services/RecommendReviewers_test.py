@@ -22,7 +22,7 @@ AUTHORS = pd.DataFrame(
 PERSONS = pd.DataFrame(
   [],
   columns=PERSON_ID_COLUMNS + [
-    'title', 'first-name', 'middle-name', 'last-name', 'institution', 'status'
+    'title', 'first-name', 'middle-name', 'last-name', 'institution', 'status', 'email'
   ])
 EARLY_CAREER_REVIEWERS = pd.DataFrame(
   [],
