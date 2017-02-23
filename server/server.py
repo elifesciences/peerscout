@@ -7,30 +7,21 @@ from flask.json import JSONEncoder
 from flask_cors import CORS
 # from intend_matchers.simple_intend_matcher import SimpleIntendMatcher
 
-from datasets import\
-  CsvDatasetLoader, PickleDatasetLoader,\
-  RoutingDatasetLoader, CachedDatasetLoader
+from datasets import PickleDatasetLoader, CachedDatasetLoader
 from services import RecommendReviewers
 
 CLIENT_FOLDER = '../client/dist'
 
 port = 8080
 
+with open('config.json') as config_file:
+  config = json.load(config_file)
+  port = config.get('port', port)
+
 def load_recommender():
-  with open('config.json') as config_file:
-    config = json.load(config_file)
-    csv_path = abspath(config['csv']['path'])
-    csv_datasets = CsvDatasetLoader(csv_path)
-    pickle_datasets = PickleDatasetLoader(csv_path)
-    routing_datasets = RoutingDatasetLoader({
-      'manuscript-abstracts-spacy-docvecs': pickle_datasets,
-      'crossref-person-extra-spacy-docvecs': pickle_datasets
-    }, csv_datasets)
-    datasets = CachedDatasetLoader(routing_datasets)
-    recommend_reviewers = RecommendReviewers(datasets)
-    if 'port' in config:
-      port = config['port']
-  return recommend_reviewers
+  csv_path = abspath(config['csv']['path'])
+  datasets = CachedDatasetLoader(PickleDatasetLoader(csv_path))
+  return RecommendReviewers(datasets)
 
 recommend_reviewers = load_recommender()
 

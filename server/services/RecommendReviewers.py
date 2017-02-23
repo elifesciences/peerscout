@@ -279,6 +279,11 @@ def sort_manuscripts_by_date(manuscripts):
     m.get(MANUSCRIPT_VERSION_ID, None)
   ), reverse=True)
 
+def parse_list_if_str(x):
+  if isinstance(x, str):
+    return ast.literal_eval(x)
+  return x
+
 def manuscript_by_crossref_person_extra(crossref_person_extra):
   doi = crossref_person_extra['doi']
   return {
@@ -288,7 +293,7 @@ def manuscript_by_crossref_person_extra(crossref_person_extra):
     'doi': doi,
     'title': crossref_person_extra['title'],
     'abstract': crossref_person_extra['abstract'],
-    'subject-areas': ast.literal_eval(crossref_person_extra['subject-areas']),
+    'subject-areas': parse_list_if_str(crossref_person_extra['subject-areas']),
     'published-date': crossref_person_extra['created-date']
   }
 
