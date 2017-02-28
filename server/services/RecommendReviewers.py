@@ -263,6 +263,7 @@ def person_by_early_career_reviewer(early_career_reviewer):
     })
   return {
     PERSON_ID: early_career_reviewer[PERSON_ID],
+    'status': 'Active',
     'first-name': early_career_reviewer['first-name'],
     'last-name': early_career_reviewer['last-name'],
     'is-early-career-reviewer': True,
