@@ -49,15 +49,20 @@ def api_root():
 
 @app.route("/api/recommend-reviewers")
 def recommend_reviewers_api():
-  keywords = request.args.get('keywords')
   manuscript_no = request.args.get('manuscript_no')
+  subject_area = request.args.get('subject_area')
+  keywords = request.args.get('keywords')
   if keywords is None:
     return 'keywords parameter required', 400
-  result = recommend_reviewers.recommend(keywords, manuscript_no)
+  result = recommend_reviewers.recommend(manuscript_no, subject_area, keywords)
   # print("result:", result)
   # if result is None:
   #   return 'did not match any intend', 404
   return jsonify(result)
+
+@app.route("/api/subject-areas")
+def subject_areas_api():
+  return jsonify(list(recommend_reviewers.get_all_subject_areas()))
 
 @app.route("/api/hello")
 def run():

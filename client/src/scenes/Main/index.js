@@ -50,8 +50,9 @@ class Main extends React.Component {
           return Promise.resolve();
         }
         return this.props.reviewerRecommendationApi.recommendReviewers({
-          keywords: searchOptions.keywords || '',
-          manuscript_no: searchOptions.manuscriptNumber || ''
+          manuscript_no: searchOptions.manuscriptNumber || '',
+          subject_area: searchOptions.subjectArea || '',
+          keywords: searchOptions.keywords || ''
         });
       }
     );
@@ -133,6 +134,9 @@ class Main extends React.Component {
     this.unlisten = this.history.listen((location, action) => {
       this.updateSearchOptionsFromLocation(location);
     });
+    this.props.reviewerRecommendationApi.getAllSubjectAreas().then(allSubjectAreas => this.setState({
+      allSubjectAreas
+    }));
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -157,13 +161,15 @@ class Main extends React.Component {
     const {
       loading,
       searchOptions,
-      results
+      results,
+      allSubjectAreas
     } = this.state;
     return (
       <View>
         <SearchHeader
           searchOptions={ searchOptions }
           onSearchOptionsChanged={ this.onSearchOptionsChanged }
+          allSubjectAreas={ allSubjectAreas }
         />
         <View style={ styles.containerWithMargin }>
           <LoadingIndicator loading={ loading }>

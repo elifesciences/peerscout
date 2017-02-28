@@ -459,6 +459,7 @@ class RecommendReviewers(object):
       MANUSCRIPT_NO,
       'production-data-doi')
 
+    self.all_subject_areas = set(self.manuscript_subject_areas_all_df['subject-area'])
     temp_subject_areas_map = groupby_column_to_dict(
       self.manuscript_subject_areas_all_df,
       MANUSCRIPT_VERSION_ID,
@@ -631,10 +632,15 @@ class RecommendReviewers(object):
     ][PERSON_ID].values)
     return result
 
-  def recommend(self, keywords, manuscript_no):
+  def get_all_subject_areas(self):
+    return self.all_subject_areas
+
+  def recommend(self, manuscript_no, subject_area, keywords):
     keyword_list = self.__parse_keywords(keywords)
     exclude_person_ids = set()
     subject_areas = set()
+    if subject_area is not None and len(subject_area) > 0:
+      subject_areas.add(subject_area)
     matching_manuscripts_dicts = []
     manuscripts_not_found = None
     if manuscript_no is not None and manuscript_no != '':
@@ -663,6 +669,7 @@ class RecommendReviewers(object):
     other_manuscripts = self.__find_manuscripts_by_keywords(
       keyword_list
     )
+    print("subject_areas:", subject_areas)
     if len(subject_areas) > 0:
       other_manuscripts = self._filter_manuscripts_by_subject_areas(
         other_manuscripts, subject_areas

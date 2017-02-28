@@ -2,6 +2,7 @@ import React from 'react';
 import Headroom from 'react-headroom';
 
 import {
+  AutoComplete,
   FlexRow,
   FontAwesomeIcon,
   Paper,
@@ -38,11 +39,12 @@ class SearchHeader extends React.Component {
     };
     this.state = this.getInitialiseState(initialSearchOptions);
     this.updateSearchOption = (key, value) => {
+      const { currentTab } = this.state;
       const searchOptions = {
         ...this.state[currentTab],
         [key]: value
       };
-      const { currentTab } = this.state;
+      console.log("this.state[currentTab]:", this.state[currentTab], searchOptions);
       this.setState({
         [currentTab]: searchOptions
       });
@@ -61,7 +63,7 @@ class SearchHeader extends React.Component {
         currentTab: BY_MANUSCRIPT,
         [BY_MANUSCRIPT]: searchOptions
       }
-    } else if (searchOptions.keywords) {
+    } else if (searchOptions.subjectArea || searchOptions.keywords) {
       return {
         currentTab: BY_SEARCH,
         [BY_SEARCH]: searchOptions
@@ -77,10 +79,11 @@ class SearchHeader extends React.Component {
   }
   
   render() {
-    const { state, updateSearchOption } = this;
+    const { state, updateSearchOption, props } = this;
+    const { allSubjectAreas=[] } = props;
     const { currentTab } = state;
     const { manuscriptNumber } = (state[BY_MANUSCRIPT] || {});
-    const { keywords } = (state[BY_SEARCH] || {});
+    const { subjectArea, keywords } = (state[BY_SEARCH] || {});
 
     return (
       <Headroom>
@@ -111,6 +114,16 @@ class SearchHeader extends React.Component {
                 <FlexRow>
                   <View style={ styles.inlineContainer }>
                     <FontAwesomeIcon style={{ paddingTop: 40 }} name="search"/>
+                  </View>
+                  <View style={ styles.field }>
+                    <AutoComplete
+                      floatingLabelText="Subject area"
+                      searchText={ subjectArea || '' }
+                      onUpdateInput={ newValue => updateSearchOption('subjectArea', newValue) }
+                      dataSource={ allSubjectAreas }
+                      filter={ AutoComplete.fuzzyFilter }
+                      style={ styles.textField }
+                    />
                   </View>
                   <View style={ styles.field }>
                     <TextField
