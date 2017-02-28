@@ -121,6 +121,9 @@ const styles = {
   }
 }
 
+const formatPersonStatus = status =>
+  status && status.length > 0 ? status : 'Unknown status';
+
 const combinedPersonName = person =>
   [
     person['title'],
@@ -128,7 +131,7 @@ const combinedPersonName = person =>
     person['middle-name'],
     person['last-name'],
     person['is-early-career-reviewer'] ? '(early career reviewer)': undefined,
-    person['status'] !== 'Active' && `(${person['status']})`
+    person['status'] !== 'Active' && `(${formatPersonStatus(person['status'])})`
   ].filter(s => !!s).join(' ');
 
 const quote = s => s && `\u201c${s}\u201d`
