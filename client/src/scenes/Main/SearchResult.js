@@ -136,10 +136,7 @@ const combinedPersonName = person =>
 
 const quote = s => s && `\u201c${s}\u201d`
 
-const formatManuscriptId = manuscript => [
-  manuscript['manuscript-no'],
-  manuscript['version-no'] && `v${manuscript['version-no']}`
-].filter(s => !!s).join(' ');
+const formatManuscriptId = manuscript => manuscript['manuscript-no'];
 
 const formatKeywordScoreInline = keyword =>
   keyword ? keyword + ' keyword match' : '';
@@ -417,7 +414,6 @@ const ManuscriptSummary = ({
   manuscript: {
     title,
     'manuscript-no': manuscriptNo,
-    'version-no': versionNo,
     abstract,
     authors,
     reviewers,
@@ -427,7 +423,7 @@ const ManuscriptSummary = ({
   <Card style={ styles.manuscriptSummary.container } initiallyExpanded={ true }>
     <CardHeader
       title={ quote(title) }
-      subtitle={ `${manuscriptNo} v${versionNo}` }
+      subtitle={ manuscriptNo }
       actAsExpander={ true }
       showExpandableButton={ true }
     />
