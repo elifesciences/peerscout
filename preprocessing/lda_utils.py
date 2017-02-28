@@ -14,9 +14,13 @@ def isstr(s):
 def get_default_stop_words():
   return ENGLISH_STOP_WORDS
 
+def tokenize_terms(text):
+    return text.split(' ')
+
 def train_lda(
   data,
   vectorizer=None,
+  vectorized=None,
   lda=None,
   n_features=100,
   n_topics=10,
@@ -32,12 +36,14 @@ def train_lda(
       max_df=max_df,
       min_df=min_df,
       max_features=n_features,
-      stop_words=stop_words)
-  t0 = time()
+      stop_words=stop_words,
+      tokenizer=tokenize_terms)
   indices = [x is not None and isstr(x) and len(x) > 0 for x in data]
   indices = np.arange(len(data))[indices]
-  vectorized = vectorizer.fit_transform(data[indices])
-  print("vectorized in %0.3fs." % (time() - t0))
+  if vectorized is None:
+    t0 = time()
+    vectorized = vectorizer.fit_transform(data[indices])
+    print("vectorized in %0.3fs." % (time() - t0))
 
   if lda is None:
     lda = LatentDirichletAllocation(
@@ -49,7 +55,7 @@ def train_lda(
   t0 = time()
   matching_docvecs = list(lda.fit_transform(vectorized))
   docvecs = [None] * len(data)
-  print("indices:", indices)
+  # print("indices:", indices)
   for index, docvec in zip(indices, matching_docvecs):
     docvecs[index] = docvec
   print("lda in %0.3fs." % (time() - t0))
