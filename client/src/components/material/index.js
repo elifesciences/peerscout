@@ -17,6 +17,13 @@ import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
 SelectField.Item = MenuItem;
 
+import { Tabs, Tab } from 'material-ui/Tabs';
+Tabs.Tab = Tab;
+
+export {
+  Tabs, Tab
+}
+
 export * from 'material-ui/Card';
 
 // export { default as Button } from './Button';
