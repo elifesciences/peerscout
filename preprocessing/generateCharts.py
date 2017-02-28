@@ -243,7 +243,7 @@ def generate_doc2vec_charts(data, charts_path):
 
     tsne_result = tsne(tsne_docvecs)
 
-    radius = (np.max(tsne_result[:, 0]) - np.min(tsne_result[:, 0])) * 0.01
+    radius = (np.max(tsne_result[:, 0]) - np.min(tsne_result[:, 0])) * 0.007
 
     bokeh_show_scatter(
       data=dict(
