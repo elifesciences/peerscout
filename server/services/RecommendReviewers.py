@@ -636,7 +636,7 @@ class RecommendReviewers(object):
   def get_all_subject_areas(self):
     return self.all_subject_areas
 
-  def recommend(self, manuscript_no, subject_area, keywords):
+  def recommend(self, manuscript_no=None, subject_area=None, keywords=None):
     keyword_list = self.__parse_keywords(keywords)
     exclude_person_ids = set()
     subject_areas = set()
