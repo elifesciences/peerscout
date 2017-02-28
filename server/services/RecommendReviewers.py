@@ -409,18 +409,15 @@ class RecommendReviewers(object):
     dates_not_available_map = groupby_column_to_dict(dates_not_available_df, PERSON_ID)
     early_career_reviewers_person_ids = set(early_career_reviewers_df[PERSON_ID].values)
 
+    print("gathering stats")
     stage_pivot = create_stage_pivot(self.manuscript_history_all_df)
     overall_stats_map = stats_by_person_for_period(stage_pivot)
 
-    # review_durations_map = duration_stats_between_by_person(
-    #   stage_pivot, 'Reviewers Accept', 'Review Received').to_dict(orient='index')
     today = datetime.today()
     from_12m = pd.Timestamp(today.replace(year=today.year - 1))
     last12m_stats_map = stats_by_person_for_period(stage_pivot, lambda dt: dt >= from_12m)
-    # review_durations_last12m_map = duration_stats_between_by_person(
-    #   filter_stage_pivot_by_stage(stage_pivot, 'Review Received', lambda dt: dt >= from_12m),
-    #   'Reviewers Accept', 'Review Received').to_dict(orient='index')
 
+    print("building person list")
     persons_list = [{
       **person,
       'is-early-career-reviewer': person['person-id'] in early_career_reviewers_person_ids,
@@ -468,6 +465,7 @@ class RecommendReviewers(object):
       'subject-area'
     )
 
+    print("building manuscript list")
     manuscripts_all_list = clean_result(
       self.manuscript_versions_all_df[
         MANUSCRIPT_ID_COLUMNS +\
@@ -498,6 +496,7 @@ class RecommendReviewers(object):
           self.manuscripts_by_reviewer_map.setdefault(reviewer[PERSON_ID], [])\
           .append(m)
 
+    print("adding crossref data")
     for row in crossref_person_extras_df.to_dict(orient='records'):
       person_id = row[PERSON_ID]
       doi = row['doi'].lower()
