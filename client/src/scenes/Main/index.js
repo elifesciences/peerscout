@@ -50,8 +50,8 @@ class Main extends React.Component {
           return Promise.resolve();
         }
         return this.props.reviewerRecommendationApi.recommendReviewers({
-          keywords: searchOptions.keywords,
-          manuscript_no: searchOptions.manuscriptNumber
+          keywords: searchOptions.keywords || '',
+          manuscript_no: searchOptions.manuscriptNumber || ''
         });
       }
     );
@@ -105,6 +105,7 @@ class Main extends React.Component {
     const path = ['/search',
       Object.keys(searchOptions)
       .filter(k => !!searchOptions[k])
+      .filter(k => typeof searchOptions[k] === 'string')
       .map(k => `${k}=${encodeURIComponent(searchOptions[k])}`)
       .join('&')].filter(s => !!s).join('?');
     if (path !== (this.history.location.pathname + this.history.location.search)) {

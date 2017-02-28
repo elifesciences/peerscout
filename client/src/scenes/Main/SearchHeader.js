@@ -26,58 +26,108 @@ const styles = {
   }
 }
 
-const SearchHeader = ({searchOptions, onSearchOptionsChanged}) => {
-  const updateSearchOption = (key, value) => {
-    onSearchOptionsChanged({
-      ...searchOptions,
-      [key]: value
-    });
+const BY_MANUSCRIPT = 'by-manuscript';
+const BY_SEARCH = 'by-search';
+
+class SearchHeader extends React.Component {
+  constructor(props) {
+    super(props);
+    const { onSearchOptionsChanged, searchOptions: initialSearchOptions } = props;
+    this.state = {
+      currentTab: BY_MANUSCRIPT
+    };
+    this.state = this.getInitialiseState(initialSearchOptions);
+    this.updateSearchOption = (key, value) => {
+      const searchOptions = {
+        ...this.state[currentTab],
+        [key]: value
+      };
+      const { currentTab } = this.state;
+      this.setState({
+        [currentTab]: searchOptions
+      });
+      onSearchOptionsChanged(searchOptions);
+    }
+    this.handleTabChange = currentTab => {
+      this.setState({
+        currentTab
+      });
+    }
   }
 
-  const { manuscriptNumber, keywords } = searchOptions;
+  getInitialiseState(searchOptions) {
+    if (searchOptions.manuscriptNumber) {
+      return {
+        currentTab: BY_MANUSCRIPT,
+        [BY_MANUSCRIPT]: searchOptions
+      }
+    } else if (searchOptions.keywords) {
+      return {
+        currentTab: BY_SEARCH,
+        [BY_SEARCH]: searchOptions
+      }
+    }
+    return this.state;
+  }
 
-  return (
-    <Headroom>
-      <Paper style={{ overflow: 'hidden' }}>
-        <Tabs>
-          <Tabs.Tab label="By Manuscript">
-            <View style={ styles.header }>
-              <FlexRow>
-                <View style={ styles.inlineContainer }>
-                  <FontAwesomeIcon style={{ paddingTop: 40 }} name="search"/>
-                </View>
-                <View style={ styles.field }>
-                  <TextField
-                    floatingLabelText="Manuscript number"
-                    value={ manuscriptNumber }
-                    onChange={ (event, newValue) => updateSearchOption('manuscriptNumber', newValue) }
-                    style={ styles.textField }
-                  />
-                </View>
-              </FlexRow>
-            </View>
-          </Tabs.Tab>
-          <Tabs.Tab label="By Search Criteria">
-            <View style={ styles.header }>
-              <FlexRow>
-                <View style={ styles.inlineContainer }>
-                  <FontAwesomeIcon style={{ paddingTop: 40 }} name="search"/>
-                </View>
-                <View style={ styles.field }>
-                  <TextField
-                    floatingLabelText="Keywords (comma separated)"
-                    value={ keywords }
-                    onChange={ (event, newValue) => updateSearchOption('keywords', newValue) }
-                    style={ styles.textField }
-                  />
-                </View>
-              </FlexRow>
-            </View>
-          </Tabs.Tab>
-        </Tabs>
-      </Paper>
-    </Headroom>
-  );
+  componentWillReceiveProps(nextProps) {
+    if (nextProps.searchOptions !== this.props.searchOptions) {
+      this.setState(this.getInitialiseState(nextProps.searchOptions));
+    }
+  }
+  
+  render() {
+    const { state, updateSearchOption } = this;
+    const { currentTab } = state;
+    const { manuscriptNumber } = (state[BY_MANUSCRIPT] || {});
+    const { keywords } = (state[BY_SEARCH] || {});
+
+    return (
+      <Headroom>
+        <Paper style={{ overflow: 'hidden' }}>
+          <Tabs
+            value={ currentTab }
+            onChange={ this.handleTabChange }
+          >
+            <Tabs.Tab label="By Manuscript" value={ BY_MANUSCRIPT }>
+              <View style={ styles.header }>
+                <FlexRow>
+                  <View style={ styles.inlineContainer }>
+                    <FontAwesomeIcon style={{ paddingTop: 40 }} name="search"/>
+                  </View>
+                  <View style={ styles.field }>
+                    <TextField
+                      floatingLabelText="Manuscript number"
+                      value={ manuscriptNumber || '' }
+                      onChange={ (event, newValue) => updateSearchOption('manuscriptNumber', newValue) }
+                      style={ styles.textField }
+                    />
+                  </View>
+                </FlexRow>
+              </View>
+            </Tabs.Tab>
+            <Tabs.Tab label="By Search Criteria" value={ BY_SEARCH }>
+              <View style={ styles.header }>
+                <FlexRow>
+                  <View style={ styles.inlineContainer }>
+                    <FontAwesomeIcon style={{ paddingTop: 40 }} name="search"/>
+                  </View>
+                  <View style={ styles.field }>
+                    <TextField
+                      floatingLabelText="Keywords (comma separated)"
+                      value={ keywords || '' }
+                      onChange={ (event, newValue) => updateSearchOption('keywords', newValue) }
+                      style={ styles.textField }
+                    />
+                  </View>
+                </FlexRow>
+              </View>
+            </Tabs.Tab>
+          </Tabs>
+        </Paper>
+      </Headroom>
+    );
+  }
 }
 
 export default SearchHeader;
