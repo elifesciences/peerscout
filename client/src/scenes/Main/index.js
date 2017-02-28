@@ -102,11 +102,11 @@ class Main extends React.Component {
   }
 
   pushSearchOptions(searchOptions) {
-    const path = '/search?' +
+    const path = ['/search',
       Object.keys(searchOptions)
       .filter(k => !!searchOptions[k])
       .map(k => `${k}=${encodeURIComponent(searchOptions[k])}`)
-      .join('&');
+      .join('&')].filter(s => !!s).join('?');
     if (path !== (this.history.location.pathname + this.history.location.search)) {
       this.history.push(path);
     }
