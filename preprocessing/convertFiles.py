@@ -219,13 +219,13 @@ def main():
     convert_xml_file_contents(filename, stream, tables)
 
   # csv_path = "csv-small"
-  # source = "../local"
+  # source = "../../local"
 
-  # csv_path = "../csv"
-  # source = "../downloads/ejp_eLife_2000_01_01_00_00_00_2017_01_01_23_59_59.zip"
+  # csv_path = "../../csv"
+  # source = "../../downloads/ejp_eLife_2000_01_01_00_00_00_2017_01_01_23_59_59.zip"
 
-  csv_path = "../csv"
-  source = "../downloads"
+  csv_path = "../../csv"
+  source = "../../downloads"
 
   process_files_in_directory_or_zip(source, process_file, ext=".xml")
 

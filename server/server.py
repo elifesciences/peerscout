@@ -1,4 +1,5 @@
 from os.path import abspath
+import os
 import datetime
 
 import json
@@ -9,6 +10,8 @@ from flask_cors import CORS
 
 from datasets import PickleDatasetLoader, CachedDatasetLoader
 from services import RecommendReviewers
+
+from docvec_model_proxy import SpacyLdaPredictModel # pylint: disable=E0611
 
 CLIENT_FOLDER = '../client/dist'
 
@@ -21,7 +24,10 @@ with open('config.json') as config_file:
 def load_recommender():
   csv_path = abspath(config['csv']['path'])
   datasets = CachedDatasetLoader(PickleDatasetLoader(csv_path))
-  return RecommendReviewers(datasets)
+  docvec_predict_model = SpacyLdaPredictModel.load_predict_model(
+    os.path.join(csv_path, 'manuscript-abstracts-sense2vec-lda-docvecs-model.pickle')
+  )
+  return RecommendReviewers(datasets, docvec_predict_model)
 
 recommend_reviewers = load_recommender()
 
@@ -52,9 +58,10 @@ def recommend_reviewers_api():
   manuscript_no = request.args.get('manuscript_no')
   subject_area = request.args.get('subject_area')
   keywords = request.args.get('keywords')
+  abstract = request.args.get('abstract')
   if keywords is None:
     return 'keywords parameter required', 400
-  result = recommend_reviewers.recommend(manuscript_no, subject_area, keywords)
+  result = recommend_reviewers.recommend(manuscript_no, subject_area, keywords, abstract)
   # print("result:", result)
   # if result is None:
   #   return 'did not match any intend', 404

@@ -16,8 +16,11 @@ import matplotlib.colors as matplotlib_colors
 from bhtsne import tsne
 import gensim
 
-from lda_utils import train_lda
 from convertUtils import flatten, unescape_and_strip_tags_if_not_none
+
+from docvec_model_proxy import lda_utils # pylint: disable=E0611
+
+train_lda = lda_utils.train_lda
 
 def get_cmap(N):
   '''Returns a function that maps each index in 0, 1, ... N-1 to a distinct
@@ -309,8 +312,8 @@ def process_article_abstracts(csv_path, charts_path):
   generate_doc2vec_charts(data, charts_path)
 
 def main():
-  csv_path = "../csv"
-  charts_path = "../charts"
+  csv_path = "../../csv"
+  charts_path = "../../charts"
 
   process_article_abstracts(csv_path, charts_path)
 

@@ -5,8 +5,8 @@ def main():
     'convertFiles',
     'convertEarlyCareerReviewersCsv',
     'enrichEarlyCareerReviewers',
-    'generateSpacyTokens',
-    'generateSpacyDocVecs',
+    'generateSense2VecTokens',
+    'generateSense2VecLdaDocVecs',
     'reloadServer'
   ]
   if not import_module('downloadFiles').main():

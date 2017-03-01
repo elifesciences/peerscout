@@ -51,13 +51,13 @@ def main():
     convert_xml_file_contents(filename, content, tables)
 
   csv_path = "csv-small"
-  source = '../articles-xml'
+  source = '../../articles-xml'
 
-  # csv_path = "../csv"
-  # source = '../articles.zip'
+  # csv_path = "../../csv"
+  # source = '../../articles.zip'
 
-  # csv_path = "../csv"
-  # source = '../downloads'
+  # csv_path = "../../csv"
+  # source = '../../downloads'
 
   process_files_in_directory_or_zip(source, process_file, ext='.xml')
 

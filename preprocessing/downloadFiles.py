@@ -32,7 +32,7 @@ def main():
   download_objects(
     client,
     s3.Bucket("elife-ejp-ftp-db-xml-dump").objects.all(),
-    "../downloads",
+    "../../downloads",
     downloaded_files)
 
   download_objects(
@@ -40,7 +40,7 @@ def main():
     s3.Bucket("elife-ejp-ftp").objects.filter(
       Prefix="ejp_query_tool_query_id_380_DataScience:_Early_Career_Researchers"
     ),
-    "../downloads-ftp",
+    "../../downloads-ftp",
     downloaded_files)
 
   print("{} files downloaded".format(len(downloaded_files)))

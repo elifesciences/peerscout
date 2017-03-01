@@ -55,6 +55,8 @@ class SearchHeader extends React.Component {
         currentTab
       });
     }
+    this.onAbstractFocus = () => this.setState({ abstractFocused: true });
+    this.onAbstractBlur = () => this.setState({ abstractFocused: false });
   }
 
   getInitialiseState(searchOptions) {
@@ -81,9 +83,9 @@ class SearchHeader extends React.Component {
   render() {
     const { state, updateSearchOption, props } = this;
     const { allSubjectAreas=[] } = props;
-    const { currentTab } = state;
+    const { currentTab, abstractFocused } = state;
     const { manuscriptNumber } = (state[BY_MANUSCRIPT] || {});
-    const { subjectArea, keywords } = (state[BY_SEARCH] || {});
+    const { subjectArea, keywords, abstract } = (state[BY_SEARCH] || {});
 
     return (
       <Headroom>
@@ -131,6 +133,19 @@ class SearchHeader extends React.Component {
                       value={ keywords || '' }
                       onChange={ (event, newValue) => updateSearchOption('keywords', newValue) }
                       style={ styles.textField }
+                    />
+                  </View>
+                  <View style={ styles.field }>
+                    <TextField
+                      floatingLabelText="Abstract"
+                      multiLine={ true }
+                      rowsMax={ 3 }
+                      value={ abstract || '' }
+                      onChange={ (event, newValue) => updateSearchOption('abstract', newValue) }
+                      style={ styles.textField }
+                      textareaStyle = { styles.textArea }
+                      onFocus={ this.onAbstractFocus }
+                      onBlur={ this.onAbstractBlur }
                     />
                   </View>
                 </FlexRow>

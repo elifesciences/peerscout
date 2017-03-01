@@ -67,7 +67,7 @@ MANUSCRIPT_HISTORY = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + ['stage-affective-person-id', 'stage-name', 'start-date'])
 
-ABSTRACT_DOCVEC_COLUMN = 'abstract-spacy-docvecs'
+ABSTRACT_DOCVEC_COLUMN = 'abstract-sense2vec-docvecs'
 
 ABSTRACT_DOCVECS = pd.DataFrame(
   [],
@@ -80,10 +80,10 @@ CROSSREF_PERSON_EXTRA_SPACY_DOCVECS = pd.DataFrame(
 
 CONTENT_DOCVECS = pd.DataFrame(
   [],
-  columns=MANUSCRIPT_ID_COLUMNS + ['content-spacy-docvecs'])
+  columns=MANUSCRIPT_ID_COLUMNS + ['content-sense2vec-docvecs'])
 
-ABSTRACT_DOCVEC_DATASET = 'manuscript-abstracts-spacy-docvecs'
-CROSSREF_PERSON_EXTRA_DOCVEC_DATASET = 'crossref-person-extra-spacy-docvecs'
+ABSTRACT_DOCVEC_DATASET = 'manuscript-abstracts-sense2vec-lda-docvecs'
+CROSSREF_PERSON_EXTRA_DOCVEC_DATASET = 'crossref-person-extra-sense2vec-lda-docvecs'
 SUBJECT_AREAS_DATASET = 'manuscript-themes'
 
 DATASETS = {
@@ -100,7 +100,8 @@ DATASETS = {
   'manuscript-history': MANUSCRIPT_HISTORY,
   ABSTRACT_DOCVEC_DATASET: ABSTRACT_DOCVECS,
   'article-content-spacy-docvecs': CONTENT_DOCVECS,
-  CROSSREF_PERSON_EXTRA_DOCVEC_DATASET: CROSSREF_PERSON_EXTRA_SPACY_DOCVECS
+  CROSSREF_PERSON_EXTRA_DOCVEC_DATASET: CROSSREF_PERSON_EXTRA_SPACY_DOCVECS,
+  CROSSREF_PERSON_EXTRA_DOCVEC_DATASET + '-model': {}
 }
 
 PERSON_ID1 = 'person1'

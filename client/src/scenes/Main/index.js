@@ -52,7 +52,8 @@ class Main extends React.Component {
         return this.props.reviewerRecommendationApi.recommendReviewers({
           manuscript_no: searchOptions.manuscriptNumber || '',
           subject_area: searchOptions.subjectArea || '',
-          keywords: searchOptions.keywords || ''
+          keywords: searchOptions.keywords || '',
+          abstract: searchOptions.abstract || ''
         });
       }
     );

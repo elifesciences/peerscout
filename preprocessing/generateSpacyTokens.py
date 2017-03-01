@@ -106,7 +106,7 @@ def main():
   include_contents = False
 
   # csv_path = "./csv-small"
-  csv_path = "../csv"
+  csv_path = "../../csv"
 
   # process_manuscript_versions(csv_path, extract_keywords_from_list)
   if include_contents:

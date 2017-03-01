@@ -1,6 +1,8 @@
 import pandas as pd
 
-from lda_utils import train_lda
+from docvec_model_proxy import lda_utils # pylint: disable=E0611
+
+train_lda = lda_utils.train_lda
 
 def process_csv_file(input_filename, output_filename, column_name, n_topics=10):
   print("input_filename:", input_filename)
@@ -37,7 +39,7 @@ def main():
   include_contents = False
 
   # csv_path = "./csv-small"
-  csv_path = "../csv"
+  csv_path = "../../csv"
 
   process_article_abstracts(csv_path)
 

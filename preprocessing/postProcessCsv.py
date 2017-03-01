@@ -1,7 +1,7 @@
 import pandas as pd
 
 def main():
-  csv_path = "../csv"
+  csv_path = "../../csv"
 
   persons_df = pd.read_csv(csv_path + "/persons.csv")
 

@@ -91,7 +91,7 @@ def enrich_early_career_reviewers(csv_path):
   print("shape:", df.shape)
   cached_get = create_str_cache(
     get,
-    cache_dir='../cache-http',
+    cache_dir='../../cache-http',
     suffix='.json')
   out_list = []
   pbar = tqdm(df.to_dict(orient='records'))
@@ -158,7 +158,7 @@ def enrich_early_career_reviewers(csv_path):
   df.to_pickle(out_filename_pickle)
 
 def main():
-  csv_path = "../csv"
+  csv_path = "../../csv"
 
   enrich_early_career_reviewers(csv_path)
 

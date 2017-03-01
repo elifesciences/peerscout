@@ -49,10 +49,8 @@ def convert_mbox_file(filename, stream, writer, fieldnames):
 
 def main():
 
-  # csv_path = "csv-small"
-  # source = '../emails-mbox'
-  csv_path = "../csv"
-  source = '../emails-mbox'
+  csv_path = "../../csv"
+  source = '../../emails-mbox'
 
   with open(csv_path + '/email-mbox-meta.csv', 'w') as csvfile:
     fieldnames = [
