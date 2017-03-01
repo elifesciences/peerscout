@@ -1,6 +1,7 @@
 from os import makedirs
 import os
 from os.path import isfile
+import random
 
 import numpy as np
 import pandas as pd
@@ -147,6 +148,7 @@ def generate_lda_charts(data, charts_path):
     ):
       continue
     print("creating LDA for {} topics".format(n_topics))
+    random.seed(0)
     lda_result = train_lda(texts, n_topics=n_topics, vectorizer=vectorizer, vectorized=vectorized)
     lda_prepared = pyLDAvis.sklearn.prepare(
       lda_result.lda,
@@ -161,12 +163,14 @@ def generate_lda_charts(data, charts_path):
 
     tsne_result = tsne(np.array(lda_result.docvecs, dtype='float64'))
 
+    radius = (np.max(tsne_result[:, 0]) - np.min(tsne_result[:, 0])) * 0.01
+
     lda_bokeh_data = dict(
       id=ids,
       x=tsne_result[:, 0],
       y=tsne_result[:, 1],
       colors=to_bokeh_colors(subject_area_colors),
-      radius=[0.2] * len(texts),
+      radius=[radius] * len(texts),
       subject_areas=[", ".join(a) for a in subject_areas],
       abstract=abstracts
     )
@@ -218,52 +222,59 @@ def generate_doc2vec_charts(data, charts_path):
 
   subject_area_colors = sets_to_colors(subject_areas)
 
+  n_iterations = 5 # number of times we keep training, generating charts
+  n_epochs = 20 # number of epochs per iteration
+
   for vec_size in vec_sizes:
-    doc2vec_scatter_output_filename = os.path.join(
+    output_filename_by_epoch = lambda epoch, vec_size=vec_size: os.path.join(
       charts_path,
-      'doc2vec-sense2vec-size{}-samples{}-scatter.html'.format(vec_size, len(texts))
+      'doc2vec-sense2vec-size{}-samples{}-epoch{}-scatter.html'.format(
+        vec_size, len(texts), epoch
+      )
     )
-    if isfile(doc2vec_scatter_output_filename):
+    if isfile(output_filename_by_epoch(n_epochs)):
       continue
     print("creating doc2vec for {} vector size".format(vec_size))
+    random.seed(0)
     model = gensim.models.Doc2Vec(
-      size=vec_size, window=10, min_count=5, workers=2, alpha=0.025, min_alpha=0.025
+      size=vec_size, window=10, min_count=5, workers=2, alpha=0.025, min_alpha=0.025, seed=0
     )
     model.build_vocab(sentences)
     current_epoch = 0
 
-    for _ in range(20):
-      print("epoch", current_epoch, ", alpha:", model.alpha)
-      model.train(sentences)
-      model.alpha = model.alpha * 0.95 # decrease the learning rate
-      model.min_alpha = model.alpha # fix the learning rate, no deca
-      current_epoch += 1
+    for _ in range(n_iterations):
+      for _ in range(n_epochs):
+        print("epoch", current_epoch, ", alpha:", model.alpha)
+        model.train(sentences)
+        model.alpha = model.alpha * 0.95 # decrease the learning rate
+        model.min_alpha = model.alpha # fix the learning rate, no deca
+        current_epoch += 1
 
-    if vec_size <= 50:
-      tsne_docvecs = np.array(model.docvecs, dtype='float64')
-    else:
-      tsne_docvecs = TruncatedSVD(n_components=50).fit_transform(model.docvecs)
+      if vec_size <= 50:
+        tsne_docvecs = np.array(model.docvecs, dtype='float64')
+      else:
+        tsne_docvecs = TruncatedSVD(n_components=50).fit_transform(model.docvecs)
 
-    tsne_result = tsne(tsne_docvecs)
+      tsne_result = tsne(tsne_docvecs)
 
-    radius = (np.max(tsne_result[:, 0]) - np.min(tsne_result[:, 0])) * 0.007
+      radius = (np.max(tsne_result[:, 0]) - np.min(tsne_result[:, 0])) * 0.007
 
-    bokeh_show_scatter(
-      data=dict(
-        id=ids,
-        x=tsne_result[:, 0],
-        y=tsne_result[:, 1],
-        colors=to_bokeh_colors(subject_area_colors),
-        radius=[radius] * len(texts),
-        subject_areas=[", ".join(a) for a in subject_areas],
-        abstract=abstracts
-      ),
-      tools=[bokeh_hover_tool([
-        '@id: <b>@subject_areas</b>',
-        '@abstract</div>'
-      ])],
-      filename=doc2vec_scatter_output_filename
-    )
+      bokeh_show_scatter(
+        data=dict(
+          id=ids,
+          x=tsne_result[:, 0],
+          y=tsne_result[:, 1],
+          colors=to_bokeh_colors(subject_area_colors),
+          radius=[radius] * len(texts),
+          subject_areas=[", ".join(a) for a in subject_areas],
+          abstract=abstracts
+        ),
+        tools=[bokeh_hover_tool([
+          '@id: <b>@subject_areas</b>',
+          '@abstract</div>'
+        ])],
+        filename=output_filename_by_epoch(current_epoch)
+      )
 
 def process_article_abstracts(csv_path, charts_path):
   suffix = '-sense2vec'
@@ -296,7 +307,14 @@ def process_article_abstracts(csv_path, charts_path):
   )
   df = df[
     pd.notnull(df[text_column])
-  ][['manuscript-no', text_column]]
+  ]
+  df = (
+    df
+    .sort_values(['manuscript-no', 'version-no'])
+    .groupby(['manuscript-no'], as_index=False)
+    .last()
+  )
+  df = df[['manuscript-no', text_column]]
   df = (
     df.merge(subject_areas_df, on='manuscript-no')
     .merge(manuscript_versions_df, on='manuscript-no')
