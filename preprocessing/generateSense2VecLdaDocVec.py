@@ -1,32 +1,44 @@
 from os.path import splitext
 
 import pandas as pd
+from sklearn.pipeline import Pipeline
 
 from docvec_model_proxy import SpacyTransformer, SpacyLdaPredictModel, lda_utils # pylint: disable=E0611
 
 train_lda = lda_utils.train_lda
 
+predict_model = None
+internal_predict_model = None
+
 def process_csv_file(input_filename, output_filename, column_name, n_topics=10):
+  global predict_model, internal_predict_model
+
   model_filename = "{}-model{}".format(*splitext(output_filename))
   print("input_filename:", input_filename)
   df = pd.read_csv(input_filename, low_memory=False)
 
-  lda_result = train_lda(df[column_name].values, n_topics=n_topics)
-  df[column_name + '-docvecs'] = list(
-    lda_result.docvecs
-  )
+  if predict_model is None:
+    lda_result = train_lda(df[column_name].values, n_topics=n_topics)
+    docvecs = lda_result.docvecs
+    predict_model = SpacyLdaPredictModel.create_predict_model(
+      spacy_transformer=SpacyTransformer(),
+      vectorizer=lda_result.vectorizer,
+      lda=lda_result.lda
+    )
+    internal_predict_model = Pipeline([
+      ('vectorizer', lda_result.vectorizer),
+      ('lda', lda_result.lda)
+    ])
+    print("writing model to:", model_filename)
+    SpacyLdaPredictModel.save_predict_model(predict_model, model_filename)
+  else:
+    # a bit of a hack to use the already trained model
+    docvecs = internal_predict_model.transform(df[column_name].values)
+
+  df[column_name + '-docvecs'] = list(docvecs)
   df = df.drop(column_name, axis=1)
   print("writing dataframe to:", output_filename)
   df.to_pickle(output_filename)
-
-  predict_model = SpacyLdaPredictModel.create_predict_model(
-    spacy_transformer=SpacyTransformer(),
-    vectorizer=lda_result.vectorizer,
-    lda=lda_result.lda
-  )
-
-  print("writing model to:", model_filename)
-  SpacyLdaPredictModel.save_predict_model(predict_model, model_filename)
 
 N_TOPICS = 20
 SUFFIX = '-sense2vec'
