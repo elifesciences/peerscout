@@ -25,10 +25,10 @@ train_lda = lda_utils.train_lda
 def get_cmap(N):
   '''Returns a function that maps each index in 0, 1, ... N-1 to a distinct
   RGB color.'''
-  color_norm  = matplotlib_colors.Normalize(vmin=0, vmax=N-1)
+  color_norm = matplotlib_colors.Normalize(vmin=0, vmax=N-1)
   scalar_map = cmx.ScalarMappable(norm=color_norm, cmap='hsv')
   def map_index_to_rgb_color(index):
-      return scalar_map.to_rgba(index)
+    return scalar_map.to_rgba(index)
   return map_index_to_rgb_color
 
 def sets_to_colors(sets, include=None):
@@ -88,7 +88,7 @@ def bokeh_show_scatter(data=None, source=None, tools=None, fill_alpha=0.2, filen
   if source is None:
     source = ColumnDataSource(data=data)
 
-  DEFAULT_TOOLS=(
+  DEFAULT_TOOLS = (
     "resize,crosshair,pan,wheel_zoom,box_zoom,zoom_in,zoom_out,reset,box_select,lasso_select"
   )
 
