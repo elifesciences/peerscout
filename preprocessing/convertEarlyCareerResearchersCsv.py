@@ -16,10 +16,10 @@ def convert_xml_file_to(filename, stream, csv_path):
     'last_nm': 'last-name'
   })
   print("columns:", df.columns.values)
-  out_filename = os.path.join(csv_path, 'early-career-reviewers.csv')
+  out_filename = os.path.join(csv_path, 'early-career-researchers.csv')
   print("writing result to:", out_filename)
   df.to_csv(out_filename, index=False)
-  df.to_pickle(os.path.join(csv_path, 'early-career-reviewers.pickle'))
+  df.to_pickle(os.path.join(csv_path, 'early-career-researchers.pickle'))
 
 def convert_last_csv_files_in_directory(root_dir, process_file, prefix):
   files = sorted([

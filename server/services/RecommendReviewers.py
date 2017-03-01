@@ -266,7 +266,7 @@ def person_by_early_career_reviewer(early_career_reviewer):
     'status': 'Active',
     'first-name': early_career_reviewer['first-name'],
     'last-name': early_career_reviewer['last-name'],
-    'is-early-career-reviewer': True,
+    'is-early-career-researcher': True,
     'memberships': memberships,
     'dates-not-available': [],
     'stats': {
@@ -382,8 +382,8 @@ class RecommendReviewers(object):
     print("docvecs incl crossref:", len(self.abstract_docvecs_df))
 
     self.persons_df = datasets["persons"].copy()
-    early_career_reviewers_df = datasets["early-career-reviewers"]
-    self.early_career_reviewers_df = early_career_reviewers_df
+    early_career_researchers_df = datasets["early-career-researchers"]
+    self.early_career_researchers_df = early_career_researchers_df
     crossref_person_extras_df = datasets["crossref-person-extra"]
 
     memberships_df = datasets["person-memberships"].rename(columns={
@@ -414,7 +414,7 @@ class RecommendReviewers(object):
 
     temp_memberships_map = groupby_column_to_dict(memberships_df, PERSON_ID)
     dates_not_available_map = groupby_column_to_dict(dates_not_available_df, PERSON_ID)
-    early_career_reviewers_person_ids = set(early_career_reviewers_df[PERSON_ID].values)
+    early_career_researchers_person_ids = set(early_career_researchers_df[PERSON_ID].values)
 
     print("gathering stats")
     stage_pivot = create_stage_pivot(self.manuscript_history_all_df)
@@ -427,7 +427,7 @@ class RecommendReviewers(object):
     print("building person list")
     persons_list = [{
       **person,
-      'is-early-career-reviewer': person['person-id'] in early_career_reviewers_person_ids,
+      'is-early-career-researcher': person['person-id'] in early_career_researchers_person_ids,
       'memberships': temp_memberships_map.get(person['person-id'], []),
       'dates-not-available': dates_not_available_map.get(person['person-id'], []),
       'stats': {
@@ -438,7 +438,7 @@ class RecommendReviewers(object):
 
     self.persons_map = dict((p[PERSON_ID], p) for p in persons_list)
 
-    for row in early_career_reviewers_df.to_dict(orient='records'):
+    for row in early_career_researchers_df.to_dict(orient='records'):
       person_id = row[PERSON_ID]
       if person_id not in self.persons_map:
         self.persons_map[person_id] = person_by_early_career_reviewer(row)
@@ -658,12 +658,12 @@ class RecommendReviewers(object):
     ]
 
   def _get_early_career_reviewer_ids_by_subject_areas(self, subject_areas):
-    result = set(self.early_career_reviewers_df[
+    result = set(self.early_career_researchers_df[
       (
-        self.early_career_reviewers_df['First subject area'].isin(subject_areas) |
-        self.early_career_reviewers_df['Second subject area'].isin(subject_areas)
+        self.early_career_researchers_df['First subject area'].isin(subject_areas) |
+        self.early_career_researchers_df['Second subject area'].isin(subject_areas)
       ) &
-      self.early_career_reviewers_df[PERSON_ID].isin(self.persons_map)
+      self.early_career_researchers_df[PERSON_ID].isin(self.persons_map)
     ][PERSON_ID].values)
     return result
 

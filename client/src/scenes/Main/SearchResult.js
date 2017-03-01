@@ -130,7 +130,7 @@ const combinedPersonName = person =>
     person['first-name'],
     person['middle-name'],
     person['last-name'],
-    person['is-early-career-reviewer'] ? '(early career reviewer)': undefined,
+    person['is-early-career-researcher'] ? '(early career researcher)': undefined,
     person['status'] !== 'Active' && `(${formatPersonStatus(person['status'])})`
   ].filter(s => !!s).join(' ');
 
@@ -491,23 +491,23 @@ const extractAllSubjectAreas = manuscripts => {
   return subjectAreas;
 }
 
-const filterReviewsByEarlyCareerReviewerStatus = (potentialReviewers, earlyCareerReviewer) =>
+const filterReviewsByEarlyCareerResearcherStatus = (potentialReviewers, earlyCareerReviewer) =>
   potentialReviewers.filter(potentialReviewer =>
-    potentialReviewer.person['is-early-career-reviewer'] === earlyCareerReviewer
+    potentialReviewer.person['is-early-career-researcher'] === earlyCareerReviewer
   );
 
 const shufflePotentialReviewers = potentialReviewers => {
-  const nonEarlyCareerReviewers = filterReviewsByEarlyCareerReviewerStatus(
+  const nonEarlyCareerResearchers = filterReviewsByEarlyCareerResearcherStatus(
     potentialReviewers, false
   );
-  const earlyCareerReviewers = filterReviewsByEarlyCareerReviewerStatus(
+  const earlyCareerReviewers = filterReviewsByEarlyCareerResearcherStatus(
     potentialReviewers, true
   );
-  const maxLength = Math.max(nonEarlyCareerReviewers.length, earlyCareerReviewers.length);
+  const maxLength = Math.max(nonEarlyCareerResearchers.length, earlyCareerReviewers.length);
   const result = [];
   for (let i = 0; i < maxLength; i++) {
-    if (nonEarlyCareerReviewers[i]) {
-      result.push(nonEarlyCareerReviewers[i]);
+    if (nonEarlyCareerResearchers[i]) {
+      result.push(nonEarlyCareerResearchers[i]);
     }
     if (earlyCareerReviewers[i]) {
       result.push(earlyCareerReviewers[i]);

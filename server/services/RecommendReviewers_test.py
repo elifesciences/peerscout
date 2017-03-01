@@ -97,7 +97,7 @@ DATASETS = {
   'editors': EDITORS,
   'senior-editors': SENIOR_EDITORS,
   'persons': PERSONS,
-  'early-career-reviewers': EARLY_CAREER_REVIEWERS,
+  'early-career-researchers': EARLY_CAREER_REVIEWERS,
   'crossref-person-extra': CROSSREF_PERSON_EXTRA,
   'person-memberships': PERSON_MEMBERSHIPS,
   'person-dates-not-available': PERSON_DATES_NOT_AVAILABLE,
@@ -125,7 +125,7 @@ PERSON1 = {
 
 PERSON1_RESULT = {
   **PERSON1,
-  'is-early-career-reviewer': False,
+  'is-early-career-researcher': False,
   'memberships': [],
   'dates-not-available': [],
   'stats': {
@@ -468,7 +468,7 @@ def test_matching_manuscript_should_recommend_early_career_reviewer_and_return_s
   datasets[CROSSREF_PERSON_EXTRA_DOCVEC_DATASET] = pd.DataFrame([
     CROSSREF_ABSTRACT_DOCVEC1
   ], columns=CROSSREF_PERSON_EXTRA_SPACY_DOCVECS.columns)
-  datasets['early-career-reviewers'] = pd.DataFrame([{
+  datasets['early-career-researchers'] = pd.DataFrame([{
     'person-id': PERSON_ID2,
     'first-name': 'Early',
     'last-name': 'Bird',

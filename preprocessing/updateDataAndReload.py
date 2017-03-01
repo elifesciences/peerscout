@@ -3,8 +3,8 @@ from importlib import import_module
 def main():
   scripts = [
     'convertFiles',
-    'convertEarlyCareerReviewersCsv',
-    'enrichEarlyCareerReviewers',
+    'convertEarlyCareerResearchersCsv',
+    'enrichEarlyCareerResearchers',
     'generateSense2VecTokens',
     'generateSense2VecLdaDocVecs',
     'reloadServer'

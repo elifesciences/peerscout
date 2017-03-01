@@ -82,12 +82,12 @@ def contains_author_with_name(item, first_name, last_name):
       author.get('family', '') == last_name
   ]) > 0
 
-def enrich_early_career_reviewers(csv_path):
-  in_filename = os.path.join(csv_path, 'early-career-reviewers.csv')
+def enrich_early_career_researchers(csv_path):
+  in_filename = os.path.join(csv_path, 'early-career-researchers.csv')
   out_filename = os.path.join(csv_path, 'crossref-person-extra.csv')
   out_filename_pickle = os.path.join(csv_path, 'crossref-person-extra.pickle')
   print("converting:", in_filename)
-  df = pd.read_csv(os.path.join(csv_path, 'early-career-reviewers.csv'))
+  df = pd.read_csv(os.path.join(csv_path, 'early-career-researchers.csv'))
   print("shape:", df.shape)
   cached_get = create_str_cache(
     get,
@@ -160,7 +160,7 @@ def enrich_early_career_reviewers(csv_path):
 def main():
   csv_path = "../../csv"
 
-  enrich_early_career_reviewers(csv_path)
+  enrich_early_career_researchers(csv_path)
 
   print("Done")
 
