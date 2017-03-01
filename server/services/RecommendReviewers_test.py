@@ -19,6 +19,12 @@ PERSON_ID_COLUMNS = ['person-id']
 AUTHORS = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + ['author-person-id'])
+EDITORS = pd.DataFrame(
+  [],
+  columns=MANUSCRIPT_ID_COLUMNS + ['editor-person-id'])
+SENIOR_EDITORS = pd.DataFrame(
+  [],
+  columns=MANUSCRIPT_ID_COLUMNS + ['senior-editor-person-id'])
 PERSONS = pd.DataFrame(
   [],
   columns=PERSON_ID_COLUMNS + [
@@ -88,6 +94,8 @@ SUBJECT_AREAS_DATASET = 'manuscript-themes'
 
 DATASETS = {
   'authors': AUTHORS,
+  'editors': EDITORS,
+  'senior-editors': SENIOR_EDITORS,
   'persons': PERSONS,
   'early-career-reviewers': EARLY_CAREER_REVIEWERS,
   'crossref-person-extra': CROSSREF_PERSON_EXTRA,
@@ -212,6 +220,10 @@ TYPE_RESEARCH_ARTICLE = 'Research Article'
 
 MANUSCRIPT_VERSION1_RESULT = {
   **MANUSCRIPT_ID_FIELDS1,
+  'authors': [],
+  'editors': [],
+  'senior-editors': [],
+  'reviewers': [],
   'doi': None,
   'title': MANUSCRIPT_TITLE1,
   'decision': DECISSION_ACCEPTED,
@@ -352,9 +364,7 @@ def test_matching_manuscript():
   assert result == {
     'potential-reviewers': [],
     'matching-manuscripts': [{
-      **MANUSCRIPT_VERSION1_RESULT,
-      'authors': [],
-      'reviewers': []
+      **MANUSCRIPT_VERSION1_RESULT
     }]
   }
 
@@ -375,9 +385,7 @@ def test_matching_manuscript_should_return_manuscript_only_once():
   assert result == {
     'potential-reviewers': [],
     'matching-manuscripts': [{
-      **MANUSCRIPT_VERSION1_RESULT,
-      'authors': [],
-      'reviewers': []
+      **MANUSCRIPT_VERSION1_RESULT
     }]
   }
 

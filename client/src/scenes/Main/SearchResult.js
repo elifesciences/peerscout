@@ -417,6 +417,8 @@ const ManuscriptSummary = ({
     abstract,
     authors,
     reviewers,
+    editors,
+    'senior-editors': seniorEditors,
     'subject-areas': subjectAreas
   }
 }) => (
@@ -441,6 +443,22 @@ const ManuscriptSummary = ({
         {
           reviewers && reviewers.map((reviewer, index) => (
             <PersonInlineSummary key={ index } person={ reviewer }/>
+          ))
+        }
+      </View>
+      <View  style={ styles.manuscriptSummary.subSection }>
+        <Text style={ styles.manuscriptSummary.label }>Editors: </Text>
+        {
+          editors && editors.map((editor, index) => (
+            <PersonInlineSummary key={ index } person={ editor }/>
+          ))
+        }
+      </View>
+      <View  style={ styles.manuscriptSummary.subSection }>
+        <Text style={ styles.manuscriptSummary.label }>Senior Editors: </Text>
+        {
+          seniorEditors && seniorEditors.map((seniorEditor, index) => (
+            <PersonInlineSummary key={ index } person={ seniorEditor }/>
           ))
         }
       </View>

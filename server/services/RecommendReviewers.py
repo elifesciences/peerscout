@@ -295,7 +295,9 @@ def manuscript_by_crossref_person_extra(crossref_person_extra):
     'title': crossref_person_extra['title'],
     'abstract': crossref_person_extra['abstract'],
     'subject-areas': parse_list_if_str(crossref_person_extra['subject-areas']),
-    'published-date': crossref_person_extra['created-date']
+    'published-date': crossref_person_extra['created-date'],
+    'authors': [],
+    'reviewers': []
   }
 
 class RecommendReviewers(object):
@@ -331,6 +333,8 @@ class RecommendReviewers(object):
       MANUSCRIPT_VERSION_ID,
       valid_version_ids
     )
+    self.editors_all_df = add_manuscript_version_id(datasets["editors"])
+    self.senior_editors_all_df = add_manuscript_version_id(datasets["senior-editors"])
     self.manuscript_history_all_df = add_manuscript_version_id(
       datasets['manuscript-history'])
     self.manuscript_history_df = filter_by(
@@ -448,6 +452,18 @@ class RecommendReviewers(object):
       lambda person_id: self.persons_map.get(person_id, None)
     )
 
+    temp_editors_map = groupby_columns_to_dict(
+      self.editors_all_df[MANUSCRIPT_VERSION_ID].values,
+      self.editors_all_df['editor-person-id'].values,
+      lambda person_id: self.persons_map.get(person_id, None)
+    )
+
+    temp_senior_editors_map = groupby_columns_to_dict(
+      self.senior_editors_all_df[MANUSCRIPT_VERSION_ID].values,
+      self.senior_editors_all_df['senior-editor-person-id'].values,
+      lambda person_id: self.persons_map.get(person_id, None)
+    )
+
     temp_reviewers_map = groupby_columns_to_dict(
       self.manuscript_history_review_received_df[MANUSCRIPT_VERSION_ID].values,
       self.manuscript_history_review_received_df['stage-affective-person-id'].values,
@@ -480,6 +496,8 @@ class RecommendReviewers(object):
       **manuscript,
       'doi': get_first(temp_doi_by_manuscript_no_map.get(manuscript[MANUSCRIPT_NO], [])),
       'authors': temp_authors_map.get(manuscript[MANUSCRIPT_VERSION_ID], []),
+      'editors': temp_editors_map.get(manuscript[MANUSCRIPT_VERSION_ID], []),
+      'senior-editors': temp_senior_editors_map.get(manuscript[MANUSCRIPT_VERSION_ID], []),
       'reviewers': temp_reviewers_map.get(manuscript[MANUSCRIPT_VERSION_ID], []),
       'subject-areas': temp_subject_areas_map.get(manuscript[MANUSCRIPT_VERSION_ID], []),
     } for manuscript in manuscripts_all_list]
@@ -679,7 +697,11 @@ class RecommendReviewers(object):
       print("subject_areas:", subject_areas)
       authors = flatten([m['authors'] for m in matching_manuscripts_dicts])
       author_ids = [a[PERSON_ID] for a in authors]
-      exclude_person_ids |= set(author_ids)
+      editors = flatten([m['editors'] for m in matching_manuscripts_dicts])
+      editor_ids = [a[PERSON_ID] for a in editors]
+      senior_editors = flatten([m['senior-editors'] for m in matching_manuscripts_dicts])
+      senior_editor_ids = [a[PERSON_ID] for a in senior_editors]
+      exclude_person_ids |= (set(author_ids) | set(editor_ids) | set(senior_editor_ids))
     else:
       matching_manuscripts = self.__find_manuscripts_by_key(None)
     print("keyword_list:", keyword_list)
