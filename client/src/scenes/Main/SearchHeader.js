@@ -89,7 +89,7 @@ class SearchHeader extends React.Component {
 
     return (
       <Headroom>
-        <Paper style={{ overflow: 'hidden' }}>
+        <Paper style={{ overflow: 'hidden' }} zDepth={ 2 }>
           <Tabs
             value={ currentTab }
             onChange={ this.handleTabChange }
