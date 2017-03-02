@@ -3,7 +3,7 @@ from os.path import splitext
 import pandas as pd
 from sklearn.pipeline import Pipeline
 
-from docvec_model_proxy import SpacyTransformer, SpacyLdaPredictModel, lda_utils # pylint: disable=E0611
+from docvec_model_proxy import SpacyTransformer, DocvecModelUtils, lda_utils # pylint: disable=E0611
 
 train_lda = lda_utils.train_lda
 
@@ -20,7 +20,7 @@ def process_csv_file(input_filename, output_filename, column_name, n_topics=10):
   if predict_model is None:
     lda_result = train_lda(df[column_name].values, n_topics=n_topics)
     docvecs = lda_result.docvecs
-    predict_model = SpacyLdaPredictModel.create_predict_model(
+    predict_model = DocvecModelUtils.create_lda_predict_model(
       spacy_transformer=SpacyTransformer(),
       vectorizer=lda_result.vectorizer,
       lda=lda_result.lda
@@ -30,7 +30,7 @@ def process_csv_file(input_filename, output_filename, column_name, n_topics=10):
       ('lda', lda_result.lda)
     ])
     print("writing model to:", model_filename)
-    SpacyLdaPredictModel.save_predict_model(predict_model, model_filename)
+    DocvecModelUtils.save_predict_model(predict_model, model_filename)
   else:
     # a bit of a hack to use the already trained model
     docvecs = internal_predict_model.transform(df[column_name].values)

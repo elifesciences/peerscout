@@ -11,7 +11,7 @@ from flask_cors import CORS
 from datasets import PickleDatasetLoader, CachedDatasetLoader
 from services import RecommendReviewers
 
-from docvec_model_proxy import SpacyLdaPredictModel # pylint: disable=E0611
+from docvec_model_proxy import DocvecModelUtils # pylint: disable=E0611
 
 CLIENT_FOLDER = '../client/dist'
 
@@ -24,8 +24,8 @@ with open('config.json') as config_file:
 def load_recommender():
   csv_path = abspath(config['csv']['path'])
   datasets = CachedDatasetLoader(PickleDatasetLoader(csv_path))
-  docvec_predict_model = SpacyLdaPredictModel.load_predict_model(
-    os.path.join(csv_path, 'manuscript-abstracts-sense2vec-lda-docvecs-model.pickle')
+  docvec_predict_model = DocvecModelUtils.load_predict_model(
+    os.path.join(csv_path, 'manuscript-abstracts-sense2vec-doc2vec-model.pickle')
   )
   return RecommendReviewers(datasets, docvec_predict_model)
 

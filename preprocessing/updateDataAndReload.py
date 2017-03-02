@@ -6,7 +6,7 @@ def main():
     'convertEarlyCareerResearchersCsv',
     'enrichEarlyCareerResearchers',
     'generateSense2VecTokens',
-    'generateSense2VecLdaDocVecs',
+    'generateSense2VecDoc2Vec',
     'reloadServer'
   ]
   if not import_module('downloadFiles').main():
