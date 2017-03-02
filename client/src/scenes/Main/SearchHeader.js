@@ -88,7 +88,7 @@ class SearchHeader extends React.Component {
     const { subjectArea, keywords, abstract } = (state[BY_SEARCH] || {});
 
     return (
-      <Headroom>
+      <Headroom downTolerance={ 10 }>
         <Paper style={{ overflow: 'hidden' }} zDepth={ 2 }>
           <Tabs
             value={ currentTab }
