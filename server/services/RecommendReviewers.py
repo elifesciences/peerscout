@@ -740,7 +740,7 @@ class RecommendReviewers(object):
       other_manuscripts = self._filter_manuscripts_by_subject_areas(
         other_manuscripts, subject_areas
       )
-    if abstract is not None:
+    if abstract is not None and len(abstract.strip()) > 0:
       all_similar_manuscripts = self.__find_similar_manuscripts_to_abstract(
         abstract
       )
