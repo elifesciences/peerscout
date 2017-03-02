@@ -74,6 +74,17 @@ class Main extends React.Component {
           shouldLoad: false,
           loading: false
         });
+      }).catch(err => {
+        console.log("error:", err);
+        this.actuallyLoading = false;
+        this.setState({
+          results: {
+            error: err
+          },
+          resultsSearchOptions,
+          shouldLoad: false,
+          loading: false
+        });
       });
     };
 

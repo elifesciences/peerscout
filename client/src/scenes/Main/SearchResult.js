@@ -527,12 +527,27 @@ const shufflePotentialReviewers = potentialReviewers => {
 }
 
 const SearchResult = ({ searchResult }) => {
-  const { potentialReviewers = [], matchingManuscripts = [], manuscriptsNotFound } = searchResult;
+  const {
+    potentialReviewers = [],
+    matchingManuscripts = [],
+    manuscriptsNotFound,
+    error
+  } = searchResult;
   const requestedSubjectAreas = extractAllSubjectAreas(matchingManuscripts);
   const sortedPotentialReviewers = shufflePotentialReviewers(potentialReviewers);
   const hasManuscriptsNotFound = manuscriptsNotFound && manuscriptsNotFound.length > 0;
   return (
     <View>
+      {
+        error && (
+          <View>
+            <Text>
+              This is very unfortunate, but there seems to be some sort of technical issue.
+              Have you tried turning it off and on again?
+            </Text>
+          </View>
+        )
+      }
       {
         hasManuscriptsNotFound && (
           <View>
@@ -558,7 +573,7 @@ const SearchResult = ({ searchResult }) => {
         ))
       }
       {
-        !hasManuscriptsNotFound && sortedPotentialReviewers.length === 0 && (
+        !hasManuscriptsNotFound && !error && sortedPotentialReviewers.length === 0 && (
           <View>
             <Text>{ 'No potential reviewers found' }</Text>
           </View>
