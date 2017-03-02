@@ -71,8 +71,8 @@ def manuscript_number_to_no(x):
 
 def groupby_to_dict(l, kf, vf):
   return {
-    k: vf(l(v))
-    for k, v in groupby(l, kf)
+    k: [vf(v) for v in g]
+    for k, g in groupby(sorted(l, key=kf), kf)
   }
 
 def groupby_columns_to_dict(groupby_keys, version_keys, vf):
@@ -92,6 +92,8 @@ def filter_dict_keys(d, f):
 def groupby_column_to_dict(df, groupby_col, value_col=None):
   if value_col is None:
     value_f = lambda item: filter_dict_keys(item, lambda col: col != groupby_col)
+  elif callable(value_col):
+    value_f = value_col
   else:
     value_f = lambda item: item[value_col]
   a = df.to_dict(orient='records')
@@ -402,6 +404,10 @@ class RecommendReviewers(object):
       ['Review Received']
     )
 
+    self.assigned_reviewers_df = add_manuscript_version_id(
+      datasets["potential-referees"]
+    )
+
     for c in PERSON_COLUMNS[1:]:
       self.persons_df[c] = self.persons_df[c].apply(unescape_if_string)
 
@@ -469,6 +475,17 @@ class RecommendReviewers(object):
       self.manuscript_history_review_received_df['stage-affective-person-id'].values,
       lambda person_id: self.persons_map.get(person_id, None)
     )
+
+    self.assigned_reviewers_by_manuscript_id_map = groupby_column_to_dict(
+      self.assigned_reviewers_df,
+      MANUSCRIPT_VERSION_ID,
+      lambda row: dict({
+        'person-id': row['potential-referee-person-id'],
+        'status': row['potential-referee-status'],
+        'excluded': row['potential-referee-suggested-to-exclude'] == 'yes'
+      })
+    )
+
     debug("self.manuscript_history_review_received_df:", self.manuscript_history_review_received_df)
     debug("temp_authors_map:", temp_authors_map)
     debug("temp_reviewers_map:", temp_reviewers_map)
@@ -678,6 +695,7 @@ class RecommendReviewers(object):
       subject_areas.add(subject_area)
     matching_manuscripts_dicts = []
     manuscripts_not_found = None
+    assigned_reviewers_by_person_id = {}
     if manuscript_no is not None and manuscript_no != '':
       matching_manuscripts = self.__find_manuscripts_by_key(manuscript_no)
       if len(matching_manuscripts) == 0:
@@ -694,6 +712,15 @@ class RecommendReviewers(object):
           matching_manuscripts[MANUSCRIPT_VERSION_ID]
         )
       ]['subject-area'])
+      assigned_reviewers_by_person_id = groupby_to_dict(
+        flatten([
+          self.assigned_reviewers_by_manuscript_id_map.get(manuscript_id, [])
+          for manuscript_id in matching_manuscripts[MANUSCRIPT_VERSION_ID].values
+        ]),
+        lambda item: item[PERSON_ID],
+        lambda item: filter_dict_keys(item, lambda key: key != PERSON_ID)
+      )
+      print("assigned_reviewers_by_person_id:", assigned_reviewers_by_person_id)
       print("subject_areas:", subject_areas)
       authors = flatten([m['authors'] for m in matching_manuscripts_dicts])
       author_ids = [a[PERSON_ID] for a in authors]
@@ -755,7 +782,7 @@ class RecommendReviewers(object):
         flatten([(m['authors'] + m['reviewers']) for m in other_manuscripts_dicts])
       ]) | self._get_early_career_reviewer_ids_by_subject_areas(
         subject_areas
-      )) - exclude_person_ids
+      ) | assigned_reviewers_by_person_id.keys()) - exclude_person_ids
     )
     # print("potential_reviewers_ids", potential_reviewers_ids)
     # for m in other_manuscripts_dicts:
@@ -804,7 +831,9 @@ class RecommendReviewers(object):
       if len(keyword_list) > 0:
         total_keyword_match_count = total_keyword_match_count / len(keyword_list)
 
-      return {
+      assignment_status = get_first(assigned_reviewers_by_person_id.get(person_id, []))
+
+      potential_reviewer = {
         'person': self.persons_map.get(person_id, None),
         'author-of-manuscripts': author_of_manuscripts,
         'reviewer-of-manuscripts': reviewer_of_manuscripts,
@@ -814,6 +843,9 @@ class RecommendReviewers(object):
           'by-manuscript': scores_by_manuscript
         }
       }
+      if assignment_status is not None:
+        potential_reviewer['assignment-status'] = assignment_status
+      return potential_reviewer
 
     potential_reviewers = [
       populate_potential_reviewer(person_id)

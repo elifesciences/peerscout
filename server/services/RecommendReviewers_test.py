@@ -25,6 +25,13 @@ EDITORS = pd.DataFrame(
 SENIOR_EDITORS = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + ['senior-editor-person-id'])
+POTENTIAL_REFEREES = pd.DataFrame(
+  [],
+  columns=MANUSCRIPT_ID_COLUMNS + [
+    'potential-referee-person-id',
+    'potential-referee-status',
+    'potential-referee-suggested-to-exclude'
+  ])
 PERSONS = pd.DataFrame(
   [],
   columns=PERSON_ID_COLUMNS + [
@@ -96,6 +103,7 @@ DATASETS = {
   'authors': AUTHORS,
   'editors': EDITORS,
   'senior-editors': SENIOR_EDITORS,
+  'potential-referees': POTENTIAL_REFEREES,
   'persons': PERSONS,
   'early-career-researchers': EARLY_CAREER_REVIEWERS,
   'crossref-person-extra': CROSSREF_PERSON_EXTRA,

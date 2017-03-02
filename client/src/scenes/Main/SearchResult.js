@@ -302,11 +302,14 @@ const renderStats = stats => {
   );
 };
 
+const formatAssignmentStatus = assignmentStatus => assignmentStatus && assignmentStatus.toLowerCase();
+
 const PotentialReviewer = ({
   potentialReviewer: {
     person = {},
     'author-of-manuscripts': authorOfManuscripts = [],
     'reviewer-of-manuscripts': reviewerOfManuscripts = [],
+    'assignment-status': assignmentStatus,
     scores
   },
   requestedSubjectAreas
@@ -322,6 +325,13 @@ const PotentialReviewer = ({
   const titleComponent = (
     <View style={ styles.inlineContainer }>
       <Text>{ combinedPersonName(person) }</Text>
+      {
+        assignmentStatus && (
+          <Text style={ styles.assignmentStatus }>
+            { ` (${formatAssignmentStatus(assignmentStatus['status'])})` }
+          </Text>
+        )
+      }
       {
         person['email'] && (
           <PersonEmailLink person={ person } />
