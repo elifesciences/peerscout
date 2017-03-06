@@ -97,8 +97,10 @@ CONTENT_DOCVECS = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + ['content-sense2vec-docvecs'])
 
-ABSTRACT_DOCVEC_DATASET = 'manuscript-abstracts-sense2vec-lda-docvecs'
-CROSSREF_PERSON_EXTRA_DOCVEC_DATASET = 'crossref-person-extra-sense2vec-lda-docvecs'
+LDA_ABSTRACT_DOCVEC_DATASET = 'manuscript-abstracts-sense2vec-lda-docvecs'
+DOC2VEC_ABSTRACT_DOCVEC_DATASET = 'manuscript-abstracts-sense2vec-doc2vec'
+LDA_CROSSREF_PERSON_EXTRA_DOCVEC_DATASET = 'crossref-person-extra-sense2vec-lda-docvecs'
+DOC2VEC_CROSSREF_PERSON_EXTRA_DOCVEC_DATASET = 'crossref-person-extra-sense2vec-doc2vec'
 SUBJECT_AREAS_DATASET = 'manuscript-themes'
 
 DATASETS = {
@@ -116,10 +118,11 @@ DATASETS = {
   'manuscript-keywords': MANUSCRIPT_KEYWORDS,
   SUBJECT_AREAS_DATASET: MANUSCRIPT_SUBJECT_AREAS,
   'manuscript-history': MANUSCRIPT_HISTORY,
-  ABSTRACT_DOCVEC_DATASET: ABSTRACT_DOCVECS,
+  LDA_ABSTRACT_DOCVEC_DATASET: ABSTRACT_DOCVECS,
+  DOC2VEC_ABSTRACT_DOCVEC_DATASET: ABSTRACT_DOCVECS,
   'article-content-spacy-docvecs': CONTENT_DOCVECS,
-  CROSSREF_PERSON_EXTRA_DOCVEC_DATASET: CROSSREF_PERSON_EXTRA_SPACY_DOCVECS,
-  CROSSREF_PERSON_EXTRA_DOCVEC_DATASET + '-model': {}
+  LDA_CROSSREF_PERSON_EXTRA_DOCVEC_DATASET: CROSSREF_PERSON_EXTRA_SPACY_DOCVECS,
+  DOC2VEC_CROSSREF_PERSON_EXTRA_DOCVEC_DATASET: CROSSREF_PERSON_EXTRA_SPACY_DOCVECS
 }
 
 PERSON_ID1 = 'person1'
@@ -440,7 +443,7 @@ def test_matching_manuscript_with_docvecs():
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1
   ], columns=MANUSCRIPT_KEYWORDS.columns)
-  datasets[ABSTRACT_DOCVEC_DATASET] = pd.DataFrame([
+  datasets[LDA_ABSTRACT_DOCVEC_DATASET] = pd.DataFrame([
     ABSTRACT_DOCVEC1
   ], columns=ABSTRACT_DOCVECS.columns)
   recommend_reviewers = create_recommend_reviewers(datasets)
@@ -457,7 +460,7 @@ def test_matching_manuscript_with_none_docvecs():
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1
   ], columns=MANUSCRIPT_KEYWORDS.columns)
-  datasets[ABSTRACT_DOCVEC_DATASET] = pd.DataFrame([
+  datasets[LDA_ABSTRACT_DOCVEC_DATASET] = pd.DataFrame([
     ABSTRACT_DOCVEC1,
     {
       **ABSTRACT_DOCVEC2,
@@ -482,10 +485,16 @@ def test_matching_manuscript_should_recommend_early_career_reviewer_and_return_s
     **MANUSCRIPT_ID_FIELDS1,
     'subject-area': SUBJECT_AREA1
   }], columns=MANUSCRIPT_SUBJECT_AREAS.columns)
-  datasets[ABSTRACT_DOCVEC_DATASET] = pd.DataFrame([
+  datasets[LDA_ABSTRACT_DOCVEC_DATASET] = pd.DataFrame([
     ABSTRACT_DOCVEC1
   ], columns=ABSTRACT_DOCVECS.columns)
-  datasets[CROSSREF_PERSON_EXTRA_DOCVEC_DATASET] = pd.DataFrame([
+  datasets[DOC2VEC_ABSTRACT_DOCVEC_DATASET] = pd.DataFrame([
+    ABSTRACT_DOCVEC1
+  ], columns=ABSTRACT_DOCVECS.columns)
+  datasets[LDA_CROSSREF_PERSON_EXTRA_DOCVEC_DATASET] = pd.DataFrame([
+    CROSSREF_ABSTRACT_DOCVEC1
+  ], columns=CROSSREF_PERSON_EXTRA_SPACY_DOCVECS.columns)
+  datasets[DOC2VEC_CROSSREF_PERSON_EXTRA_DOCVEC_DATASET] = pd.DataFrame([
     CROSSREF_ABSTRACT_DOCVEC1
   ], columns=CROSSREF_PERSON_EXTRA_SPACY_DOCVECS.columns)
   datasets['early-career-researchers'] = pd.DataFrame([{

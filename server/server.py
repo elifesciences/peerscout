@@ -28,12 +28,17 @@ with open('config.json') as config_file:
 def load_recommender():
   csv_path = abspath(config['csv']['path'])
   datasets = CachedDatasetLoader(PickleDatasetLoader(csv_path))
-  docvec_predict_model = DocvecModelUtils.load_predict_model(
+  lda_docvec_predict_model = DocvecModelUtils.load_predict_model(
     os.path.join(csv_path, 'manuscript-abstracts-sense2vec-lda-docvecs-model.pickle')
+  )
+  doc2vec_docvec_predict_model = DocvecModelUtils.load_predict_model(
+    os.path.join(csv_path, 'manuscript-abstracts-sense2vec-doc2vec-model.pickle')
   )
   manuscript_model = ManuscriptModel(datasets)
   similarity_model = DocumentSimilarityModel(
-    datasets, manuscript_model=manuscript_model, docvec_predict_model=docvec_predict_model
+    datasets, manuscript_model=manuscript_model,
+    lda_docvec_predict_model=lda_docvec_predict_model,
+    doc2vec_docvec_predict_model=doc2vec_docvec_predict_model
   )
   return RecommendReviewers(
     datasets, manuscript_model=manuscript_model, similarity_model=similarity_model
