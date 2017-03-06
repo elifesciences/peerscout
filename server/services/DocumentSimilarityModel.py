@@ -46,7 +46,7 @@ class DocumentSimilarityModel(object):
         SIMILARITY_COLUMN: []
       })
     all_docvecs = self.abstract_docvecs_df[ABSTRACT_DOCVEC_COLUMN].values
-    to_docvecs = to_docvecs.tolist()
+    to_docvecs = to_docvecs if isinstance(to_docvecs, list) else to_docvecs.tolist()
     all_docvecs = all_docvecs.tolist()
     similarity = pd.DataFrame({
       MANUSCRIPT_VERSION_ID: self.abstract_docvecs_df[MANUSCRIPT_VERSION_ID],

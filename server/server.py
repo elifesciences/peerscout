@@ -29,7 +29,7 @@ def load_recommender():
   csv_path = abspath(config['csv']['path'])
   datasets = CachedDatasetLoader(PickleDatasetLoader(csv_path))
   docvec_predict_model = DocvecModelUtils.load_predict_model(
-    os.path.join(csv_path, 'manuscript-abstracts-sense2vec-doc2vec-model.pickle')
+    os.path.join(csv_path, 'manuscript-abstracts-sense2vec-lda-docvecs-model.pickle')
   )
   manuscript_model = ManuscriptModel(datasets)
   similarity_model = DocumentSimilarityModel(
