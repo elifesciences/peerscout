@@ -25,3 +25,6 @@ def strip_tags(text):
 
 def unescape_and_strip_tags(text):
   return strip_tags(html.unescape(text))
+
+def filter_by(df, col_name, values):
+  return df[df[col_name].isin(values)]

@@ -5,6 +5,8 @@ import pprint
 
 import pandas as pd
 
+from .ManuscriptModel import ManuscriptModel
+from .DocumentSimilarityModel import DocumentSimilarityModel
 from .RecommendReviewers import RecommendReviewers, set_debug_enabled
 
 set_debug_enabled(True)
@@ -348,8 +350,18 @@ POTENTIAL_REVIEWER2 = {
 
 PP = pprint.PrettyPrinter(indent=2, width=40)
 
+def create_recommend_reviewers(datasets):
+  manuscript_model = ManuscriptModel(datasets)
+  similarity_model = DocumentSimilarityModel(
+    datasets,
+    manuscript_model=manuscript_model
+  )
+  return RecommendReviewers(
+    datasets, manuscript_model=manuscript_model, similarity_model=similarity_model
+  )
+
 def test_no_match():
-  recommend_reviewers = RecommendReviewers(DATASETS)
+  recommend_reviewers = create_recommend_reviewers(DATASETS)
   result = recommend_reviewers.recommend(keywords='', manuscript_no='')
   assert result == {
     'potential-reviewers': [],
@@ -367,7 +379,7 @@ def test_matching_manuscript():
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1
   ], columns=MANUSCRIPT_KEYWORDS.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
   assert result == {
     'potential-reviewers': [],
@@ -387,7 +399,7 @@ def test_matching_manuscript_should_return_manuscript_only_once():
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1, MANUSCRIPT_KEYWORD1
   ], columns=MANUSCRIPT_KEYWORDS.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
   print("result:", result)
   assert result == {
@@ -412,7 +424,7 @@ def test_matching_manuscript_should_include_subject_areas():
     MANUSCRIPT_SUBJECT_AREA1,
     MANUSCRIPT_SUBJECT_AREA2
   ], columns=MANUSCRIPT_SUBJECT_AREAS.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
   subject_areas = result['matching-manuscripts'][0]['subject-areas']
   assert subject_areas == [SUBJECT_AREA1, SUBJECT_AREA2]
@@ -431,7 +443,7 @@ def test_matching_manuscript_with_docvecs():
   datasets[ABSTRACT_DOCVEC_DATASET] = pd.DataFrame([
     ABSTRACT_DOCVEC1
   ], columns=ABSTRACT_DOCVECS.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
 
 def test_matching_manuscript_with_none_docvecs():
@@ -452,7 +464,7 @@ def test_matching_manuscript_with_none_docvecs():
       ABSTRACT_DOCVEC_COLUMN: None
     }
   ], columns=ABSTRACT_DOCVECS.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
 
 def test_matching_manuscript_should_recommend_early_career_reviewer_and_return_similarity():
@@ -489,7 +501,7 @@ def test_matching_manuscript_should_recommend_early_career_reviewer_and_return_s
     'doi': DOI1,
     'subject-areas': str([])
   }], columns=CROSSREF_PERSON_EXTRA.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
   print("result:", PP.pformat(result))
   recommended_person_ids = [r['person']['person-id'] for r in result['potential-reviewers']]
@@ -513,7 +525,7 @@ def test_matching_manuscript_should_return_draft_version_with_authors():
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1
   ], columns=MANUSCRIPT_KEYWORDS.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
   print("result:", PP.pformat(result))
   assert result == {
@@ -554,7 +566,7 @@ def test_matching_manuscript_should_not_recommend_its_authors():
       **MANUSCRIPT_ID_FIELDS2
     }
   ], columns=AUTHORS.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
   print("result:", PP.pformat(result))
   recommended_person_ids = [r['person']['person-id'] for r in result['potential-reviewers']]
@@ -605,7 +617,7 @@ def test_matching_manuscript_should_only_recommend_authors_of_matching_subject_a
       **MANUSCRIPT_ID_FIELDS3
     }
   ], columns=AUTHORS.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_NO1)
   print("result:", PP.pformat(result))
   recommended_person_ids = [r['person']['person-id'] for r in result['potential-reviewers']]
@@ -625,7 +637,7 @@ def test_matching_one_keyword_author():
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1
   ], columns=MANUSCRIPT_KEYWORDS.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", PP.pformat(result))
   assert result == {
@@ -656,7 +668,7 @@ def test_matching_one_keyword_author_should_not_return_author_of_rejected_manusc
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1
   ], columns=MANUSCRIPT_KEYWORDS.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", PP.pformat(result))
   assert result == {
@@ -711,7 +723,7 @@ def test_matching_one_keyword_author_should_return_stats():
     'stage-name': STAGE_CONTACTING_REVIEWERS,
     'start-date': pd.Timestamp('2017-02-01')
   }], columns=MANUSCRIPT_HISTORY.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   review_duration = {
     'min': 1.0,
     'mean': 1.5,
@@ -749,7 +761,7 @@ def test_matching_one_keyword_author_should_return_memberships():
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1
   ], columns=MANUSCRIPT_KEYWORDS.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   person_with_memberships = {
     **PERSON1_RESULT,
     'memberships': [MEMBERSHIP1_RESULT]
@@ -779,7 +791,7 @@ def test_matching_one_keyword_author_should_return_other_accepted_papers():
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1
   ], columns=MANUSCRIPT_KEYWORDS.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   author_of_manuscripts = result['potential-reviewers'][0]['author-of-manuscripts']
   author_of_manuscript_ids = [m[MANUSCRIPT_NO] for m in author_of_manuscripts]
@@ -810,7 +822,7 @@ def test_matching_one_keyword_author_should_not_return_other_draft_papers():
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1
   ], columns=MANUSCRIPT_KEYWORDS.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", result)
   assert result == {
@@ -842,7 +854,7 @@ def test_matching_one_keyword_author_should_return_author_only_once():
     MANUSCRIPT_KEYWORD1,
     MANUSCRIPT_KEYWORD1
   ], columns=MANUSCRIPT_KEYWORDS.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", result)
   assert result == {
@@ -872,7 +884,7 @@ def test_matching_one_keyword_previous_reviewer():
   datasets['manuscript-keywords'] = pd.DataFrame([
     MANUSCRIPT_KEYWORD1
   ], columns=MANUSCRIPT_KEYWORDS.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   expected = {
     'potential-reviewers': [{
@@ -906,7 +918,7 @@ def test_matching_one_keyword_previous_reviewer_should_return_reviewer_only_once
     MANUSCRIPT_KEYWORD1,
     MANUSCRIPT_KEYWORD1
   ], columns=MANUSCRIPT_KEYWORDS.columns)
-  recommend_reviewers = RecommendReviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", PP.pformat(result))
   assert\

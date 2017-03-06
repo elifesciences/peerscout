@@ -3,9 +3,10 @@ import ast
 from datetime import datetime
 
 import pandas as pd
-from sklearn.metrics.pairwise import cosine_similarity
 
-from .utils import unescape_and_strip_tags
+from .ManuscriptModel import is_manuscript_relevant
+
+from .utils import unescape_and_strip_tags, filter_by
 
 from .collection_utils import flatten, filter_none, deep_get, deep_get_list
 
@@ -122,7 +123,6 @@ RAW_MANUSCRIPT_ID_COLUMNS = [MANUSCRIPT_NO, VERSION_NO]
 TEMP_MANUSCRIPT_ID_COLUMNS = [MANUSCRIPT_VERSION_ID]
 MANUSCRIPT_ID_COLUMNS = RAW_MANUSCRIPT_ID_COLUMNS + TEMP_MANUSCRIPT_ID_COLUMNS
 
-ABSTRACT_DOCVEC_COLUMN = 'abstract-docvec'
 SIMILARITY_COLUMN = 'similarity'
 
 PERSON_ID = 'person-id'
@@ -131,35 +131,6 @@ PERSON_COLUMNS = [
   'person-id',
   'title', 'first-name', 'middle-name', 'last-name', 'institution', 'status', 'email'
 ]
-
-DECISIONS_ACCEPTED = set(['Accept Full Submission', 'Auto-Accept'])
-TYPES_ACCEPTED = set([
-  'Research Article', 'Short Report', 'Tools and Resources', 'Research Advance'
-])
-
-def filter_accepted_manuscript_versions(manuscript_versions):
-  return manuscript_versions[
-    manuscript_versions['decision'].isin(DECISIONS_ACCEPTED)
-  ]
-
-def filter_research_articles(manuscript_versions):
-  print("manuscript types:", manuscript_versions['manuscript-type'].unique())
-  return manuscript_versions[
-    manuscript_versions['manuscript-type'].isin(
-      ['Research Article', 'Initial Submission: Research Article'])
-  ]
-
-def is_manuscript_accepted(manuscript):
-  return manuscript.get('decision', None) in DECISIONS_ACCEPTED
-
-def is_manuscript_type_relevant(manuscript):
-  return manuscript.get('manuscript-type') in TYPES_ACCEPTED
-
-def is_manuscript_relevant(manuscript):
-  return is_manuscript_accepted(manuscript) and is_manuscript_type_relevant(manuscript)
-
-def filter_by(df, col_name, values):
-  return df[df[col_name].isin(values)]
 
 def unescape_if_string(s):
   if isinstance(s, str):
@@ -303,8 +274,8 @@ def manuscript_by_crossref_person_extra(crossref_person_extra):
   }
 
 class RecommendReviewers(object):
-  def __init__(self, datasets, docvec_predict_model=None):
-    self.docvec_predict_model = docvec_predict_model
+  def __init__(self, datasets, manuscript_model, similarity_model=None):
+    self.similarity_model = similarity_model
 
     self.manuscript_versions_all_df = add_manuscript_version_id(
       datasets['manuscript-versions'].copy())
@@ -312,15 +283,12 @@ class RecommendReviewers(object):
       self.manuscript_versions_all_df[c] = self.manuscript_versions_all_df[c].apply(
         unescape_if_string
       )
-    self.manuscript_versions_df = filter_research_articles(filter_accepted_manuscript_versions(
-      self.manuscript_versions_all_df
-    ))
-    print("manuscript_versions_df:", self.manuscript_versions_df.shape)
-    self.manuscript_last_versions_df = self.manuscript_versions_df\
-      .sort_values(VERSION_NO)\
-      .groupby([MANUSCRIPT_NO], as_index=False)\
-      .last()
-    valid_version_ids = self.manuscript_last_versions_df[MANUSCRIPT_VERSION_ID]
+    valid_version_ids = manuscript_model.get_valid_manuscript_version_ids()
+    self.manuscript_versions_df = filter_by(
+      self.manuscript_versions_all_df,
+      MANUSCRIPT_VERSION_ID,
+      valid_version_ids
+    )
     self.manuscript_keywords_all_df = add_manuscript_version_id(
       datasets["manuscript-keywords"]\
       .drop('sequence', axis=1).copy())
@@ -356,32 +324,6 @@ class RecommendReviewers(object):
     )
 
     manuscripts_df = datasets["manuscripts"]
-
-    self.abstract_docvecs_all_df = add_manuscript_version_id(
-      datasets["manuscript-abstracts-sense2vec-lda-docvecs"]\
-      .rename(columns={'abstract-sense2vec-docvecs': ABSTRACT_DOCVEC_COLUMN}).dropna())
-    self.abstract_docvecs_df = filter_by(
-      self.abstract_docvecs_all_df,
-      MANUSCRIPT_VERSION_ID,
-      valid_version_ids
-    )
-    print("valid docvecs:", len(self.abstract_docvecs_df))
-
-    crossref_abstract_docvecs_df = (
-      datasets["crossref-person-extra-sense2vec-lda-docvecs"]
-      .rename(columns={
-        'abstract-sense2vec-docvecs': ABSTRACT_DOCVEC_COLUMN,
-        'doi': MANUSCRIPT_VERSION_ID
-      }).dropna()
-    )
-    crossref_abstract_docvecs_df[MANUSCRIPT_VERSION_ID] = (
-      crossref_abstract_docvecs_df[MANUSCRIPT_VERSION_ID].str.lower()
-    )
-    self.abstract_docvecs_df = pd.concat([
-      self.abstract_docvecs_df,
-      crossref_abstract_docvecs_df
-    ])
-    print("docvecs incl crossref:", len(self.abstract_docvecs_df))
 
     self.persons_df = datasets["persons"].copy()
     early_career_researchers_df = datasets["early-career-researchers"]
@@ -616,49 +558,6 @@ class RecommendReviewers(object):
       return []
     return [keyword.strip() for keyword in keywords.split(',')]
 
-  def __find_similar_manuscripts_to_docvecs(self, to_docvecs, exclude_version_ids=None):
-    if len(to_docvecs) == 0:
-      return pd.DataFrame({
-        MANUSCRIPT_VERSION_ID: [],
-        SIMILARITY_COLUMN: []
-      })
-    all_docvecs = self.abstract_docvecs_df[ABSTRACT_DOCVEC_COLUMN].values
-    to_docvecs = to_docvecs.tolist()
-    all_docvecs = all_docvecs.tolist()
-    similarity = pd.DataFrame({
-      MANUSCRIPT_VERSION_ID: self.abstract_docvecs_df[MANUSCRIPT_VERSION_ID],
-      SIMILARITY_COLUMN: cosine_similarity(
-        all_docvecs,\
-        to_docvecs
-      )[:, 0]
-    })
-    if exclude_version_ids is not None:
-      similarity = similarity[
-        ~similarity[MANUSCRIPT_VERSION_ID].isin(
-          exclude_version_ids
-        )
-      ]
-    return similarity
-
-  def __find_similar_manuscripts_to_abstract(self, abstract):
-    to_docvecs = (
-      self.docvec_predict_model.transform([abstract])
-      if self.docvec_predict_model is not None
-      else []
-    )
-    print("abstract docvec:", to_docvecs, abstract)
-    return self.__find_similar_manuscripts_to_docvecs(to_docvecs)
-
-  def __find_similar_manuscripts(self, version_ids):
-    to_docvecs = self.abstract_docvecs_all_df[
-      self.abstract_docvecs_all_df[MANUSCRIPT_VERSION_ID].isin(
-        version_ids
-      )
-    ][ABSTRACT_DOCVEC_COLUMN].values
-    if len(to_docvecs) == 0:
-      print("no docvecs for:", version_ids)
-    return self.__find_similar_manuscripts_to_docvecs(to_docvecs, exclude_version_ids=version_ids)
-
   def _filter_manuscripts_by_subject_areas(self, manuscripts_df, subject_areas):
     df = manuscripts_df.merge(
       self.manuscript_subject_areas_df,
@@ -741,11 +640,11 @@ class RecommendReviewers(object):
         other_manuscripts, subject_areas
       )
     if abstract is not None and len(abstract.strip()) > 0:
-      all_similar_manuscripts = self.__find_similar_manuscripts_to_abstract(
+      all_similar_manuscripts = self.similarity_model.find_similar_manuscripts_to_abstract(
         abstract
       )
     else:
-      all_similar_manuscripts = self.__find_similar_manuscripts(
+      all_similar_manuscripts = self.similarity_model.find_similar_manuscripts(
         matching_manuscripts[MANUSCRIPT_VERSION_ID]
       )
     print("all_similar_manuscripts:", len(all_similar_manuscripts), all_similar_manuscripts[

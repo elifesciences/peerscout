@@ -9,7 +9,11 @@ from flask_cors import CORS
 # from intend_matchers.simple_intend_matcher import SimpleIntendMatcher
 
 from datasets import PickleDatasetLoader, CachedDatasetLoader
-from services import RecommendReviewers
+from services import (
+  ManuscriptModel,
+  DocumentSimilarityModel,
+  RecommendReviewers
+)
 
 from docvec_model_proxy import DocvecModelUtils # pylint: disable=E0611
 
@@ -27,12 +31,18 @@ def load_recommender():
   docvec_predict_model = DocvecModelUtils.load_predict_model(
     os.path.join(csv_path, 'manuscript-abstracts-sense2vec-doc2vec-model.pickle')
   )
-  return RecommendReviewers(datasets, docvec_predict_model)
+  manuscript_model = ManuscriptModel(datasets)
+  similarity_model = DocumentSimilarityModel(
+    datasets, manuscript_model=manuscript_model, docvec_predict_model=docvec_predict_model
+  )
+  return RecommendReviewers(
+    datasets, manuscript_model=manuscript_model, similarity_model=similarity_model
+  )
 
 recommend_reviewers = load_recommender()
 
 class CustomJSONEncoder(JSONEncoder):
-  def default(self, obj):
+  def default(self, obj): # pylint: disable=E0202
     try:
       if isinstance(obj, datetime.datetime) or isinstance(obj, datetime.date):
         return obj.isoformat()
