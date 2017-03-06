@@ -586,7 +586,7 @@ class RecommendReviewers(object):
   def get_all_subject_areas(self):
     return self.all_subject_areas
 
-  def recommend(self, manuscript_no=None, subject_area=None, keywords=None, abstract=None):
+  def recommend(self, manuscript_no=None, subject_area=None, keywords=None, abstract=None, limit=None):
     keyword_list = self.__parse_keywords(keywords)
     exclude_person_ids = set()
     subject_areas = set()
@@ -767,6 +767,9 @@ class RecommendReviewers(object):
         potential_reviewer['person']['last-name']
       )
     )
+
+    if limit is not None and limit > 0:
+      potential_reviewers = potential_reviewers[:limit]
 
     result = {
       'potential-reviewers': potential_reviewers,

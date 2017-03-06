@@ -69,9 +69,20 @@ def recommend_reviewers_api():
   subject_area = request.args.get('subject_area')
   keywords = request.args.get('keywords')
   abstract = request.args.get('abstract')
+  limit = request.args.get('limit')
+  if limit is None:
+    limit = 100
+  else:
+    limit = int(limit)
   if keywords is None:
     return 'keywords parameter required', 400
-  result = recommend_reviewers.recommend(manuscript_no, subject_area, keywords, abstract)
+  result = recommend_reviewers.recommend(
+    manuscript_no,
+    subject_area,
+    keywords,
+    abstract,
+    limit=limit
+  )
   # print("result:", result)
   # if result is None:
   #   return 'did not match any intend', 404
