@@ -1,4 +1,5 @@
 from itertools import groupby
+import itertools
 import ast
 from datetime import datetime
 
@@ -767,6 +768,12 @@ class RecommendReviewers(object):
         potential_reviewer['person']['last-name']
       )
     )
+
+    # create a list with interleaving normal reviewer, ecr, ...
+    potential_reviewers = [x for x in itertools.chain.from_iterable(itertools.zip_longest(
+      [pr for pr in potential_reviewers if not pr['person'].get('is-early-career-researcher')],
+      [pr for pr in potential_reviewers if pr['person'].get('is-early-career-researcher')]
+    )) if x]
 
     if limit is not None and limit > 0:
       potential_reviewers = potential_reviewers[:limit]

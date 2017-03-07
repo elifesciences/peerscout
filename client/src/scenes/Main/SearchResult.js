@@ -506,26 +506,6 @@ const filterReviewsByEarlyCareerResearcherStatus = (potentialReviewers, earlyCar
     potentialReviewer.person['is-early-career-researcher'] === earlyCareerReviewer
   );
 
-const shufflePotentialReviewers = potentialReviewers => {
-  const nonEarlyCareerResearchers = filterReviewsByEarlyCareerResearcherStatus(
-    potentialReviewers, false
-  );
-  const earlyCareerReviewers = filterReviewsByEarlyCareerResearcherStatus(
-    potentialReviewers, true
-  );
-  const maxLength = Math.max(nonEarlyCareerResearchers.length, earlyCareerReviewers.length);
-  const result = [];
-  for (let i = 0; i < maxLength; i++) {
-    if (nonEarlyCareerResearchers[i]) {
-      result.push(nonEarlyCareerResearchers[i]);
-    }
-    if (earlyCareerReviewers[i]) {
-      result.push(earlyCareerReviewers[i]);
-    }
-  }
-  return result;
-}
-
 const SearchResult = ({ searchResult }) => {
   const {
     potentialReviewers = [],
@@ -534,7 +514,6 @@ const SearchResult = ({ searchResult }) => {
     error
   } = searchResult;
   const requestedSubjectAreas = extractAllSubjectAreas(matchingManuscripts);
-  const sortedPotentialReviewers = shufflePotentialReviewers(potentialReviewers);
   const hasManuscriptsNotFound = manuscriptsNotFound && manuscriptsNotFound.length > 0;
   return (
     <View>
@@ -564,7 +543,7 @@ const SearchResult = ({ searchResult }) => {
         ))
       }
       {
-        sortedPotentialReviewers.map((potentialReviewer, index) => (
+        potentialReviewers.map((potentialReviewer, index) => (
           <PotentialReviewer
             key={ index }
             potentialReviewer={ potentialReviewer }
@@ -573,7 +552,7 @@ const SearchResult = ({ searchResult }) => {
         ))
       }
       {
-        !hasManuscriptsNotFound && !error && sortedPotentialReviewers.length === 0 && (
+        !hasManuscriptsNotFound && !error && potentialReviewers.length === 0 && (
           <View>
             <Text>{ 'No potential reviewers found' }</Text>
           </View>
