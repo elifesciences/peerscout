@@ -91,7 +91,7 @@ class DocumentSimilarityModel(object):
         SIMILARITY_COLUMN: []
       })
     version_ids = (
-      set(self.abstract_lda_docvecs_df[MANUSCRIPT_VERSION_ID].values) |
+      set(self.abstract_lda_docvecs_df[MANUSCRIPT_VERSION_ID].values) &
       set(self.abstract_doc2vec_df[MANUSCRIPT_VERSION_ID].values)
     )
     if exclude_version_ids is not None:
