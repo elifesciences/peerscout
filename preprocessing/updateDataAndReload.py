@@ -6,6 +6,7 @@ def main():
     'convertEarlyCareerResearchersCsv',
     'enrichEarlyCareerResearchers',
     'generateSense2VecTokens',
+    'generateSense2VecLdaDocVec',
     'generateSense2VecDoc2Vec',
     'reloadServer'
   ]
