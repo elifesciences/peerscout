@@ -47,7 +47,7 @@ def is_nat(x):
   return isinstance(x, type(pd.NaT))
 
 def is_null(x):
-  return pd.isnull(x) or is_nat(x)
+  return not isinstance(x, list) and (pd.isnull(x) or is_nat(x))
 
 def nat_to_none(x):
   return None if is_nat(x) else x
@@ -309,6 +309,10 @@ class RecommendReviewers(object):
     self.manuscript_keywords_all_df = add_manuscript_version_id(
       datasets["manuscript-keywords"]\
       .drop('sequence', axis=1).copy())
+    self.manuscript_keywords_all_df['word'] = (
+      self.manuscript_keywords_all_df['word'].str.lower()
+      .apply(unescape_and_strip_tags)
+    )
     self.manuscript_keywords_df = filter_by(
       self.manuscript_keywords_all_df,
       MANUSCRIPT_VERSION_ID,
@@ -461,6 +465,8 @@ class RecommendReviewers(object):
       'subject-area'
     )
 
+    self.all_keywords = sorted(set(self.manuscript_keywords_df['word']))
+
     print("building manuscript list")
     manuscripts_all_list = clean_result(
       self.manuscript_versions_all_df[
@@ -603,6 +609,9 @@ class RecommendReviewers(object):
 
   def get_all_subject_areas(self):
     return self.all_subject_areas
+
+  def get_all_keywords(self):
+    return self.all_keywords
 
   def recommend(self, manuscript_no=None, subject_area=None, keywords=None, abstract=None, limit=None):
     keyword_list = self.__parse_keywords(keywords)
