@@ -454,7 +454,7 @@ class RecommendReviewers(object):
       MANUSCRIPT_NO,
       'production-data-doi')
 
-    self.all_subject_areas = set(self.manuscript_subject_areas_all_df['subject-area'])
+    self.all_subject_areas = sorted(set(self.manuscript_subject_areas_all_df['subject-area']))
     temp_subject_areas_map = groupby_column_to_dict(
       self.manuscript_subject_areas_all_df,
       MANUSCRIPT_VERSION_ID,
