@@ -179,6 +179,11 @@ const getReviewerTooltipHtml = r => {
   let s = '<p class="person-name">' +
     escapeHtml(p['first-name'] + ' ' + p['last-name']) +
   '</p>';
+  if (p['institution']) {
+    s += '<p class="person-institution">' +
+      escapeHtml(p['institution']) +
+    '</p>';
+  }
   if (r.scores && r.scores.combined) {
     s += '<p class="score">' +
       '<b>score:</b> ';
