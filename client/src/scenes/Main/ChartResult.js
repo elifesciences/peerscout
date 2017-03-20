@@ -38,7 +38,8 @@ const recommendedReviewersToGraph = recommendedReviewers => {
     links.push(link);
     reviewerLinksMap[targetId] = link;
 
-    const manuscriptNo = sourceNode.manuscript && sourceNode.manuscript['manuscript-no'];
+    const manuscript = sourceNode.manuscript;
+    const manuscriptNo = manuscript && manuscript['manuscript-no'];
     const r = reviewerNode.potentialReviewer;
     if (manuscriptNo && r['scores'] && r['scores']['by-manuscript']) {
       const score = r['scores']['by-manuscript'].filter(
@@ -46,7 +47,7 @@ const recommendedReviewersToGraph = recommendedReviewers => {
       )[0];
       link.score = score;
       if (score) {
-        m.score = score;
+        manuscript.score = score;
       }
     }
   }
@@ -69,7 +70,7 @@ const recommendedReviewersToGraph = recommendedReviewers => {
     nodeMap[id] = node;
     nodes.push(node);
     if (r) {
-      addManuscriptReviewerLink(m, r);
+      addReviewerLink(node, nodeMap[personToId(r['person'])]);
     } else {
       node.isMain = true;
     }
@@ -114,6 +115,30 @@ const recommendedReviewersToGraph = recommendedReviewers => {
     mainNodes.forEach(mainNode => addReviewerLink(mainNode, node));
   }
 
+  const addCommonReviewerManuscript = (m, r) => {
+    const mid = manuscriptToId(m);
+    if (nodeMap[mid]) {
+      return;
+    }
+    // const pid = personToId(r['person']);
+    const relatedPersons = (m['authors'] || []).concat(m['reviewers'] || []);
+    const relatedPersonIds = relatedPersons.map(p => personToId(p));
+    const reviewerPersonIds = relatedPersonIds.filter(personId => !!nodeMap[personId]);
+    if (reviewerPersonIds.length > 1) {
+      const manuscriptNode = addManuscript(m, r);
+      reviewerPersonIds.forEach(personId => addReviewerLink(manuscriptNode, nodeMap[personId]));
+    }
+  }
+
+  const addCommonReviewerLinks = r => {
+    if (r['author-of-manuscripts']) {
+      r['author-of-manuscripts'].forEach(m => addCommonReviewerManuscript(m, r));
+    }
+    if (r['reviewer-of-manuscripts']) {
+      r['reviewer-of-manuscripts'].forEach(m => addCommonReviewerManuscript(m, r));
+    }
+  }
+
   const {
     matchingManuscripts,
     potentialReviewers,
@@ -129,6 +154,7 @@ const recommendedReviewersToGraph = recommendedReviewers => {
   }
   if (potentialReviewers) {
     potentialReviewers.forEach(addReviewer);
+    potentialReviewers.forEach(addCommonReviewerLinks);
   }
 
   // console.log("node keys:", Object.keys(nodeMap));
@@ -389,13 +415,13 @@ const createLegend = (parent, showSearch) => {
     },
     label: 'Early career researcher'
   }];
-  const includeOtherManuscripts = false;
+  const includeOtherManuscripts = true;
   if (includeOtherManuscripts) {
     legendData.push({
       manuscript: {
         score: fullScore
       },
-      label: 'Other manuscript'
+      label: 'Common manuscript'
     });
   }
   legendData.forEach((d, index) => {
