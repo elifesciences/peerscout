@@ -3,6 +3,7 @@ html, body {
   margin: 0;
   cursor: default;
   height: 100%;
+  overflow: hidden;
 }
 
 .app-container {
