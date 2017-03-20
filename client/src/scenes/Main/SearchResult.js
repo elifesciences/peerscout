@@ -124,6 +124,11 @@ const styles = {
       display: 'inline-block',
       color: '#888'
     }
+  },
+  errorMessage: {
+    padding: 20,
+    fontSize: 20,
+    color: '#f22'
   }
 }
 
@@ -544,7 +549,7 @@ const SearchResult = ({ searchResult, selectedReviewer }) => {
     <View className="result-list">
       {
         error && (
-          <View>
+          <View style={ styles.errorMessage }>
             <Text>
               This is very unfortunate, but there seems to be some sort of technical issue.
               Have you tried turning it off and on again?
@@ -554,7 +559,7 @@ const SearchResult = ({ searchResult, selectedReviewer }) => {
       }
       {
         hasManuscriptsNotFound && (
-          <View>
+          <View style={ styles.errorMessage }>
             <Text>{ `Manuscript not found: ${manuscriptsNotFound.join(', ')}` }</Text>
           </View>
         )
@@ -578,7 +583,7 @@ const SearchResult = ({ searchResult, selectedReviewer }) => {
       }
       {
         !hasManuscriptsNotFound && !error && potentialReviewers.length === 0 && (
-          <View>
+          <View style={ styles.errorMessage }>
             <Text>{ 'No potential reviewers found' }</Text>
           </View>
         )
