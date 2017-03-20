@@ -3,7 +3,10 @@ import os
 
 import pandas as pd
 
-from convertUtils import filter_filenames_by_ext
+from convertUtils import (
+  filter_filenames_by_ext,
+  unescape_and_strip_tags_if_not_none
+)
 
 def convert_xml_file_to(filename, stream, csv_path):
   print("converting:", filename)
@@ -15,6 +18,8 @@ def convert_xml_file_to(filename, stream, csv_path):
     'first_nm': 'first-name',
     'last_nm': 'last-name'
   })
+  for c in ['first-name', 'last-name']:
+    df[c] = df[c].apply(unescape_and_strip_tags_if_not_none)
   print("columns:", df.columns.values)
   out_filename = os.path.join(csv_path, 'early-career-researchers.csv')
   print("writing result to:", out_filename)
