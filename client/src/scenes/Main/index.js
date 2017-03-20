@@ -195,6 +195,8 @@ class Main extends React.Component {
       allSubjectAreas,
       selectedReviewer
     } = this.state;
+    const hasPotentialReviewers =
+      results && (results.potentialReviewers) && (results.potentialReviewers.length > 0);
     return (
       <View style={ styles.sceneContainer }>
         <SearchHeader
@@ -206,7 +208,15 @@ class Main extends React.Component {
           <LoadingIndicator loading={ loading }>
             <View style={ styles.resultsContainer } className="inner-results-container">
               {
-                results && (
+                results && !hasPotentialReviewers && (
+                  <SearchResult
+                    searchResult={ results }
+                    selectedReviewer={ selectedReviewer }
+                  />
+                )
+              }
+              {
+                results && hasPotentialReviewers && (
                   <SplitPane split="vertical" defaultSize="50%">
                     <ChartResult
                       searchResult={ results }
