@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="400"
+   height="400"
+   id="svg6386"
+   version="1.1"
+   inkscape:version="0.48.4 r9939"
+   sodipodi:docname="Paper note.svg">
+  <title
+     id="title5938">Paper note</title>
+  <defs
+     id="defs6388" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.61"
+     inkscape:cx="198.36066"
+     inkscape:cy="200"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="944"
+     inkscape:window-height="1041"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0" />
+  <metadata
+     id="metadata6391">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title>Paper note</dc:title>
+        <dc:date>2017-01-16</dc:date>
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>m1981</dc:title>
+          </cc:Agent>
+        </dc:creator>
+        <dc:rights>
+          <cc:Agent>
+            <dc:title>Public domain</dc:title>
+          </cc:Agent>
+        </dc:rights>
+        <dc:publisher>
+          <cc:Agent>
+            <dc:title>Inkscape</dc:title>
+          </cc:Agent>
+        </dc:publisher>
+        <dc:subject>
+          <rdf:Bag>
+            <rdf:li>icon</rdf:li>
+            <rdf:li>paper</rdf:li>
+            <rdf:li>note</rdf:li>
+            <rdf:li>document</rdf:li>
+            <rdf:li></rdf:li>
+          </rdf:Bag>
+        </dc:subject>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Calque 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-652.36218)">
+    <path
+       inkscape:connector-curvature="0"
+       id="rect3769"
+       d="m 115,704.81531 c -13.77319,0 -25.1875,11.41431 -25.1875,25.1875 l 0,244.71875 c 0,13.7732 11.41431,25.1875 25.1875,25.1875 l 170,0 c 13.77319,0 25.1875,-11.41431 25.1875,-25.1875 l 0,-179.90625 c 0,-10.02243 -4.62071,-19.96445 -12.9375,-28.28125 L 248.5,717.75281 c -7.32374,-7.32374 -16.61407,-12.9375 -28.28125,-12.9375 l -105.21875,0 z m 0,20 105.21875,0 c 6.78843,0 8.20175,1.13925 14.125,7.0625 l 48.78125,48.8125 c 5.6418,5.6418 7.0625,9.65271 7.0625,14.125 l 0,179.90625 c 0,3.05529 -2.13224,5.1875 -5.1875,5.1875 l -170,0 c -3.05527,0 -5.1875,-2.13222 -5.1875,-5.1875 l 0,-244.71875 c 0,-3.05527 2.13223,-5.1875 5.1875,-5.1875 z m 18.625,8.8125 c -8.22505,0 -15,6.77495 -15,15 0,8.22505 6.77495,15 15,15 8.22503,0 15,-6.77495 15,-15 0,-8.22505 -6.77497,-15 -15,-15 z m 63.71875,0 a 5.0062462,5.0062462 0 1 0 0.5,10 l 10.5,0 c 4.79314,0 8.5,3.69489 8.5,8.5 l 0,27.5 c 0,10.16201 8.326,18.5 18.5,18.5 l 26.8125,0 c 4.79314,0 8.5,3.72614 8.5,8.53125 l 0,10.46875 a 5.0004998,5.0004998 0 1 0 10,0 l 0,-10.46875 c 0,-10.16201 -8.32601,-18.53125 -18.5,-18.53125 l -26.8125,0 c -4.79314,0 -8.5,-3.69489 -8.5,-8.5 l 0,-27.5 c 0,-10.16201 -8.32601,-18.5 -18.5,-18.5 l -10.5,0 a 5.0004998,5.0004998 0 0 0 -0.5,0 z m -63.71875,9.96875 c 2.82064,0 4.96875,2.21061 4.96875,5.03125 0,2.82065 -2.14811,5 -4.96875,5 -2.82065,0 -5,-2.17935 -5,-5 0,-2.82064 2.17935,-5.03125 5,-5.03125 z m 0,31.53125 c -8.22505,0 -15,6.77495 -15,15 0,8.22505 6.77495,15 15,15 8.22503,0 15,-6.77495 15,-15 0,-8.22505 -6.77497,-15 -15,-15 z m 0,9.96875 c 2.82064,0 4.96875,2.21061 4.96875,5.03125 0,2.82065 -2.14811,4.96875 -4.96875,4.96875 -2.82065,0 -5,-2.1481 -5,-4.96875 0,-2.82064 2.17935,-5.03125 5,-5.03125 z m 0,31.8125 c -8.22505,0 -15,6.77495 -15,15 0,8.22505 6.77495,15 15,15 8.22503,0 15,-6.77495 15,-15 0,-8.22505 -6.77497,-15 -15,-15 z m 0,9.96875 c 2.82064,0 4.96875,2.21061 4.96875,5.03125 0,2.82065 -2.14811,4.96875 -4.96875,4.96875 -2.82065,0 -5,-2.1481 -5,-4.96875 0,-2.82064 2.17935,-5.03125 5,-5.03125 z m 39.8125,0 a 5.0004998,5.0004998 0 1 0 0,10 l 46.6875,0 a 5.0004998,5.0004998 0 1 0 0,-10 l -46.6875,0 z m 65.96875,0 a 5.0004998,5.0004998 0 1 0 0,10 l 15.34375,0 a 5.0004998,5.0004998 0 1 0 0,-10 l -15.34375,0 z M 133.625,858.09656 c -8.22505,0 -15,6.77495 -15,15 0,8.22505 6.77495,15 15,15 8.22503,0 15,-6.77495 15,-15 0,-8.22505 -6.77497,-15 -15,-15 z m 0,10 c 2.82064,0 4.96875,2.17936 4.96875,5 0,2.82065 -2.14811,5 -4.96875,5 -2.82065,0 -5,-2.17935 -5,-5 0,-2.82064 2.17935,-5 5,-5 z m 39.8125,0 a 5.0004998,5.0004998 0 1 0 0,10 l 9.8125,0 a 5.0004998,5.0004998 0 1 0 0,-10 l -9.8125,0 z m 38.90625,0 a 5.0004998,5.0004998 0 1 0 0,10 l 42.40625,0 a 5.0004998,5.0004998 0 1 0 0,-10 l -42.40625,0 z m -78.71875,31.5 c -8.22505,0 -15,6.77495 -15,15 0,8.22505 6.77495,15 15,15 8.22503,0 15,-6.77495 15,-15 0,-8.22505 -6.77497,-15 -15,-15 z m 0,10 c 2.82064,0 4.96875,2.17936 4.96875,5 0,2.82065 -2.14811,5 -4.96875,5 -2.82065,0 -5,-2.17935 -5,-5 0,-2.82064 2.17935,-5 5,-5 z m 39.8125,0 a 5.0004998,5.0004998 0 1 0 0,10 l 53.4375,0 a 5.0004998,5.0004998 0 1 0 0,-10 l -53.4375,0 z m 72.5,0 a 5.0004998,5.0004998 0 1 0 0,10 l 8.8125,0 a 5.0004998,5.0004998 0 1 0 0,-10 l -8.8125,0 z m -112.3125,31.5 c -8.22505,0 -15,6.77495 -15,15 0,8.22505 6.77495,15 15,15 8.22503,0 15,-6.77495 15,-15 0,-8.22505 -6.77497,-15 -15,-15 z m 0,10 c 2.82064,0 4.96875,2.17936 4.96875,5 0,2.82065 -2.14811,5 -4.96875,5 -2.82065,0 -5,-2.17935 -5,-5 0,-2.82064 2.17935,-5 5,-5 z m 39.8125,0 a 5.0004998,5.0004998 0 1 0 0,10 l 31.625,0 a 5.0004998,5.0004998 0 1 0 0,-10 l -31.625,0 z m 51.4375,0 a 5.0004998,5.0004998 0 1 0 0,10 l 29.875,0 a 5.0004998,5.0004998 0 1 0 0,-10 l -29.875,0 z"
+       style="font-size:medium;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-indent:0;text-align:start;text-decoration:none;line-height:normal;letter-spacing:normal;word-spacing:normal;text-transform:none;direction:ltr;block-progression:tb;writing-mode:lr-tb;text-anchor:start;baseline-shift:baseline;color:#000000;fill:#4d4d4d;fill-opacity:1;stroke:none;stroke-width:20;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;font-family:Sans;-inkscape-font-specification:Sans" />
+  </g>
+</svg>

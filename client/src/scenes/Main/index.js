@@ -3,6 +3,7 @@ import { createSelector } from 'reselect';
 import debounce from 'debounce';
 import createHashHistory from 'history/createHashHistory';
 import equals from 'deep-equal';
+import SplitPane from 'react-split-pane';
 
 import {
   LoadingIndicator,
@@ -11,10 +12,19 @@ import {
 
 import SearchHeader from './SearchHeader';
 import SearchResult from './SearchResult';
+import ChartResult from './ChartResult';
 
 const styles = {
   containerWithMargin: {
-    margin: 8
+    flex: 1
+  },
+  resultsContainer: {
+    position: 'relative',
+    flex: 1,
+    display: 'flex'
+  },
+  sceneContainer: {
+    flex: 1
   }
 }
 
@@ -68,7 +78,8 @@ class Main extends React.Component {
           results: resultsResponse && {
             potentialReviewers: resultsResponse['potential-reviewers'],
             matchingManuscripts: resultsResponse['matching-manuscripts'],
-            manuscriptsNotFound: resultsResponse['manuscripts-not-found']
+            manuscriptsNotFound: resultsResponse['manuscripts-not-found'],
+            search: resultsResponse['search']
           },
           resultsSearchOptions,
           shouldLoad: false,
@@ -104,6 +115,13 @@ class Main extends React.Component {
       });
       this.updateResultsDebounced();
     };
+
+    this.onNodeClicked = node => {
+      console.log("onNodeClicked:", node);
+      this.setState({
+        selectedReviewer: node.potentialReviewer
+      });
+    }
   }
 
   locationToSearchOptions(location, defaultSearchOptions) {
@@ -174,21 +192,31 @@ class Main extends React.Component {
       loading,
       searchOptions,
       results,
-      allSubjectAreas
+      allSubjectAreas,
+      selectedReviewer
     } = this.state;
     return (
-      <View>
+      <View style={ styles.sceneContainer }>
         <SearchHeader
           searchOptions={ searchOptions }
           onSearchOptionsChanged={ this.onSearchOptionsChanged }
           allSubjectAreas={ allSubjectAreas }
         />
-        <View style={ styles.containerWithMargin }>
+        <View style={ styles.containerWithMargin } className="results-container">
           <LoadingIndicator loading={ loading }>
-            <View>
+            <View style={ styles.resultsContainer } className="inner-results-container">
               {
                 results && (
-                  <SearchResult searchResult={ results }/>
+                  <SplitPane split="vertical" defaultSize="50%">
+                    <ChartResult
+                      searchResult={ results }
+                      onNodeClicked={ this.onNodeClicked }
+                    />
+                    <SearchResult
+                      searchResult={ results }
+                      selectedReviewer={ selectedReviewer }
+                    />
+                  </SplitPane>
                 )
               }
             </View>

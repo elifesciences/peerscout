@@ -787,4 +787,10 @@ class RecommendReviewers(object):
     }
     if manuscripts_not_found is not None:
       result['manuscripts-not-found'] = manuscripts_not_found
+    elif len(matching_manuscripts) == 0:
+      result['search'] = remove_none({
+        'subject-area': subject_area,
+        'keywords': keyword_list,
+        'abstract': abstract
+      })
     return result

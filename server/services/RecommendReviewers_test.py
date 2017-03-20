@@ -351,6 +351,10 @@ POTENTIAL_REVIEWER2 = {
   'person': PERSON2_RESULT
 }
 
+KEYWORD_SEARCH1 = {
+  'keywords': [KEYWORD1]
+}
+
 PP = pprint.PrettyPrinter(indent=2, width=40)
 
 def create_recommend_reviewers(datasets):
@@ -366,10 +370,7 @@ def create_recommend_reviewers(datasets):
 def test_no_match():
   recommend_reviewers = create_recommend_reviewers(DATASETS)
   result = recommend_reviewers.recommend(keywords='', manuscript_no='')
-  assert result == {
-    'potential-reviewers': [],
-    'matching-manuscripts': []
-  }
+  assert result['matching-manuscripts'] == []
 
 def test_matching_manuscript():
   datasets = dict(DATASETS)
@@ -649,18 +650,15 @@ def test_matching_one_keyword_author():
   recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", PP.pformat(result))
-  assert result == {
-    'potential-reviewers': [{
-      **POTENTIAL_REVIEWER1,
-      'author-of-manuscripts': [{
-        **MANUSCRIPT_VERSION1_RESULT,
-        'authors': [PERSON1_RESULT],
-        'reviewers': []
-      }],
-      'reviewer-of-manuscripts': []
+  assert result['potential-reviewers'] == [{
+    **POTENTIAL_REVIEWER1,
+    'author-of-manuscripts': [{
+      **MANUSCRIPT_VERSION1_RESULT,
+      'authors': [PERSON1_RESULT],
+      'reviewers': []
     }],
-    'matching-manuscripts': []
-  }
+    'reviewer-of-manuscripts': []
+  }]
 
 def test_matching_one_keyword_author_should_not_return_author_of_rejected_manuscripts():
   datasets = dict(DATASETS)
@@ -680,10 +678,7 @@ def test_matching_one_keyword_author_should_not_return_author_of_rejected_manusc
   recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", PP.pformat(result))
-  assert result == {
-    'potential-reviewers': [],
-    'matching-manuscripts': []
-  }
+  assert result['potential-reviewers'] == []
 
 def test_matching_one_keyword_author_should_return_stats():
   datasets = dict(DATASETS)
@@ -834,18 +829,15 @@ def test_matching_one_keyword_author_should_not_return_other_draft_papers():
   recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", result)
-  assert result == {
-    'potential-reviewers': [{
-      **POTENTIAL_REVIEWER1,
-      'author-of-manuscripts': [{
-        **MANUSCRIPT_VERSION1_RESULT,
-        'authors': [PERSON1_RESULT],
-        'reviewers': []
-      }],
-      'reviewer-of-manuscripts': []
+  assert result['potential-reviewers'] == [{
+    **POTENTIAL_REVIEWER1,
+    'author-of-manuscripts': [{
+      **MANUSCRIPT_VERSION1_RESULT,
+      'authors': [PERSON1_RESULT],
+      'reviewers': []
     }],
-    'matching-manuscripts': []
-  }
+    'reviewer-of-manuscripts': []
+  }]
 
 def test_matching_one_keyword_author_should_return_author_only_once():
   datasets = dict(DATASETS)
@@ -866,18 +858,15 @@ def test_matching_one_keyword_author_should_return_author_only_once():
   recommend_reviewers = create_recommend_reviewers(datasets)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", result)
-  assert result == {
-    'potential-reviewers': [{
-      **POTENTIAL_REVIEWER1,
-      'author-of-manuscripts': [{
-        **MANUSCRIPT_VERSION1_RESULT,
-        'authors': [PERSON1_RESULT],
-        'reviewers': []
-      }],
-      'reviewer-of-manuscripts': []
+  assert result['potential-reviewers'] == [{
+    **POTENTIAL_REVIEWER1,
+    'author-of-manuscripts': [{
+      **MANUSCRIPT_VERSION1_RESULT,
+      'authors': [PERSON1_RESULT],
+      'reviewers': []
     }],
-    'matching-manuscripts': []
-  }
+    'reviewer-of-manuscripts': []
+  }]
 
 def test_matching_one_keyword_previous_reviewer():
   datasets = dict(DATASETS)
@@ -909,7 +898,7 @@ def test_matching_one_keyword_previous_reviewer():
   }
   print("result:", PP.pformat(result))
   print("expected:", PP.pformat(result))
-  assert result == expected
+  assert result['potential-reviewers'] == expected['potential-reviewers']
 
 def test_matching_one_keyword_previous_reviewer_should_return_reviewer_only_once():
   datasets = dict(DATASETS)

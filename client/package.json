@@ -13,6 +13,8 @@
   "license": "MIT",
   "dependencies": {
     "clipboard-js": "^0.3.2",
+    "d3": "^4.7.1",
+    "d3-tip": "^0.7.1",
     "debounce": "^1.0.0",
     "deep-equal": "^1.0.1",
     "font-awesome": "^4.7.0",
@@ -25,6 +27,7 @@
     "react-headroom": "^2.1.3",
     "react-more": "^1.2.0",
     "react-portal-tooltip": "^1.1.5",
+    "react-split-pane": "^0.1.59",
     "react-tap-event-plugin": "^2.0.1",
     "reselect": "^2.5.4"
   },
@@ -48,6 +51,7 @@
     "http-server": "^0.9.0",
     "jest": "18.1.0",
     "react-test-renderer": "15.4.1",
+    "resize-observer-polyfill": "^1.4.1",
     "style-loader": "^0.13.1",
     "url-loader": "^0.5.7",
     "webpack": "^1.14.0",

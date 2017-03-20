@@ -139,10 +139,10 @@ const quote = s => s && `\u201c${s}\u201d`
 const formatManuscriptId = manuscript => manuscript['manuscript-no'];
 
 const formatKeywordScoreInline = keyword =>
-  keyword ? keyword + ' keyword match' : '';
+  keyword ? Math.round(keyword * 100) + ' keyword match' : '';
 
 const formatSimilarityScoreInline = similarity =>
-  similarity ? similarity.toFixed(2) + ' similarity' : '';
+  similarity ? Math.round(similarity * 100) + ' similarity' : '';
 
 const doiUrl = doi => doi && 'http://dx.doi.org/' + doi;
 
@@ -403,12 +403,12 @@ const PotentialReviewer = ({
             <FlexColumn>
               {
                 (scores && scores['keyword'] && (
-                  <Text>{ `${scores['keyword'].toFixed(2)} keyword match (higher is better)` }</Text>
+                  <Text>{ `${Math.round(scores['keyword'] * 100)} keyword match (higher is better)` }</Text>
                 )) || null
               }
               {
                 (scores && scores['similarity'] && (
-                  <Text>{ `${scores['similarity'].toFixed(2)} similarity (max across articles)` }</Text>
+                  <Text>{ `${Math.round(scores['similarity'] * 100)} similarity (max across articles)` }</Text>
                 )) || null
               }
             </FlexColumn>
@@ -506,7 +506,9 @@ const filterReviewsByEarlyCareerResearcherStatus = (potentialReviewers, earlyCar
     potentialReviewer.person['is-early-career-researcher'] === earlyCareerReviewer
   );
 
-const SearchResult = ({ searchResult }) => {
+const reviewerPersonId = reviewer => reviewer && reviewer.person && reviewer.person['person-id'];
+
+const SearchResult = ({ searchResult, selectedReviewer }) => {
   const {
     potentialReviewers = [],
     matchingManuscripts = [],
@@ -515,6 +517,8 @@ const SearchResult = ({ searchResult }) => {
   } = searchResult;
   const requestedSubjectAreas = extractAllSubjectAreas(matchingManuscripts);
   const hasManuscriptsNotFound = manuscriptsNotFound && manuscriptsNotFound.length > 0;
+  const filteredPotentialReviewers = !selectedReviewer ? potentialReviewers :
+    potentialReviewers.filter(r => reviewerPersonId(r) === reviewerPersonId(selectedReviewer));
   return (
     <View>
       {
@@ -535,7 +539,7 @@ const SearchResult = ({ searchResult }) => {
         )
       }
       {
-        matchingManuscripts.map((matchingManuscript, index) => (
+        !selectedReviewer && matchingManuscripts.map((matchingManuscript, index) => (
           <ManuscriptSummary
             key={ index }
             manuscript={ matchingManuscript }
@@ -543,7 +547,7 @@ const SearchResult = ({ searchResult }) => {
         ))
       }
       {
-        potentialReviewers.map((potentialReviewer, index) => (
+        filteredPotentialReviewers.map((potentialReviewer, index) => (
           <PotentialReviewer
             key={ index }
             potentialReviewer={ potentialReviewer }
