@@ -11,6 +11,7 @@ import {
   FlatButton,
   FlexColumn,
   FontAwesomeIcon,
+  InlineContainer,
   Link,
   Text,
   TooltipWrapper,
@@ -20,6 +21,11 @@ import {
 import { groupBy } from '../../utils';
 
 import ManuscriptTooltipContent from './ManuscriptTooltipContent';
+
+import {
+  formatCombinedScore,
+  formatScoreWithDetails
+} from './formatUtils';
 
 const commonStyles = {
   link: {
@@ -138,24 +144,19 @@ const quote = s => s && `\u201c${s}\u201d`
 
 const formatManuscriptId = manuscript => manuscript['manuscript-no'];
 
-const formatKeywordScoreInline = keyword =>
-  keyword ? Math.round(keyword * 100) + ' keyword match' : '';
-
-const formatSimilarityScoreInline = similarity =>
-  similarity ? Math.round(similarity * 100) + ' similarity' : '';
-
 const doiUrl = doi => doi && 'http://dx.doi.org/' + doi;
-
-const formatScoresInline = ({ keyword, similarity }) =>
-  [
-    formatKeywordScoreInline(keyword),
-    formatSimilarityScoreInline(similarity)
-  ].filter(s => !!s).join(', ');
 
 const hasMatchingSubjectAreas = (manuscript, requestedSubjectAreas) =>
   requestedSubjectAreas.length === 0 || !!(manuscript['subject-areas'] || []).filter(
     subjectArea => requestedSubjectAreas.has(subjectArea)
   )[0];
+
+const Score = ({ score = {} }) => (
+  <Text
+    className="score"
+    title={ formatScoreWithDetails(score) }
+  >{ formatCombinedScore(score.combined) }</Text>
+);
 
 const ManuscriptRefLink = ({ manuscript }) => (
   <Link
@@ -168,7 +169,6 @@ const ManuscriptRefLink = ({ manuscript }) => (
 );
 
 const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectAreas }) => {
-  const formattedScores = formatScoresInline(scores);
   return (
     <View
       style={
@@ -184,11 +184,14 @@ const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectArea
       <Text>{ formatDate(manuscript['published-date']) }</Text>
       <Text>{ ' (' }</Text>
       <ManuscriptRefLink manuscript={ manuscript }/>
-      <Text>{ ')' }</Text>
+      <Text>{ ') ' }</Text>
       {
-        formattedScores && (
-          <Text>{ ` - ${formattedScores}` }</Text>
-        )
+        scores.combined && (
+          <InlineContainer>
+            <Text>{ '- ' }</Text>
+            <Score score={ scores }/>
+          </InlineContainer>
+        ) || null
       }
     </View>
   );
@@ -402,13 +405,11 @@ const PotentialReviewer = ({
           <View style={ styles.potentialReviewer.value }>
             <FlexColumn>
               {
-                (scores && scores['keyword'] && (
-                  <Text>{ `${Math.round(scores['keyword'] * 100)} keyword match (higher is better)` }</Text>
-                )) || null
-              }
-              {
-                (scores && scores['similarity'] && (
-                  <Text>{ `${Math.round(scores['similarity'] * 100)} similarity (max across articles)` }</Text>
+                (scores && scores['combined'] && (
+                  <InlineContainer>
+                    <Score score={ scores }/>
+                    <Text>{ ' (max across manuscripts)' }</Text>
+                  </InlineContainer>
                 )) || null
               }
             </FlexColumn>
@@ -520,7 +521,7 @@ const SearchResult = ({ searchResult, selectedReviewer }) => {
   const filteredPotentialReviewers = !selectedReviewer ? potentialReviewers :
     potentialReviewers.filter(r => reviewerPersonId(r) === reviewerPersonId(selectedReviewer));
   return (
-    <View>
+    <View className="result-list">
       {
         error && (
           <View>

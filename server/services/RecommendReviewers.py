@@ -700,36 +700,36 @@ class RecommendReviewers(object):
       reviewer_of_manuscripts = self.manuscripts_by_reviewer_map.get(person_id, [])
       involved_manuscripts = author_of_manuscripts + reviewer_of_manuscripts
 
-      total_keyword_match_count = float(sum([
-        keyword_match_count_by_by_version_key_map.get(manuscript[MANUSCRIPT_VERSION_ID], 0)
-        for manuscript in involved_manuscripts
-      ]))
-
-      max_similarity = null_to_none(all_similar_manuscripts[
-        all_similar_manuscripts[MANUSCRIPT_VERSION_ID].isin(
-          [m[MANUSCRIPT_VERSION_ID] for m in involved_manuscripts]
-        )
-      ][SIMILARITY_COLUMN].max())
-
       similarity_by_manuscript_version_id = all_similar_manuscripts[
         all_similar_manuscripts[MANUSCRIPT_VERSION_ID].isin(
           [m[MANUSCRIPT_VERSION_ID] for m in involved_manuscripts]
         )
       ].set_index(MANUSCRIPT_VERSION_ID)[SIMILARITY_COLUMN].to_dict()
 
-      scores_by_manuscript = [
-        {
+      def score_by_manuscript(manuscript, keyword, similarity):
+        return {
           **manuscript_id_fields(manuscript),
-          'keyword': keyword_match_count_by_by_version_key_map.get(
-            manuscript[MANUSCRIPT_VERSION_ID], 0) / max(1, len(keyword_list)),
-          'similarity': similarity_by_manuscript_version_id.get(
-            manuscript[MANUSCRIPT_VERSION_ID], None)
+          'keyword': keyword,
+          'similarity': similarity,
+          'combined': min(1.0, keyword + (similarity or 0) * 0.5)
         }
+
+      scores_by_manuscript = [
+        score_by_manuscript(
+          manuscript,
+          keyword=keyword_match_count_by_by_version_key_map.get(
+            manuscript[MANUSCRIPT_VERSION_ID], 0) / max(1, len(keyword_list)),
+          similarity=similarity_by_manuscript_version_id.get(
+            manuscript[MANUSCRIPT_VERSION_ID], None)
+        )
         for manuscript in involved_manuscripts
       ]
-
-      if len(keyword_list) > 0:
-        total_keyword_match_count = total_keyword_match_count / len(keyword_list)
+      scores_by_manuscript = list(reversed(sorted(scores_by_manuscript, key=lambda score: (
+        score['combined'],
+        score['keyword'],
+        score['similarity']
+      ))))
+      best_score = get_first(scores_by_manuscript, {})
 
       assignment_status = get_first(assigned_reviewers_by_person_id.get(person_id, []))
 
@@ -738,8 +738,9 @@ class RecommendReviewers(object):
         'author-of-manuscripts': author_of_manuscripts,
         'reviewer-of-manuscripts': reviewer_of_manuscripts,
         'scores': {
-          'keyword': total_keyword_match_count,
-          'similarity': max_similarity,
+          'keyword': best_score.get('keyword'),
+          'similarity': best_score.get('similarity'),
+          'combined': best_score.get('combined'),
           'by-manuscript': scores_by_manuscript
         }
       }
@@ -761,8 +762,9 @@ class RecommendReviewers(object):
     potential_reviewers = sorted(
       potential_reviewers,
       key=lambda potential_reviewer: (
-        -potential_reviewer['scores']['keyword'],
-        -(potential_reviewer['scores']['similarity'] or 0),
+        -(potential_reviewer['scores'].get('combined') or 0),
+        -(potential_reviewer['scores'].get('keyword') or 0),
+        -(potential_reviewer['scores'].get('similarity') or 0),
         deep_get(potential_reviewer, review_duration_mean_keys, potential_reviewer_mean_duration),
         potential_reviewer['person']['first-name'],
         potential_reviewer['person']['last-name']

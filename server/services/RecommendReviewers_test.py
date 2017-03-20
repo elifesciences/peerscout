@@ -336,10 +336,12 @@ MANUSCRIPT_HISTORY_REVIEW_COMPLETE1 = {
 POTENTIAL_REVIEWER1 = {
   'person': PERSON1_RESULT,
   'scores': {
+    'combined': 1.0,
     'keyword': 1.0,
     'similarity': None,
     'by-manuscript': [{
       **MANUSCRIPT_ID_FIELDS1,
+      'combined': 1.0,
       'keyword': 1.0,
       'similarity': None
     }]

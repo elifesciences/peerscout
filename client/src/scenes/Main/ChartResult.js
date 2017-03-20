@@ -4,6 +4,11 @@ import ResizeObserver from 'resize-observer-polyfill';
 import * as d3 from 'd3';
 import d3Tip from 'd3-tip';
 
+import {
+  formatCombinedScore,
+  formatScoreWithDetails
+} from './formatUtils';
+
 const recommendedReviewersToGraph = recommendedReviewers => {
   const nodes = [];
   let links = [];
@@ -151,20 +156,15 @@ const escapeHtml = s => {
   return div.innerHTML;
 }
 
-const formatScore = score => [
-  score.keyword && Math.round(score.keyword * 100) + ' keyword match',
-  score.similarity && Math.round(score.similarity * 100) + ' similarity'
-].filter(x => !!x).join(', ');
-
 const getManuscriptTooltipHtml = m => {
   let s = '<p class="title">' +
     '<b>title:</b>' +
     escapeHtml(m.title) +
   '</p>';
-  if (m.score) {
+  if (m.score && m.score.combined) {
     s += '<p class="score">' +
       '<b>score:</b> ';
-    s += formatScore(m.score);
+    s += formatScoreWithDetails(m.score);
     s += '</p>';
   }
   s += '<p class="abstract">' +
@@ -179,10 +179,10 @@ const getReviewerTooltipHtml = r => {
   let s = '<p class="person-name">' +
     escapeHtml(p['first-name'] + ' ' + p['last-name']) +
   '</p>';
-  if (r.scores) {
+  if (r.scores && r.scores.combined) {
     s += '<p class="score">' +
       '<b>score:</b> ';
-    s += formatScore(r.scores);
+    s += formatScoreWithDetails(r.scores);
     s += '</p>';
   }
   return s;
@@ -212,14 +212,7 @@ const nodeScore = d => (
   (d && d.potentialReviewer && d.potentialReviewer.scores)
 );
 
-const asSingleScore = score => {
-  if (score) {
-    const keywordScore = score.keyword || 0;
-    return Math.min(1, keywordScore + (score.similarity || 0) * 0.5);
-  } else {
-    return 0;
-  }
-}
+const asSingleScore = score => (score && score.combined) || 0;
 
 const nodeSingleScore = d => {
   if (d && d.isMain) {
@@ -341,7 +334,7 @@ const createNode = (parent, nodes) => {
   node.append("text")
     .text(d => {
       const singleScore = nodeSingleScore(d);
-      return (singleScore && !d.isMain && Math.round(singleScore * 100)) || '';
+      return (singleScore && !d.isMain && formatCombinedScore(singleScore)) || '';
     })
     .style("fill", "#000")
     .style("text-anchor", "middle")
@@ -356,7 +349,7 @@ const createLegend = (parent, showSearch) => {
   .style('opacity', 0.7)
   .attr("transform", d => "translate(20, 20)");
   const fullScore = {
-    keyword: 1
+    combined: 1
   };
   const legendData = [{
     isMain: true,
