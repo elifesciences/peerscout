@@ -9,7 +9,13 @@ from .ManuscriptModel import is_manuscript_relevant
 
 from .utils import unescape_and_strip_tags, filter_by
 
-from .collection_utils import flatten, filter_none, deep_get, deep_get_list
+from .collection_utils import (
+  flatten,
+  filter_none,
+  deep_get,
+  deep_get_list,
+  merge_grouped_dicts
+)
 
 debug_enabled = False
 
@@ -98,7 +104,7 @@ def groupby_column_to_dict(df, groupby_col, value_col=None):
     value_f = value_col
   else:
     value_f = lambda item: item[value_col]
-  a = df.to_dict(orient='records')
+  a = df.sort_values(groupby_col).to_dict(orient='records')
   return {
     k: [value_f(item) for item in v]
     for k, v in groupby(a, lambda item: item[groupby_col])
@@ -273,6 +279,16 @@ def manuscript_by_crossref_person_extra(crossref_person_extra):
     'authors': [],
     'reviewers': []
   }
+
+def create_early_career_researcher_ids_by_subject_area_map(early_career_researchers_df):
+  df = early_career_researchers_df.copy()
+  df['First subject area'] = df['First subject area'].str.lower()
+  df['Second subject area'] = df['Second subject area'].str.lower()
+  m = merge_grouped_dicts([
+    groupby_column_to_dict(df, 'First subject area', PERSON_ID),
+    groupby_column_to_dict(df, 'Second subject area', PERSON_ID)
+  ])
+  return m
 
 class RecommendReviewers(object):
   def __init__(self, datasets, manuscript_model, similarity_model=None):
@@ -498,6 +514,9 @@ class RecommendReviewers(object):
     self.manuscripts_by_reviewer_map = applymap_dict(
       self.manuscripts_by_reviewer_map, sort_manuscripts_by_date
     )
+    self.early_career_researcher_ids_by_subject_area = (
+      create_early_career_researcher_ids_by_subject_area_map(self.early_career_researchers_df)
+    )
 
   def __find_manuscripts_by_keywords(self, keywords, manuscript_no=None):
     other_manuscripts = self.manuscript_keywords_df[
@@ -575,13 +594,11 @@ class RecommendReviewers(object):
     ]
 
   def _get_early_career_reviewer_ids_by_subject_areas(self, subject_areas):
-    result = set(self.early_career_researchers_df[
-      (
-        self.early_career_researchers_df['First subject area'].isin(subject_areas) |
-        self.early_career_researchers_df['Second subject area'].isin(subject_areas)
-      ) &
-      self.early_career_researchers_df[PERSON_ID].isin(self.persons_map)
-    ][PERSON_ID].values)
+    result = set(flatten([
+      self.early_career_researcher_ids_by_subject_area.get(subject_area.lower(), [])
+      for subject_area in subject_areas
+    ]))
+    print("found {} early career researchers for subject areas:".format(len(result)), subject_areas)
     return result
 
   def get_all_subject_areas(self):

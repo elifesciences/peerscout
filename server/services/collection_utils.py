@@ -13,3 +13,9 @@ def deep_get(dictionary, keys, defaultValue=None):
 
 def deep_get_list(dictionary_list, keys, defaultValue=None):
   return [deep_get(d, keys, defaultValue) for d in dictionary_list]
+
+def merge_grouped_dicts(grouped_dicts):
+  return {
+    k: flatten([d.get(k, []) for d in grouped_dicts])
+    for k in set(flatten([d.keys() for d in grouped_dicts]))
+  }
