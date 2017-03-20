@@ -180,7 +180,7 @@ class SearchHeader extends React.Component {
                       onUpdateInput={ newValue => this.setState({currentKeyword: newValue}) }
                       onNewRequest={ newValue => this.addKeyword(newValue) }
                       dataSource={ allKeywords }
-                      filter={ AutoComplete.fuzzyFilter }
+                      filter={ AutoComplete.defaultFilter }
                       maxSearchResults={ 10 }
                       style={ styles.textField }
                     />
