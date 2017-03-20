@@ -125,7 +125,10 @@ class SearchHeader extends React.Component {
   render() {
     const { state, updateSearchOption, props } = this;
     const { allSubjectAreas=[], allKeywords=[] } = props;
-    const { currentTab, abstractFocused, currentKeyword='', keywords=[] } = state;
+    const {
+      currentTab, abstractFocused,
+      currentSubjectArea='', currentKeyword='', keywords=[]
+    } = state;
     const { manuscriptNumber } = (state[BY_MANUSCRIPT] || {});
     const { subjectArea, abstract } = (state[BY_SEARCH] || {});
 
@@ -161,8 +164,9 @@ class SearchHeader extends React.Component {
                 <View style={ styles.field }>
                   <AutoComplete
                     floatingLabelText="Subject area"
-                    searchText={ subjectArea || '' }
-                    onUpdateInput={ newValue => updateSearchOption('subjectArea', newValue) }
+                    searchText={ currentSubjectArea || subjectArea || '' }
+                    onUpdateInput={ newValue => this.setState({currentSubjectArea: newValue}) }
+                    onNewRequest={ newValue => updateSearchOption('subjectArea', newValue) }
                     dataSource={ allSubjectAreas }
                     filter={ AutoComplete.fuzzyFilter }
                     style={ styles.textField }
