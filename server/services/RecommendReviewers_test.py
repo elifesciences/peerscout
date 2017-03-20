@@ -101,7 +101,7 @@ LDA_ABSTRACT_DOCVEC_DATASET = 'manuscript-abstracts-sense2vec-lda-docvecs'
 DOC2VEC_ABSTRACT_DOCVEC_DATASET = 'manuscript-abstracts-sense2vec-doc2vec'
 LDA_CROSSREF_PERSON_EXTRA_DOCVEC_DATASET = 'crossref-person-extra-sense2vec-lda-docvecs'
 DOC2VEC_CROSSREF_PERSON_EXTRA_DOCVEC_DATASET = 'crossref-person-extra-sense2vec-doc2vec'
-SUBJECT_AREAS_DATASET = 'manuscript-themes'
+SUBJECT_AREAS_DATASET = 'manuscript-subject-areas-normalised'
 
 DATASETS = {
   'authors': AUTHORS,

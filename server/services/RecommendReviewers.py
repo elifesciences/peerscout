@@ -331,7 +331,7 @@ class RecommendReviewers(object):
     )
 
     self.manuscript_subject_areas_all_df = add_manuscript_version_id(
-      datasets['manuscript-themes']
+      datasets['manuscript-subject-areas-normalised']
       .rename(columns={'theme': 'subject-area'})
     )
     self.manuscript_subject_areas_df = filter_by(

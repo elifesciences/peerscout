@@ -4,6 +4,7 @@ def main():
   scripts = [
     'convertFiles',
     'convertEarlyCareerResearchersCsv',
+    'postProcessFiles',
     'enrichEarlyCareerResearchers',
     'generateSense2VecTokens',
     'generateSense2VecLdaDocVec',
