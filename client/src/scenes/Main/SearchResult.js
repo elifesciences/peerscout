@@ -380,41 +380,49 @@ const PotentialReviewer = ({
             </View>
           )
         }
-        <View style={ styles.potentialReviewer.subSection }>
-          <Text style={ styles.potentialReviewer.label }>Author of: </Text>
-          <View style={ styles.potentialReviewer.value }>
-            <More lines={ 5 }>
-              <FlexColumn>
-                { renderManuscripts(authorOfManuscripts) }
-              </FlexColumn>
-            </More>
-          </View>
-        </View>
-        <View  style={ styles.potentialReviewer.subSection }>
-          <Text style={ styles.potentialReviewer.label }>Reviewer of: </Text>
-          <View style={ styles.potentialReviewer.value }>
-            <FlexColumn>
-              <More lines={ 5 }>
-                { renderManuscripts(reviewerOfManuscripts) }
-              </More>
-            </FlexColumn>
-          </View>
-        </View>
-        <View  style={ styles.potentialReviewer.subSection }>
-          <Text style={ styles.potentialReviewer.label }>Scores: </Text>
-          <View style={ styles.potentialReviewer.value }>
-            <FlexColumn>
-              {
-                (scores && scores['combined'] && (
-                  <InlineContainer>
-                    <Score score={ scores }/>
-                    <Text>{ ' (max across manuscripts)' }</Text>
-                  </InlineContainer>
-                )) || null
-              }
-            </FlexColumn>
-          </View>
-        </View>
+        {
+          (authorOfManuscripts.length > 0) && (
+            <View style={ styles.potentialReviewer.subSection }>
+              <Text style={ styles.potentialReviewer.label }>Author of: </Text>
+              <View style={ styles.potentialReviewer.value }>
+                <More lines={ 5 }>
+                  <FlexColumn>
+                    { renderManuscripts(authorOfManuscripts) }
+                  </FlexColumn>
+                </More>
+              </View>
+            </View>
+          )
+        }
+        {
+          (reviewerOfManuscripts.length > 0) && (
+            <View  style={ styles.potentialReviewer.subSection }>
+              <Text style={ styles.potentialReviewer.label }>Reviewer of: </Text>
+              <View style={ styles.potentialReviewer.value }>
+                <FlexColumn>
+                  <More lines={ 5 }>
+                    { renderManuscripts(reviewerOfManuscripts) }
+                  </More>
+                </FlexColumn>
+              </View>
+            </View>
+          )
+        }
+        {
+          (scores && scores['combined'] && (
+            <View  style={ styles.potentialReviewer.subSection }>
+              <Text style={ styles.potentialReviewer.label }>Scores: </Text>
+              <View style={ styles.potentialReviewer.value }>
+                <FlexColumn>
+                      <InlineContainer>
+                        <Score score={ scores }/>
+                        <Text>{ ' (max across manuscripts)' }</Text>
+                      </InlineContainer>
+                </FlexColumn>
+              </View>
+            </View>
+          )) || null
+        }
       </CardText>
     </Card>
   );
@@ -449,30 +457,42 @@ const ManuscriptSummary = ({
           ))
         }
       </View>
-      <View  style={ styles.manuscriptSummary.subSection }>
-        <Text style={ styles.manuscriptSummary.label }>Reviewers: </Text>
-        {
-          reviewers && reviewers.map((reviewer, index) => (
-            <PersonInlineSummary key={ index } person={ reviewer }/>
-          ))
-        }
-      </View>
-      <View  style={ styles.manuscriptSummary.subSection }>
-        <Text style={ styles.manuscriptSummary.label }>Editors: </Text>
-        {
-          editors && editors.map((editor, index) => (
-            <PersonInlineSummary key={ index } person={ editor }/>
-          ))
-        }
-      </View>
-      <View  style={ styles.manuscriptSummary.subSection }>
-        <Text style={ styles.manuscriptSummary.label }>Senior Editors: </Text>
-        {
-          seniorEditors && seniorEditors.map((seniorEditor, index) => (
-            <PersonInlineSummary key={ index } person={ seniorEditor }/>
-          ))
-        }
-      </View>
+      {
+        reviewers && reviewers.length > 0 && (
+          <View  style={ styles.manuscriptSummary.subSection }>
+            <Text style={ styles.manuscriptSummary.label }>Reviewers: </Text>
+            {
+              reviewers.map((reviewer, index) => (
+                <PersonInlineSummary key={ index } person={ reviewer }/>
+              ))
+            }
+          </View>
+        )
+      }
+      {
+        editors && editors.length > 0 && (
+          <View  style={ styles.manuscriptSummary.subSection }>
+            <Text style={ styles.manuscriptSummary.label }>Editors: </Text>
+            {
+              editors.map((editor, index) => (
+                <PersonInlineSummary key={ index } person={ editor }/>
+              ))
+            }
+          </View>
+        )
+      }
+      {
+        seniorEditors && seniorEditors.length > 0 && (
+          <View  style={ styles.manuscriptSummary.subSection }>
+            <Text style={ styles.manuscriptSummary.label }>Senior Editors: </Text>
+            {
+              seniorEditors.map((seniorEditor, index) => (
+                <PersonInlineSummary key={ index } person={ seniorEditor }/>
+              ))
+            }
+          </View>
+        )
+      }
     </CardText>
     <CardText expandable={ true }>
       <View  style={ styles.manuscriptSummary.subSection }>
