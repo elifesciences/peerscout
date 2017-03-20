@@ -167,6 +167,9 @@ class Main extends React.Component {
     this.props.reviewerRecommendationApi.getAllSubjectAreas().then(allSubjectAreas => this.setState({
       allSubjectAreas
     }));
+    this.props.reviewerRecommendationApi.getAllKeywords().then(allKeywords => this.setState({
+      allKeywords
+    }));
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -193,6 +196,7 @@ class Main extends React.Component {
       searchOptions,
       results,
       allSubjectAreas,
+      allKeywords,
       selectedReviewer
     } = this.state;
     const hasPotentialReviewers =
@@ -203,6 +207,7 @@ class Main extends React.Component {
           searchOptions={ searchOptions }
           onSearchOptionsChanged={ this.onSearchOptionsChanged }
           allSubjectAreas={ allSubjectAreas }
+          allKeywords={ allKeywords }
         />
         <View style={ styles.containerWithMargin } className="results-container">
           <LoadingIndicator loading={ loading }>

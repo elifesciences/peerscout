@@ -97,6 +97,10 @@ def recommend_reviewers_api():
 def subject_areas_api():
   return jsonify(list(recommend_reviewers.get_all_subject_areas()))
 
+@app.route("/api/keywords")
+def keywords_api():
+  return jsonify(list(recommend_reviewers.get_all_keywords()))
+
 @app.route("/api/hello")
 def run():
   return "Hello!"

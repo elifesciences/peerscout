@@ -29,9 +29,11 @@ const fetchJson = url => fetch(url, {
 
 const api = baseUrl => {
   const getAllSubjectAreasUrl = baseUrl + '/subject-areas';
+  const getAllKeywordsUrl = baseUrl + '/keywords';
   const recommendReviewersUrl = baseUrl + '/recommend-reviewers';
   return {
     getAllSubjectAreas: () => fetchJson(urlWithParams(getAllSubjectAreasUrl, {})),
+    getAllKeywords: () => fetchJson(urlWithParams(getAllKeywordsUrl, {})),
     recommendReviewers: params => fetchJson(urlWithParams(recommendReviewersUrl, params))
   };
 };

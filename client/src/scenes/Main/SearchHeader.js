@@ -2,6 +2,8 @@ import React from 'react';
 
 import {
   AutoComplete,
+  Chip,
+  FlexColumn,
   FlexRow,
   FontAwesomeIcon,
   Paper,
@@ -23,6 +25,14 @@ const styles = {
     paddingTop: 0,
     marginTop: -10,
     overflow: 'hidden'
+  },
+  keywordList: {
+    maxWidth: 300,
+    flexWrap: 'wrap'
+  },
+  chip: {
+    marginRight: 4,
+    marginBottom: 4
   }
 }
 
@@ -49,6 +59,34 @@ class SearchHeader extends React.Component {
       });
       onSearchOptionsChanged(searchOptions);
     }
+
+    this.addKeyword = keyword => {
+      const normalisedKeyword = keyword.trim().toLowerCase();
+      const keywords = this.state.keywords || [];
+      if (normalisedKeyword.length > 0 && keywords.indexOf(normalisedKeyword) < 0) {
+        console.log("addKeyword:", keyword);
+        const updatedKeywords = keywords.concat([normalisedKeyword]);
+        updatedKeywords.sort();
+        this.setState({
+          currentKeyword: '',
+          keywords: updatedKeywords
+        });
+        this.updateSearchOption('keywords', updatedKeywords.join(','));
+      }
+    }
+
+    this.deleteKeyword = keyword => {
+      const keywords = this.state.keywords || [];
+      if (keywords.indexOf(keyword) >= 0) {
+        console.log("deleteKeyword:", keyword);
+        const updatedKeywords = keywords.filter(k => k !== keyword);
+        this.setState({
+          keywords: updatedKeywords
+        });
+        this.updateSearchOption('keywords', updatedKeywords.join(','));
+      }
+    }
+
     this.handleTabChange = currentTab => {
       this.setState({
         currentTab
@@ -67,6 +105,11 @@ class SearchHeader extends React.Component {
     } else if (searchOptions.subjectArea || searchOptions.keywords) {
       return {
         currentTab: BY_SEARCH,
+        keywords: (
+          searchOptions.keywords &&
+          searchOptions.keywords.length > 0 &&
+          searchOptions.keywords.split(',').map(k => k.trim())
+        ),
         [BY_SEARCH]: searchOptions
       }
     }
@@ -81,10 +124,10 @@ class SearchHeader extends React.Component {
   
   render() {
     const { state, updateSearchOption, props } = this;
-    const { allSubjectAreas=[] } = props;
-    const { currentTab, abstractFocused } = state;
+    const { allSubjectAreas=[], allKeywords=[] } = props;
+    const { currentTab, abstractFocused, currentKeyword='', keywords=[] } = state;
     const { manuscriptNumber } = (state[BY_MANUSCRIPT] || {});
-    const { subjectArea, keywords, abstract } = (state[BY_SEARCH] || {});
+    const { subjectArea, abstract } = (state[BY_SEARCH] || {});
 
     return (
       <Paper style={{ overflow: 'hidden' }} zDepth={ 2 }>
@@ -126,12 +169,31 @@ class SearchHeader extends React.Component {
                   />
                 </View>
                 <View style={ styles.field }>
-                  <TextField
-                    floatingLabelText="Keywords (comma separated)"
-                    value={ keywords || '' }
-                    onChange={ (event, newValue) => updateSearchOption('keywords', newValue) }
-                    style={ styles.textField }
-                  />
+                  <FlexColumn>
+                    <AutoComplete
+                      floatingLabelText="Keywords"
+                      searchText={ currentKeyword }
+                      onUpdateInput={ newValue => this.setState({currentKeyword: newValue}) }
+                      onNewRequest={ newValue => this.addKeyword(newValue) }
+                      dataSource={ allKeywords }
+                      filter={ AutoComplete.fuzzyFilter }
+                      maxSearchResults={ 10 }
+                      style={ styles.textField }
+                    />
+                    <FlexRow style={ styles.keywordList }>
+                      {
+                        keywords.map(keyword => (
+                          <Chip
+                            key={ keyword }
+                            onRequestDelete={ () => this.deleteKeyword(keyword) }
+                            style={ styles.chip }
+                          >
+                            { keyword }
+                          </Chip>
+                        ))
+                      }
+                    </FlexRow>
+                  </FlexColumn>
                 </View>
                 <View style={ styles.field }>
                   <TextField

@@ -10,7 +10,7 @@ const styles = {
 };
 
 const FlexRow = props => (
-  <View style={ styles.flexRow }>
+  <View style={ Object.assign({}, styles.flexRow, props.style) }>
     { props.children }
   </View>
 );
