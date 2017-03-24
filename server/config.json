@@ -1,5 +1,5 @@
 {
   "csv": {
-    "path": "../../csv"
+    "path": "../.data/db"
   }
 }

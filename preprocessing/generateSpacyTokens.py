@@ -6,6 +6,8 @@ from tqdm import tqdm
 
 from convertUtils import unescape_and_strip_tags, flatten
 
+from preprocessingUtils import get_db_path
+
 def manuscript_number_to_no(x):
   return x.split('-')[-1]
 
@@ -105,8 +107,7 @@ def main():
 
   include_contents = False
 
-  # csv_path = "./csv-small"
-  csv_path = "../../csv"
+  csv_path = get_db_path()
 
   # process_manuscript_versions(csv_path, extract_keywords_from_list)
   if include_contents:

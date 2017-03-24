@@ -1,5 +1,7 @@
 import pandas as pd
 
+from preprocessingUtils import get_db_path
+
 def normalise_subject_area(subject_area):
   return subject_area.lower().title().replace(' And ', ' and ')
 
@@ -20,7 +22,7 @@ def normalise_subject_areas(csv_path):
   df.to_pickle(normalised_pickle_filename)
 
 def main():
-  csv_path = "../../csv"
+  csv_path = get_db_path()
   normalise_subject_areas(csv_path)
   print("done")
 

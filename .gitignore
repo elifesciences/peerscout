@@ -1,5 +1,6 @@
 /client/node_modules
 /client/dist
+/.data
 
 .cache
 __pycache__

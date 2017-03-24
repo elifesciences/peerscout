@@ -4,6 +4,8 @@ from convertUtils import\
   TableOutput, process_files_in_directory_or_zip,\
   parse_xml_file, write_tables_to_csv
 
+from preprocessingUtils import get_data_path, get_db_path
+
 def join_text(a, b):
   if a != '' and b != '':
     return a + ' ' + b
@@ -50,14 +52,8 @@ def main():
   process_file = lambda filename, content:\
     convert_xml_file_contents(filename, content, tables)
 
-  csv_path = "csv-small"
-  source = '../../articles-xml'
-
-  # csv_path = "../../csv"
-  # source = '../../articles.zip'
-
-  # csv_path = "../../csv"
-  # source = '../../downloads'
+  csv_path = get_db_path()
+  source = get_data_path('articles-xml')
 
   process_files_in_directory_or_zip(source, process_file, ext='.xml')
 

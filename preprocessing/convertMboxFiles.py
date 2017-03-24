@@ -1,12 +1,13 @@
 import csv
 from os import SEEK_END
-from os.path import basename, splitext
 
 from tqdm import tqdm
 
 from mbox_parser import split_messages_skip_content, parse_header_properties
 
 from convertUtils import process_files_in_directory_or_zip
+
+from preprocessingUtils import get_data_path, get_db_path
 
 def stream_size(stream):
   if stream.seekable():
@@ -49,8 +50,8 @@ def convert_mbox_file(filename, stream, writer, fieldnames):
 
 def main():
 
-  csv_path = "../../csv"
-  source = '../../emails-mbox'
+  csv_path = get_db_path()
+  source = get_data_path('emails-mbox')
 
   with open(csv_path + '/email-mbox-meta.csv', 'w') as csvfile:
     fieldnames = [

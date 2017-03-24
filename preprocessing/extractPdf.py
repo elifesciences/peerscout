@@ -3,6 +3,8 @@ import PyPDF2
 from convertUtils import\
   get_basename, process_files_in_directory_or_zip, TableOutput, write_tables_to_csv
 
+from preprocessingUtils import get_data_path, get_db_path
+
 def filename_to_manuscript_no(filename):
   return get_basename(filename).split('-')[-1]
 
@@ -34,14 +36,8 @@ def main():
   process_file = lambda filename, content:\
     convert_pdf_file_contents(filename, content, tables)
 
-  csv_path = "csv-small"
-  source = '../../articles-pdf'
-
-  # csv_path = "../../csv"
-  # source = '../../articles.zip'
-
-  # csv_path = "../../csv"
-  # source = '../../downloads'
+  csv_path = get_db_path()
+  source = get_data_path('articles-pdf')
 
   process_files_in_directory_or_zip(source, process_file, ext='.pdf')
 

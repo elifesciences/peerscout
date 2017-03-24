@@ -19,6 +19,8 @@ import gensim
 
 from convertUtils import flatten, unescape_and_strip_tags_if_not_none
 
+from preprocessingUtils import get_data_path, get_db_path
+
 from docvec_model_proxy import lda_utils # pylint: disable=E0611
 
 train_lda = lda_utils.train_lda
@@ -330,8 +332,8 @@ def process_article_abstracts(csv_path, charts_path):
   generate_doc2vec_charts(data, charts_path)
 
 def main():
-  csv_path = "../../csv"
-  charts_path = "../../charts"
+  csv_path = get_db_path()
+  charts_path = get_data_path('charts')
 
   process_article_abstracts(csv_path, charts_path)
 

@@ -3,6 +3,8 @@ from os.path import splitext
 import pandas as pd
 from sklearn.pipeline import Pipeline
 
+from preprocessingUtils import get_db_path
+
 from docvec_model_proxy import SpacyTransformer, DocvecModelUtils, lda_utils # pylint: disable=E0611
 
 train_lda = lda_utils.train_lda
@@ -72,8 +74,7 @@ def main():
 
   include_contents = False
 
-  # csv_path = "./csv-small"
-  csv_path = "../../csv"
+  csv_path = get_db_path()
 
   process_article_abstracts(csv_path)
 

@@ -8,6 +8,8 @@ from convertUtils import (
   unescape_and_strip_tags_if_not_none
 )
 
+from preprocessingUtils import get_db_path, get_downloads_csv_path
+
 def convert_xml_file_to(filename, stream, csv_path):
   print("converting:", filename)
   df = pd.read_csv(stream, skiprows=3)
@@ -40,8 +42,8 @@ def convert_last_csv_files_in_directory(root_dir, process_file, prefix):
     raise Exception("no csv files found with prefix {} in directory {}".format(prefix, root_dir))
 
 def main():
-  source = '../../downloads-ftp'
-  csv_path = "../../csv"
+  source = get_downloads_csv_path()
+  csv_path = get_db_path()
 
   process_file = lambda filename, stream:\
     convert_xml_file_to(filename, stream, csv_path)

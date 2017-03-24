@@ -2,7 +2,6 @@ import os
 import re
 from pathlib import Path
 import json
-import csv
 from textwrap import shorten
 
 import dateutil
@@ -11,6 +10,8 @@ import pandas as pd
 from tqdm import tqdm
 
 from convertUtils import unescape_and_strip_tags_if_not_none
+
+from preprocessingUtils import get_data_path, get_db_path
 
 PERSON_ID = 'person-id'
 
@@ -91,7 +92,7 @@ def enrich_early_career_researchers(csv_path):
   print("shape:", df.shape)
   cached_get = create_str_cache(
     get,
-    cache_dir='../../cache-http',
+    cache_dir=get_data_path('cache-http'),
     suffix='.json')
   out_list = []
   pbar = tqdm(df.to_dict(orient='records'))
@@ -158,7 +159,7 @@ def enrich_early_career_researchers(csv_path):
   df.to_pickle(out_filename_pickle)
 
 def main():
-  csv_path = "../../csv"
+  csv_path = get_db_path()
 
   enrich_early_career_researchers(csv_path)
 

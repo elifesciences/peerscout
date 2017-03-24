@@ -6,6 +6,8 @@ import pandas as pd
 from convertUtils import\
   process_files_in_directory_or_zip, has_children, parse_xml_file, TableOutput, write_tables_to_csv
 
+from preprocessingUtils import get_db_path, get_downloads_xml_path
+
 def auto_convert(name, value):
   if name.endswith('-date'):
     return pd.to_datetime(value)
@@ -218,14 +220,8 @@ def main():
   process_file = lambda filename, stream:\
     convert_xml_file_contents(filename, stream, tables)
 
-  # csv_path = "csv-small"
-  # source = "../../local"
-
-  # csv_path = "../../csv"
-  # source = "../../downloads/ejp_eLife_2000_01_01_00_00_00_2017_01_01_23_59_59.zip"
-
-  csv_path = "../../csv"
-  source = "../../downloads"
+  csv_path = get_db_path()
+  source = get_downloads_xml_path()
 
   process_files_in_directory_or_zip(source, process_file, ext=".xml")
 

@@ -1,14 +1,11 @@
-import re
-import sys, importlib
-from pathlib import Path
-
 import pandas as pd
-import spacy
 from tqdm import tqdm
 
 from docvec_model_proxy import SpacyTransformer # pylint: disable=E0611
 
 from convertUtils import unescape_and_strip_tags_if_not_none, flatten
+
+from preprocessingUtils import get_db_path
 
 def manuscript_number_to_no(x):
   return x.split('-')[-1]
@@ -90,7 +87,7 @@ def main():
 
   include_contents = False
 
-  csv_path = "../../csv"
+  csv_path = get_db_path()
 
   process_manuscript_versions(csv_path, extract_keywords_from_list)
   if include_contents:

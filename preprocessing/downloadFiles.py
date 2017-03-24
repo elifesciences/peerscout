@@ -5,6 +5,8 @@ from textwrap import shorten
 import boto3
 from tqdm import tqdm
 
+from preprocessingUtils import get_downloads_csv_path, get_downloads_xml_path
+
 # Prerequisites:
 # * Credentials setup in user profile
 
@@ -32,7 +34,7 @@ def main():
   download_objects(
     client,
     s3.Bucket("elife-ejp-ftp-db-xml-dump").objects.all(),
-    "../../downloads",
+    get_downloads_xml_path(),
     downloaded_files)
 
   download_objects(
@@ -40,7 +42,7 @@ def main():
     s3.Bucket("elife-ejp-ftp").objects.filter(
       Prefix="ejp_query_tool_query_id_380_DataScience:_Early_Career_Researchers"
     ),
-    "../../downloads-ftp",
+    get_downloads_csv_path(),
     downloaded_files)
 
   print("{} files downloaded".format(len(downloaded_files)))
