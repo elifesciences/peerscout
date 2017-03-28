@@ -1,6 +1,7 @@
 /client/node_modules
 /client/dist
 /.data
+/venv
 
 .cache
 __pycache__
