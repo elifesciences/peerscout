@@ -239,6 +239,7 @@ const createTooltip = () => {
 }
 
 const nodeScore = d => (
+  (d && d.score) ||
   (d && d.manuscript && d.manuscript.score) ||
   (d && d.potentialReviewer && d.potentialReviewer.scores)
 );
@@ -272,14 +273,14 @@ const nodeColor = d => {
     }
     return '#8f8';
   } else {
-    return '#444';
+    return '#fff';
   }
 };
 
 const nodeImage = d => {
   if (d.potentialReviewer) {
     return '/images/person.svg';
-  } else {
+  } else if (d.manuscript) {
     return '/images/manuscript.svg';
   }
 }
@@ -388,8 +389,7 @@ const createLegend = (parent, showSearch) => {
   }, {
     potentialReviewer: {
       person: {
-      },
-      scores: fullScore
+      }
     },
     label: 'Potential reviewer'
   }, {
@@ -402,16 +402,14 @@ const createLegend = (parent, showSearch) => {
             }
           }
         },
-      },
-      scores: fullScore
+      }
     },
     label: 'With review duration'
   }, {
     potentialReviewer: {
       person: {
         'is-early-career-researcher': true
-      },
-      scores: fullScore
+      }
     },
     label: 'Early career researcher'
   }];
@@ -419,22 +417,29 @@ const createLegend = (parent, showSearch) => {
   if (includeOtherManuscripts) {
     legendData.push({
       manuscript: {
-        score: fullScore
       },
       label: 'Common manuscript'
     });
   }
+  legendData.push({
+    score: fullScore,
+    label: 'Combined score\n(keyword & similarity)'
+  });
   legendData.forEach((d, index) => {
     d.x = 10;
     d.y = 10 + index * 40;
+    d.labels = d.label.split('\n');
   });
-  createNode(legend, legendData)
-    .attr("transform", d => "translate(" + d.x + ", " + d.y + ")")
-    .append('text')
-    .text(d => d.label)
-    .attr('text-anchor', 'right')
-    .attr("class", "legend-label")
-    .attr("transform", d => "translate(20, 4)");
+  const node = createNode(legend, legendData)
+    .attr("transform", d => "translate(" + d.x + ", " + d.y + ")");
+  for (let lineNo = 0; lineNo < 2; lineNo++) {
+    node
+      .append('text')
+      .text(d => d.labels[lineNo])
+      .attr('text-anchor', 'right')
+      .attr("class", "legend-label")
+      .attr("transform", d => "translate(20, " + (4 + 20 * lineNo) + ")");
+  }
   return legend;
 }
 
