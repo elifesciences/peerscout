@@ -39,6 +39,11 @@ html, body {
   line-height: 1.3em;
 }
 
+.potential-reviewer-author-of .score,
+.potential-reviewer-reviewer-of .score {
+  font-size: 80%;
+}
+
 .result-list .score,
 .node-text {
   font-family: Roboto, sans-serif;

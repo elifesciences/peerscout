@@ -387,7 +387,10 @@ const PotentialReviewer = ({
         }
         {
           (authorOfManuscripts.length > 0) && (
-            <View style={ styles.potentialReviewer.subSection }>
+            <View
+              style={ styles.potentialReviewer.subSection }
+              className="potential-reviewer-author-of"
+            >
               <Text style={ styles.potentialReviewer.label }>Author of: </Text>
               <View style={ styles.potentialReviewer.value }>
                 <More lines={ 5 }>
@@ -401,14 +404,17 @@ const PotentialReviewer = ({
         }
         {
           (reviewerOfManuscripts.length > 0) && (
-            <View  style={ styles.potentialReviewer.subSection }>
+            <View
+              style={ styles.potentialReviewer.subSection }
+              className="potential-reviewer-reviewer-of"
+            >
               <Text style={ styles.potentialReviewer.label }>Reviewer of: </Text>
               <View style={ styles.potentialReviewer.value }>
-                <FlexColumn>
-                  <More lines={ 5 }>
+                <More lines={ 5 }>
+                  <FlexColumn>
                     { renderManuscripts(reviewerOfManuscripts) }
-                  </More>
-                </FlexColumn>
+                  </FlexColumn>
+                </More>
               </View>
             </View>
           )
