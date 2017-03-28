@@ -123,6 +123,13 @@ class Main extends React.Component {
         selectedNode: node.potentialReviewer ? node : null,
         selectedReviewer: node.potentialReviewer
       });
+    };
+
+    this.onClearSelection = () => {
+      this.setState({
+        selectedNode: null,
+        selectedReviewer: null
+      });
     }
   }
 
@@ -234,6 +241,7 @@ class Main extends React.Component {
                     <SearchResult
                       searchResult={ results }
                       selectedReviewer={ selectedReviewer }
+                      onClearSelection={ this.onClearSelection }
                     />
                   </SplitPane>
                 )

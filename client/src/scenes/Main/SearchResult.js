@@ -13,6 +13,7 @@ import {
   FontAwesomeIcon,
   InlineContainer,
   Link,
+  RaisedButton,
   Text,
   TooltipWrapper,
   View
@@ -129,6 +130,9 @@ const styles = {
     padding: 20,
     fontSize: 20,
     color: '#f22'
+  },
+  buttons: {
+    padding: 10
   }
 }
 
@@ -540,7 +544,7 @@ const filterReviewsByEarlyCareerResearcherStatus = (potentialReviewers, earlyCar
 
 const reviewerPersonId = reviewer => reviewer && reviewer.person && reviewer.person['person-id'];
 
-const SearchResult = ({ searchResult, selectedReviewer }) => {
+const SearchResult = ({ searchResult, selectedReviewer, onClearSelection }) => {
   const {
     potentialReviewers = [],
     matchingManuscripts = [],
@@ -591,6 +595,17 @@ const SearchResult = ({ searchResult, selectedReviewer }) => {
         !hasManuscriptsNotFound && !error && potentialReviewers.length === 0 && (
           <View style={ styles.errorMessage }>
             <Text>{ 'No potential reviewers found' }</Text>
+          </View>
+        )
+      }
+      {
+        selectedReviewer && (
+          <View style={ styles.buttons }>
+            <RaisedButton
+              primary={ true }
+              onClick={ onClearSelection }
+              label="Clear Selection"
+            />
           </View>
         )
       }
