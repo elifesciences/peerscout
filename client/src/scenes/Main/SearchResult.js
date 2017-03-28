@@ -544,7 +544,12 @@ const filterReviewsByEarlyCareerResearcherStatus = (potentialReviewers, earlyCar
 
 const reviewerPersonId = reviewer => reviewer && reviewer.person && reviewer.person['person-id'];
 
-const SearchResult = ({ searchResult, selectedReviewer, onClearSelection }) => {
+const SearchResult = ({
+  searchResult,
+  selectedReviewer,
+  selectedManuscript,
+  onClearSelection
+}) => {
   const {
     potentialReviewers = [],
     matchingManuscripts = [],
@@ -553,8 +558,12 @@ const SearchResult = ({ searchResult, selectedReviewer, onClearSelection }) => {
   } = searchResult;
   const requestedSubjectAreas = extractAllSubjectAreas(matchingManuscripts);
   const hasManuscriptsNotFound = manuscriptsNotFound && manuscriptsNotFound.length > 0;
-  const filteredPotentialReviewers = !selectedReviewer ? potentialReviewers :
-    potentialReviewers.filter(r => reviewerPersonId(r) === reviewerPersonId(selectedReviewer));
+  const filteredPotentialReviewers =
+    selectedManuscript ? [] : (
+      !selectedReviewer ? potentialReviewers :
+      potentialReviewers.filter(r => reviewerPersonId(r) === reviewerPersonId(selectedReviewer))
+    );
+  const nonEmptySelection = selectedReviewer || selectedManuscript;
   return (
     <View className="result-list">
       {
@@ -575,12 +584,19 @@ const SearchResult = ({ searchResult, selectedReviewer, onClearSelection }) => {
         )
       }
       {
-        !selectedReviewer && matchingManuscripts.map((matchingManuscript, index) => (
+        !nonEmptySelection && matchingManuscripts.map((matchingManuscript, index) => (
           <ManuscriptSummary
             key={ index }
             manuscript={ matchingManuscript }
           />
         ))
+      }
+      {
+        selectedManuscript && (
+          <ManuscriptSummary
+            manuscript={ selectedManuscript }
+          />
+        )
       }
       {
         filteredPotentialReviewers.map((potentialReviewer, index) => (
@@ -599,7 +615,7 @@ const SearchResult = ({ searchResult, selectedReviewer, onClearSelection }) => {
         )
       }
       {
-        selectedReviewer && (
+        nonEmptySelection && (
           <View style={ styles.buttons }>
             <RaisedButton
               primary={ true }

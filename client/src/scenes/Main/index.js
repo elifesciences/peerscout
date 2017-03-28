@@ -120,15 +120,17 @@ class Main extends React.Component {
     this.onNodeClicked = node => {
       console.log("onNodeClicked:", node);
       this.setState({
-        selectedNode: node.potentialReviewer ? node : null,
-        selectedReviewer: node.potentialReviewer
+        selectedNode: node.potentialReviewer || node.manuscript ? node : null,
+        selectedReviewer: node.potentialReviewer,
+        selectedManuscript: node.manuscript
       });
     };
 
     this.onClearSelection = () => {
       this.setState({
         selectedNode: null,
-        selectedReviewer: null
+        selectedReviewer: null,
+        selectedManuscript: null
       });
     }
   }
@@ -207,7 +209,8 @@ class Main extends React.Component {
       allSubjectAreas,
       allKeywords,
       selectedNode,
-      selectedReviewer
+      selectedReviewer,
+      selectedManuscript
     } = this.state;
     const hasPotentialReviewers =
       results && (results.potentialReviewers) && (results.potentialReviewers.length > 0);
@@ -227,6 +230,8 @@ class Main extends React.Component {
                   <SearchResult
                     searchResult={ results }
                     selectedReviewer={ selectedReviewer }
+                    selectedManuscript={ selectedManuscript }
+                    onClearSelection={ this.onClearSelection }
                   />
                 )
               }
@@ -241,6 +246,7 @@ class Main extends React.Component {
                     <SearchResult
                       searchResult={ results }
                       selectedReviewer={ selectedReviewer }
+                      selectedManuscript={ selectedManuscript }
                       onClearSelection={ this.onClearSelection }
                     />
                   </SplitPane>
