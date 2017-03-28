@@ -6,7 +6,7 @@ import json
 from flask import Flask, request, send_from_directory, jsonify, url_for
 from flask.json import JSONEncoder
 from flask_cors import CORS
-# from intend_matchers.simple_intend_matcher import SimpleIntendMatcher
+from joblib import Memory
 
 from datasets import PickleDatasetLoader, CachedDatasetLoader
 from services import (
@@ -19,11 +19,18 @@ from docvec_model_proxy import DocvecModelUtils # pylint: disable=E0611
 
 CLIENT_FOLDER = '../client/dist'
 
+
 port = 8080
+data_dir = os.path.join('..', '.data')
+cache_dir = os.path.join(data_dir, 'server-cache')
 
 with open('config.json') as config_file:
   config = json.load(config_file)
   port = config.get('port', port)
+
+memory = Memory(cachedir=cache_dir, verbose=0)
+print("cache directory:", cache_dir)
+memory.clear(warn=False)
 
 def load_recommender():
   csv_path = abspath(config['csv']['path'])
@@ -68,6 +75,16 @@ def api_root():
     }
   })
 
+@memory.cache
+def recommend_reviewers_as_json(manuscript_no, subject_area, keywords, abstract, limit):
+  return jsonify(recommend_reviewers.recommend(
+    manuscript_no,
+    subject_area,
+    keywords,
+    abstract,
+    limit=limit
+  ))
+
 @app.route("/api/recommend-reviewers")
 def recommend_reviewers_api():
   manuscript_no = request.args.get('manuscript_no')
@@ -81,17 +98,13 @@ def recommend_reviewers_api():
     limit = int(limit)
   if keywords is None:
     return 'keywords parameter required', 400
-  result = recommend_reviewers.recommend(
+  return recommend_reviewers_as_json(
     manuscript_no,
     subject_area,
     keywords,
     abstract,
     limit=limit
   )
-  # print("result:", result)
-  # if result is None:
-  #   return 'did not match any intend', 404
-  return jsonify(result)
 
 @app.route("/api/subject-areas")
 def subject_areas_api():
@@ -112,6 +125,7 @@ def control_reload():
     return jsonify({'ip': request.remote_addr}), 403
   print("reloading...")
   recommend_reviewers = load_recommender()
+  recommend_reviewers_as_json.clear()
   return jsonify({'status': 'OK'})
 
 @app.route('/')
