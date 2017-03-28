@@ -380,8 +380,17 @@ const createNode = (parent, nodes) => {
 
 const createLegend = (parent, showSearch) => {
   const legend = parent.append("g")
-  .style('opacity', 0.7)
-  .attr("transform", d => "translate(20, 20)");
+    .style('opacity', 0.7)
+    .attr('class', 'legend')
+    .attr("transform", d => "translate(20, 20)");
+
+  const backround = legend
+    .append('rect')
+    .attr('x', -10)
+    .attr('y', -10)
+    .attr('width', 200)
+    .attr('fill', '#fff');
+
   const fullScore = {
     combined: 1
   };
@@ -436,6 +445,10 @@ const createLegend = (parent, showSearch) => {
     d.labels = d.label.split('\n');
     currentY += 20 + d.labels.length * 20;
   });
+
+  backround
+    .attr('height', currentY - 10);
+
   const node = createNode(legend, legendData)
     .attr("transform", d => "translate(" + d.x + ", " + d.y + ")");
   for (let lineNo = 0; lineNo < 2; lineNo++) {
