@@ -63,7 +63,8 @@ class Main extends React.Component {
           manuscript_no: searchOptions.manuscriptNumber || '',
           subject_area: searchOptions.subjectArea || '',
           keywords: searchOptions.keywords || '',
-          abstract: searchOptions.abstract || ''
+          abstract: searchOptions.abstract || '',
+          limit: searchOptions.limit || '100'
         });
       }
     );
