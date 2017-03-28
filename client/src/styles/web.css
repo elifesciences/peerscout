@@ -31,12 +31,18 @@ html, body {
 .result-list .score {
   display: inline-block;
   width: 1.3em;
-  border: 1px solid #ccc;
+  border: 2px solid #ccc;
   border-radius: 1em;
   text-align: center;
   padding: 0.1em;
-  font-size: 80%;
+  font-size: 120%;
   line-height: 1.3em;
+}
+
+.result-list .score,
+.node-text {
+  font-family: Roboto, sans-serif;
+  font-weight: bold;
 }
 
 a {
@@ -63,10 +69,6 @@ a {
 .svg-container {
   position: absolute;
   height: 100%;
-}
-
-.node-text {
-  font-weight: bold;
 }
 
 .Resizer {

@@ -371,7 +371,7 @@ const createNode = (parent, nodes) => {
     .style("fill", "#000")
     .style("text-anchor", "middle")
     .attr("class", "node-text")
-    .attr("transform", d => "translate(0, 5)");
+    .attr("transform", d => "translate(0, 6)");
 
   return node;
 }
