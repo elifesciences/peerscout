@@ -385,7 +385,9 @@ const createLegend = (parent, showSearch) => {
   };
   const legendData = [{
     isMain: true,
-    label: showSearch ? 'Search' : 'Main manuscript'
+    label: showSearch ? 'Search' : 'Main manuscript',
+    manuscript: {
+    }
   }, {
     potentialReviewer: {
       person: {
@@ -404,7 +406,7 @@ const createLegend = (parent, showSearch) => {
         },
       }
     },
-    label: 'With review duration'
+    label: 'Potential reviewer\nwith review duration'
   }, {
     potentialReviewer: {
       person: {
@@ -425,10 +427,12 @@ const createLegend = (parent, showSearch) => {
     score: fullScore,
     label: 'Combined score\n(keyword & similarity)'
   });
+  let currentY = 10;
   legendData.forEach((d, index) => {
     d.x = 10;
-    d.y = 10 + index * 40;
+    d.y = currentY;
     d.labels = d.label.split('\n');
+    currentY += 20 + d.labels.length * 20;
   });
   const node = createNode(legend, legendData)
     .attr("transform", d => "translate(" + d.x + ", " + d.y + ")");
