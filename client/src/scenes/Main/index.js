@@ -120,6 +120,7 @@ class Main extends React.Component {
     this.onNodeClicked = node => {
       console.log("onNodeClicked:", node);
       this.setState({
+        selectedNode: node.potentialReviewer ? node : null,
         selectedReviewer: node.potentialReviewer
       });
     }
@@ -198,6 +199,7 @@ class Main extends React.Component {
       results,
       allSubjectAreas,
       allKeywords,
+      selectedNode,
       selectedReviewer
     } = this.state;
     const hasPotentialReviewers =
@@ -227,6 +229,7 @@ class Main extends React.Component {
                     <ChartResult
                       searchResult={ results }
                       onNodeClicked={ this.onNodeClicked }
+                      selectedNode={ selectedNode }
                     />
                     <SearchResult
                       searchResult={ results }

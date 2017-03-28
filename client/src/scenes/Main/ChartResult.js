@@ -334,13 +334,15 @@ const nodeScoreEndAngle = d => {
 }
 
 const createNode = (parent, nodes) => {
-  var node = parent.append("g")
+  const nodeParent = parent.append("g")
     .attr("class", "nodes")
     .selectAll("circle")
     .data(nodes)
     .enter()
     .append('g')
     .style('opacity', nodeOpacity);
+
+  const node = nodeParent.append('g');
     
   node.append("circle")
     .attr("r", 15)
@@ -373,7 +375,7 @@ const createNode = (parent, nodes) => {
     .attr("class", "node-text")
     .attr("transform", d => "translate(0, 6)");
 
-  return node;
+  return nodeParent;
 }
 
 const createLegend = (parent, showSearch) => {
@@ -583,6 +585,13 @@ const createChart = (parent, graph, options) => {
   const showSearch = !!graph.nodes[0].search;
   createLegend(svg, showSearch);
 
+  const selectNode = selectedNode => {
+    console.log("select node:", selectedNode);
+    const selectedId = selectedNode && selectedNode.id;
+    const isSelected = d => d.id === selectedId;
+    node.classed('selected', isSelected);
+  }
+
   if (options.onNodeClicked) {
     node.on('click', options.onNodeClicked);
   }
@@ -605,7 +614,8 @@ const createChart = (parent, graph, options) => {
 
   window.addEventListener('resize', windowResizeListener);
   return {
-    destroy
+    destroy,
+    selectNode
   };
 };
 
@@ -634,12 +644,15 @@ class ChartResult extends React.Component {
       this.chart = createChart(this.node, graph, {
         onNodeClicked 
       });
+      this.chart.selectNode(props.selectNode);
     }
   }
 
   componentWillReceiveProps(nextProps) {
     if ((nextProps.searchResult != this.props.searchResult) && (nextProps.searchResult)) {
       this.updateChart(nextProps);
+    } else if (this.chart && (nextProps.selectedNode != this.props.selectedNode)) {
+      this.chart.selectNode(nextProps.selectedNode);
     }
   }
 
