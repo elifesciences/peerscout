@@ -48,7 +48,10 @@ def unescape_and_strip_tags(text):
   return strip_tags(html.unescape(text))
 
 def unescape_and_strip_tags_if_not_none(text):
-  return strip_tags(html.unescape(text)) if text else None
+  return unescape_and_strip_tags(text) if text else None
+
+def unescape_and_strip_tags_if_str(x):
+  return unescape_and_strip_tags(x) if isinstance(x, str) else x
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 
@@ -120,6 +123,10 @@ class TableOutput(object):
     for k, v in self.columns.items():
       a[v] = k
     return a
+
+  def to_frame(self):
+    m = self.matrix()
+    return pd.DataFrame(m[1:], columns=m[0])
 
   def matrix(self):
     column_count = len(self.columns)
@@ -203,7 +210,7 @@ def process_files_in_directory(root_dir, process_file, ext=None):
   for filename in pbar:
     pbar.set_description("%40s" % shorten(filename, width=40))
     full_filename = root_dir + "/" + filename
-    if get_filename_ext(filename) == '.zip':
+    if get_filename_ext(filename) == '.zip' and ext != '.zip':
       process_files_in_zip(full_filename, process_file, ext)
     else:
       with open(full_filename, 'rb') as f:

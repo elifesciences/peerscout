@@ -3,12 +3,16 @@ from json import JSONEncoder
 import datetime
 import configparser
 
+import pandas as pd
 import sqlalchemy
-from sqlalchemy import Column, Integer, String, ForeignKey, TIMESTAMP
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import load_only
+
+from .database_schema import (
+  Base,
+  SCHEMA_VERSION,
+  TABLES
+)
 
 class CustomJSONEncoder(JSONEncoder):
   def default(self, obj): # pylint: disable=E0202
@@ -30,49 +34,24 @@ def db_connect(user, password, db, host='localhost', port=5432):
   url = url.format(user, password, host, port, db)
 
   # The return value of create_engine() is our connection object
-  return sqlalchemy.create_engine(url, client_encoding='utf8', json_serializer=json_serializer)
-
-Base = declarative_base()
+  return sqlalchemy.create_engine(
+    url, client_encoding='utf8', json_serializer=json_serializer,
+    echo=False
+  )
 
 DEFAULT_SCHEMA_VERSION_ID = 'default'
-
-class SchemaVersion(Base):
-  __tablename__ = "schema_version"
-
-  id = Column('id', String, primary_key=True)
-  version = Column('version', Integer)
-
-class ImportProcessed(Base):
-  __tablename__ = "import_processed"
-
-  id = Column('id', String, primary_key=True)
-  version = Column('version', Integer)
-  when = Column('data', TIMESTAMP)
-
-class Manuscript(Base):
-  __tablename__ = "manuscript"
-
-  id = Column('id', String, primary_key=True)
-  data = Column('data', JSONB)
-
-class ManuscriptVersion(Base):
-  __tablename__ = "manuscript_version"
-
-  id = Column('id', String, primary_key=True)
-  manuscript_id = Column(String, ForeignKey('manuscript.id'))
-  data = Column('data', JSONB)
-
-class Person(Base):
-  __tablename__ = "person"
-
-  id = Column('id', String, primary_key=True)
-  data = Column('data', JSONB)
 
 class Entity(object):
   def __init__(self, session, table):
     self.session = session
     self.table = table
-    self.auto_commit = True
+    self.auto_commit = False
+    inspected = sqlalchemy.inspection.inspect(self.table)
+    self.primary_key = inspected.primary_key
+    self.relashionships = {
+      r.key: r.mapper.class_
+      for r in sqlalchemy.inspection.inspect(self.table).relationships
+    }
 
   def _auto_commit_if_enabled(self):
     if self.auto_commit:
@@ -82,11 +61,22 @@ class Entity(object):
     self.session.query(self.table).delete()
     self._auto_commit_if_enabled()
 
+  def delete_where(self, *conditions):
+    self.session.query(self.table).filter(*conditions).delete(synchronize_session=False)
+    self._auto_commit_if_enabled()
+
   def _get_instance(self, *args, **kwargs):
     if len(args) == 1 and len(kwargs) == 0:
-      instance = self.table(**args[0])
+      props = args[0]
     else:
-      instance = self.table(**kwargs)
+      props = kwargs
+    # rels = self.relashionships
+    # props = dict(props)
+    # for k, v in props.items():
+    #   if k in rels and isinstance(v, list):
+    #     # map relationships to instance of corresponding class
+    #     props[k] = [rels[k](**x) for x in v]
+    instance = self.table(**props)
     return instance
 
   def create(self, *args, **kwargs):
@@ -120,21 +110,32 @@ class Entity(object):
       q = q.options(load_only(*fields))
     return q.all()
 
+  def read_df(self):
+    primary_key = self.primary_key
+    return pd.read_sql_table(
+      self.table.__tablename__,
+      self.session.get_bind(),
+      index_col=primary_key[0].name if len(primary_key) == 1 else None
+    )
+
+  def write_frame(self, df, **kwargs):
+    df.to_sql(
+      self.table.__tablename__,
+      self.session.get_bind(),
+      if_exists='append',
+      **kwargs
+    )
+
   def count(self):
     return self.session.query(self.table).count()
-
-SCHEMA_VERSION = 2
 
 class Database(object):
   def __init__(self, engine):
     self.engine = engine
     self.session = sessionmaker(engine)()
     self.tables = {
-      'schema_version': Entity(self.session, SchemaVersion),
-      'import_processed': Entity(self.session, ImportProcessed),
-      'person': Entity(self.session, Person),
-      'manuscript': Entity(self.session, Manuscript),
-      'manuscript_version': Entity(self.session, ManuscriptVersion)
+      t.__tablename__: Entity(self.session, t)
+      for t in TABLES
     }
 
   def update_schema(self):
