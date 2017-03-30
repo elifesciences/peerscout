@@ -2,6 +2,7 @@
 /client/dist
 /.data
 /venv
+/app.cfg
 
 .cache
 __pycache__
