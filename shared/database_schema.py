@@ -11,7 +11,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 class SchemaVersion(Base):
   __tablename__ = "schema_version"
@@ -145,11 +145,11 @@ class ManuscriptSubjectArea(Base):
   version_id = create_manuscript_version_id_fk(primary_key=True)
   subject_area = Column(String, primary_key=True)
 
-class ManuscriptSubject(Base):
-  __tablename__ = "manuscript_subject"
+class ManuscriptResearchOrganism(Base):
+  __tablename__ = "manuscript_research_organism"
 
   version_id = create_manuscript_version_id_fk(primary_key=True)
-  subject = Column(String, primary_key=True)
+  research_organism = Column(String, primary_key=True)
 
 class ManuscriptStage(Base):
   __tablename__ = "manuscript_stage"
@@ -192,7 +192,7 @@ TABLES = [
   ManuscriptPotentialReviewer,
   ManuscriptKeyword,
   ManuscriptSubjectArea,
-  ManuscriptSubject,
+  ManuscriptResearchOrganism,
   ManuscriptStage,
   ManuscriptFunding,
   ManuscriptAuthorFunding

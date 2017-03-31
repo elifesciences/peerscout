@@ -94,7 +94,7 @@ version_copy_paths = {
   'manuscript_keyword': ['keywords/keywords'],
   'manuscript_author_funding': ['author-funding/author-funding'],
   'manuscript_funding': ['manuscript-funding/manuscript-funding'],
-  'manuscript_subject': ['subject-areas/subject-area'],
+  'manuscript_research_organism': ['subject-areas/subject-area'],
   'manuscript_related_manuscript': ['related-manuscripts/related-manuscript'],
   'manuscript_subject_area': ['themes/theme']
 }
@@ -179,9 +179,9 @@ default_field_mapping_by_table_name = {
     'version_id': 'version-id',
     'subject_area': 'theme'
   },
-  'manuscript_subject': {
+  'manuscript_research_organism': {
     'version_id': 'version-id',
-    'subject': 'subject-area'
+    'research_organism': 'subject-area'
   },
   'manuscript_stage': {
     'version_id': 'version-id',
