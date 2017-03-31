@@ -424,8 +424,17 @@ def filter_invalid_person_ids(frame_by_table_name):
         df['person_id'].isin(valid_person_ids)
       ]
 
+def apply_early_career_researcher_flag(
+  df, early_career_researcher_person_ids
+):
+  df['is_early_career_researcher'] = df['id'].apply(
+    lambda person_id: person_id in early_career_researcher_person_ids
+  )
+  return df
+
 def convert_zip_files(
-  zip_filename, zip_stream, db, field_mapping_by_table_name, export_emails=False):
+  zip_filename, zip_stream, db, field_mapping_by_table_name,
+  early_career_researcher_person_ids, export_emails=False):
 
   current_version = 4
   processed = db.import_processed.get(zip_filename)
@@ -465,6 +474,11 @@ def convert_zip_files(
     for table_name in table_names
   }
 
+  frame_by_table_name['person'] = apply_early_career_researcher_flag(
+    frame_by_table_name['person'],
+    early_career_researcher_person_ids
+  )
+
   # ignore entries with invalid person id (perhaps address that differently in the future)
   filter_invalid_person_ids(frame_by_table_name)
 
@@ -483,10 +497,21 @@ def main():
   field_mapping_by_table_name = default_field_mapping_by_table_name
 
   db = database.connect_configured_database()
-  db.update_schema()
+
+  # keep the early career researcher status
+  person_table = db['person']
+  early_career_researcher_person_ids = set(
+    x[0]
+    for x in person_table.session.query(person_table.table.id).filter(
+      person_table.table.is_early_career_researcher == True # pylint: disable=C0121
+    ).all()
+  )
 
   process_zip = lambda filename, stream:\
-    convert_zip_files(filename, stream, db, field_mapping_by_table_name)
+    convert_zip_files(
+      filename, stream, db, field_mapping_by_table_name,
+      early_career_researcher_person_ids
+    )
 
   source = get_downloads_xml_path()
 

@@ -145,7 +145,7 @@ class Database(object):
         Base.metadata.create_all(self.engine)
         return
       else:
-        print("schema out of sync, re-creating schema (was: {}, required: {}".format(
+        print("schema out of sync, re-creating schema (was: {}, required: {})".format(
           version.version, SCHEMA_VERSION
         ))
     except sqlalchemy.exc.ProgrammingError:
