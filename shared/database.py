@@ -96,6 +96,27 @@ class Entity(object):
     else:
       self.session.add(instance)
 
+  def create_list(self, objs):
+    self.session.bulk_insert_mappings(self.table, objs)
+
+  def update_list(self, objs):
+    self.session.bulk_update_mappings(self.table, objs)
+
+  def update_or_create_list(self, objs):
+    if len(self.primary_key) != 1:
+      raise Exception("operation only supported for simple primary key, but found: {}".format(
+        self.primary_key
+      ))
+    id_attr = self.primary_key[0].name
+    obj_ids = [o.get(id_attr) for o in objs]
+    existing_ids = set(self.get_existing_ids(obj_ids))
+    existing_objs = [o for obj_id, o in zip(obj_ids, objs) if obj_id in existing_ids]
+    not_existing_objs = [o for obj_id, o in zip(obj_ids, objs) if obj_id not in existing_ids]
+    if len(existing_objs) > 0:
+      self.update_list(existing_objs)
+    if len(not_existing_objs) > 0:
+      self.create_list(not_existing_objs)
+
   def exists(self, entity_id):
     return self.session.query(self.table).filter(
       self.table.id == entity_id
@@ -109,6 +130,18 @@ class Entity(object):
     if fields is not None:
       q = q.options(load_only(*fields))
     return q.all()
+
+  def get_existing_ids(self, ids):
+    if len(self.primary_key) != 1:
+      raise Exception("operation only supported for simple primary key, but found: {}".format(
+        self.primary_key
+      ))
+    id_field = getattr(self.table, self.primary_key[0].name)
+    return set([x[0] for x in self.session.query(
+      id_field
+    ).filter(
+      id_field.in_(ids)
+    ).all()])
 
   def read_df(self):
     primary_key = self.primary_key

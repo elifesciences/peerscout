@@ -11,7 +11,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 class SchemaVersion(Base):
   __tablename__ = "schema_version"
@@ -175,6 +175,13 @@ class ManuscriptAuthorFunding(Base):
   funder_name = Column(String, primary_key=True)
   grant_reference_number = Column(String, primary_key=True)
 
+# generated data for the ML model
+class ML_ManuscriptData(Base):
+  __tablename__ = "ml_manuscript_data"
+
+  version_id = create_manuscript_version_id_fk(primary_key=True)
+  abstract_tokens = Column(String)
+
 TABLES = [
   SchemaVersion,
   ImportProcessed,
@@ -195,5 +202,6 @@ TABLES = [
   ManuscriptResearchOrganism,
   ManuscriptStage,
   ManuscriptFunding,
-  ManuscriptAuthorFunding
+  ManuscriptAuthorFunding,
+  ML_ManuscriptData
 ]
