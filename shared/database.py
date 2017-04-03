@@ -179,7 +179,7 @@ class Database(object):
         return
       else:
         print("schema out of sync, re-creating schema (was: {}, required: {})".format(
-          version.version, SCHEMA_VERSION
+          version.version if version else None, SCHEMA_VERSION
         ))
     except sqlalchemy.exc.ProgrammingError:
       print("creating schema")
