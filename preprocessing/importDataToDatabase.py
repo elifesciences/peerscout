@@ -143,6 +143,7 @@ default_field_mapping_by_table_name = {
     'title': 'title',
     'abstract': 'abstract',
     'manuscript_type': 'manuscript-type',
+    'decision': 'decision',
     'decision_timestamp': 'decision-date'
   },
   'manuscript_author': {
