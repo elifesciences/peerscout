@@ -184,11 +184,13 @@ class ML_ManuscriptData(Base):
   version_id = create_manuscript_version_id_fk(primary_key=True)
   abstract_tokens = Column(String)
   lda_docvec = Column(postgresql.ARRAY(Float))
+  doc2vec_docvec = Column(postgresql.ARRAY(Float))
 
 class ML_ModelData(Base):
   __tablename__ = "ml_model_data"
 
   LDA_MODEL_ID = 'lda'
+  DOC2VEC_MODEL_ID = 'doc2vec'
 
   id = Column(String, primary_key=True)
   data = Column(postgresql.BYTEA)
