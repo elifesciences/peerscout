@@ -2,12 +2,14 @@ from sqlalchemy import (
   Column,
   Boolean,
   DateTime,
+  Float,
   Integer,
   String,
   ForeignKey,
   TIMESTAMP
 )
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.dialects import postgresql
 
 Base = declarative_base()
 
@@ -181,6 +183,15 @@ class ML_ManuscriptData(Base):
 
   version_id = create_manuscript_version_id_fk(primary_key=True)
   abstract_tokens = Column(String)
+  lda_docvec = Column(postgresql.ARRAY(Float))
+
+class ML_ModelData(Base):
+  __tablename__ = "ml_model_data"
+
+  LDA_MODEL_ID = 'lda'
+
+  id = Column(String, primary_key=True)
+  data = Column(postgresql.BYTEA)
 
 TABLES = [
   SchemaVersion,
@@ -203,5 +214,6 @@ TABLES = [
   ManuscriptStage,
   ManuscriptFunding,
   ManuscriptAuthorFunding,
-  ML_ManuscriptData
+  ML_ManuscriptData,
+  ML_ModelData
 ]
