@@ -37,6 +37,8 @@ class Person(Base):
   middle_name = Column(String)
   last_name = Column(String)
   status = Column(String)
+  email = Column(String)
+  institution = Column(String)
   is_early_career_researcher = Column(Boolean, nullable=False, default=False)
 
 def create_person_id_fk(**kwargs):

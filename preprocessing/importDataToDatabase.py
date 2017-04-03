@@ -120,6 +120,8 @@ default_field_mapping_by_table_name = {
     'middle_name': 'middle_name-name',
     'last_name': 'last-name',
     'status': 'status',
+    'email': 'email',
+    'institution': 'institution',
     'memberships': 'person-memberships'
   },
   'person_dates_not_available': {
