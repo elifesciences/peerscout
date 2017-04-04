@@ -4,6 +4,8 @@ from sqlalchemy import (
   DateTime,
   Float,
   Integer,
+  LargeBinary,
+  PickleType,
   String,
   ForeignKey,
   TIMESTAMP
@@ -181,13 +183,15 @@ class ManuscriptAuthorFunding(Base):
   grant_reference_number = Column(String, primary_key=True)
 
 # generated data for the ML model
+VECTOR = PickleType().with_variant(postgresql.ARRAY(Float), 'postgresql')
+
 class ML_ManuscriptData(Base):
   __tablename__ = "ml_manuscript_data"
 
   version_id = create_manuscript_version_id_fk(primary_key=True)
   abstract_tokens = Column(String)
-  lda_docvec = Column(postgresql.ARRAY(Float))
-  doc2vec_docvec = Column(postgresql.ARRAY(Float))
+  lda_docvec = Column(VECTOR)
+  doc2vec_docvec = Column(VECTOR)
 
 class ML_ModelData(Base):
   __tablename__ = "ml_model_data"
@@ -196,7 +200,7 @@ class ML_ModelData(Base):
   DOC2VEC_MODEL_ID = 'doc2vec'
 
   id = Column(String, primary_key=True)
-  data = Column(postgresql.BYTEA)
+  data = Column(LargeBinary)
 
 TABLES = [
   SchemaVersion,
