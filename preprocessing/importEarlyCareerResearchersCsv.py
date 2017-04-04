@@ -52,6 +52,25 @@ def frame_to_subject_areas(df):
         })
   return subject_areas
 
+def frame_to_person_membership(df):
+  person_membership = []
+  for person_id in df['p_id'].unique():
+    matching_df = df[
+      df['p_id'] == person_id
+    ]
+    matching_orcid = sorted(
+      set(matching_df['ORCID'])
+    )
+    for orcid in matching_orcid:
+      orcid = orcid.strip()
+      if len(orcid) > 0:
+        person_membership.append({
+          'person_id': person_id,
+          'member_type': 'ORCID',
+          'member_id': orcid
+        })
+  return person_membership
+
 def add_persons(db, persons):
   person_df = pd.DataFrame(persons).set_index('person_id')
   # print("person:", person_df)
@@ -69,6 +88,17 @@ def update_subject_areas(db, subject_areas, person_ids):
   )
   db.commit()
   db_table.write_frame(subject_area_df, index=False)
+
+def update_person_membership(db, person_membership, person_ids):
+  person_membership_df = pd.DataFrame(person_membership)
+
+  print("updating person memberships")
+  db_table = db['person_membership']
+  db_table.delete_where(
+    db_table.table.person_id.in_(person_ids)
+  )
+  db.commit()
+  db_table.write_frame(person_membership_df, index=False)
 
 def update_early_career_researcher_status(db, person_ids):
   print("updating early career researcher status")
@@ -121,8 +151,10 @@ def convert_csv_file_to(filename, stream, db):
     print("no persons found")
   else:
     subject_areas = frame_to_subject_areas(df)
+    person_membership = frame_to_person_membership(df)
 
     update_subject_areas(db, subject_areas, person_ids)
+    update_person_membership(db, person_membership, person_ids)
 
   update_early_career_researcher_status(db, person_ids)
 

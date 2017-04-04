@@ -60,6 +60,8 @@ class PersonDatesNotAvailable(Base):
 class PersonMembership(Base):
   __tablename__ = "person_membership"
 
+  ORCID_MEMBER_TYPE = 'ORCID'
+
   person_id = create_person_id_fk(primary_key=True)
   member_type = Column(String, primary_key=True)
   member_id = Column(String, primary_key=True)
