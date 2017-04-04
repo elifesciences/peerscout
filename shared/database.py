@@ -183,6 +183,8 @@ class Database(object):
         ))
     except sqlalchemy.exc.ProgrammingError:
       print("creating schema")
+    except sqlalchemy.exc.OperationalError:
+      print("creating schema")
     # the commit is necessary to prevent freezing
     self.commit()
     Base.metadata.drop_all(self.engine)
