@@ -139,6 +139,9 @@ class ManuscriptPotentialReviewer(Base):
 
   version_id = create_manuscript_version_id_fk(primary_key=True)
   person_id = create_person_id_fk(primary_key=True)
+  status = Column(String)
+  suggested_to_include = Column(Boolean)
+  suggested_to_exclude = Column(Boolean)
 
 class ManuscriptKeyword(Base):
   __tablename__ = "manuscript_keyword"

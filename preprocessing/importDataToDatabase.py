@@ -172,7 +172,10 @@ default_field_mapping_by_table_name = {
   },
   'manuscript_potential_reviewer': {
     'version_id': 'version-id',
-    'person_id': 'potential-referee-person-id'
+    'person_id': 'potential-referee-person-id',
+    'status': 'potential-referee-status',
+    'suggested_to_include': 'potential-referee-suggested-to-include',
+    'suggested_to_exclude': 'potential-referee-suggested-to-exclude'
   },
   'manuscript_keyword': {
     'version_id': 'version-id',
