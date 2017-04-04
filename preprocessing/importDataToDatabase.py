@@ -135,12 +135,12 @@ default_field_mapping_by_table_name = {
     'member_id': 'member-id'
   },
   'manuscript': {
-    'id': 'manuscript-no',
+    'manuscript_id': 'manuscript-no',
     'doi': 'production-data-doi',
     'country': 'country'
   },
   'manuscript_version': {
-    'id': 'version-id',
+    'version_id': 'version-id',
     'manuscript_id': 'manuscript-no',
     'title': 'title',
     'abstract': 'abstract',
@@ -311,7 +311,7 @@ def convert_xml(doc, tables, manuscript_number, field_mapping_by_table_name):
       break
     manuscript_no = manuscript_number_to_no(manuscript_number)
     tables['manuscript'].remove_where_property_is(
-      'id',
+      'manuscript_id',
       manuscript_no)
     tables['manuscript'].append(collect_props(
       manuscript,
@@ -329,7 +329,7 @@ def convert_xml(doc, tables, manuscript_number, field_mapping_by_table_name):
       for table_name in all_version_table_names:
         if table_name in field_mapping_by_table_name:
           tables[table_name].remove_where_property_is(
-            'id' if table_name == 'manuscript_version' else 'version_id',
+            'version_id',
             version_id)
       version_key_props = {
         'manuscript-no': manuscript_no,

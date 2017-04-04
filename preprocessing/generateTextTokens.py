@@ -20,11 +20,11 @@ def process_manuscript_versions(
     ml_manuscript_data_table.table.abstract_tokens != None
   )
   versions_requiring_tokens_df = pd.DataFrame(db.session.query(
-    manuscript_version_table.table.id,
+    manuscript_version_table.table.version_id,
     manuscript_version_table.table.abstract
   ).filter(
     sqlalchemy.and_(
-      ~manuscript_version_table.table.id.in_(version_ids_with_abstract_tokens_query),
+      ~manuscript_version_table.table.version_id.in_(version_ids_with_abstract_tokens_query),
       manuscript_version_table.table.abstract != None
     )
   ).all(), columns=['version_id', 'abstract'])

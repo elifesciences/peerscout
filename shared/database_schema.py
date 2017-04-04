@@ -73,21 +73,21 @@ class PersonSubjectArea(Base):
 class Manuscript(Base):
   __tablename__ = "manuscript"
 
-  id = Column('id', String, primary_key=True)
+  manuscript_id = Column(String, primary_key=True)
   country = Column(String)
   doi = Column(String)
 
 def create_manuscript_id_fk(**kwargs):
   return Column(
     String,
-    ForeignKey('manuscript.id', onupdate="CASCADE", ondelete="CASCADE"),
+    ForeignKey('manuscript.manuscript_id', onupdate="CASCADE", ondelete="CASCADE"),
     **kwargs
   )
 
 class ManuscriptVersion(Base):
   __tablename__ = "manuscript_version"
 
-  id = Column('id', String, primary_key=True)
+  version_id = Column(String, primary_key=True)
   manuscript_id = create_manuscript_id_fk()
   title = Column(String)
   abstract = Column(String)
@@ -98,7 +98,7 @@ class ManuscriptVersion(Base):
 def create_manuscript_version_id_fk(**kwargs):
   return Column(
     String,
-    ForeignKey('manuscript_version.id', onupdate="CASCADE", ondelete="CASCADE"),
+    ForeignKey('manuscript_version.version_id', onupdate="CASCADE", ondelete="CASCADE"),
     **kwargs
   )
 
@@ -185,16 +185,17 @@ class ManuscriptAuthorFunding(Base):
   funder_name = Column(String, primary_key=True)
   grant_reference_number = Column(String, primary_key=True)
 
-# generated data for the ML model
-VECTOR = PickleType().with_variant(postgresql.ARRAY(Float), 'postgresql')
+# Vector type (Array of floats)
+VECTOR = lambda: postgresql.ARRAY(Float).with_variant(PickleType(), 'sqlite')
 
+# generated data for the ML model
 class ML_ManuscriptData(Base):
   __tablename__ = "ml_manuscript_data"
 
   version_id = create_manuscript_version_id_fk(primary_key=True)
   abstract_tokens = Column(String)
-  lda_docvec = Column(VECTOR)
-  doc2vec_docvec = Column(VECTOR)
+  lda_docvec = Column(VECTOR())
+  doc2vec_docvec = Column(VECTOR())
 
 class ML_ModelData(Base):
   __tablename__ = "ml_model_data"
