@@ -89,7 +89,7 @@ def update_early_career_researcher_status(db, person_ids):
   }, synchronize_session=False)
 
 
-def convert_xml_file_to(filename, stream, db):
+def convert_csv_file_to(filename, stream, db):
   print("converting:", filename)
   df = (
     pd.read_csv(stream, skiprows=3, dtype={'p_id': str})
@@ -145,7 +145,7 @@ def main():
   db = database.connect_configured_database()
 
   process_file = lambda filename, stream:\
-    convert_xml_file_to(filename, stream, db)
+    convert_csv_file_to(filename, stream, db)
 
   convert_last_csv_files_in_directory(
     source,
