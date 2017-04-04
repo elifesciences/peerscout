@@ -111,7 +111,7 @@ class ManuscriptAuthor(Base):
   version_id = create_manuscript_version_id_fk(primary_key=True)
   person_id = create_person_id_fk(primary_key=True)
   seq = Column(Integer)
-  is_corr = Column(Boolean)
+  is_corresponding_author = Column(Boolean)
 
 class ManuscriptEditor(Base):
   __tablename__ = "manuscript_editor"

@@ -56,14 +56,18 @@ def collect_props(
 def apply_filter(l, filter_func):
   return l if filter_func is None else [x for x in l if filter_func(x)]
 
-def collect_props_list(nodes, *args, filter_func=None, **kwargs):
-  return apply_filter([
+def apply_list_transformer(l, list_transformer_func):
+  return l if list_transformer_func is None else list_transformer_func(l)
+
+def collect_props_list(nodes, *args, list_transformer_func=None, **kwargs):
+  return apply_list_transformer([
     collect_props(node, *args, **kwargs)
     for node in nodes
-  ], filter_func)
+  ], list_transformer_func)
 
-def populate_and_append_to_table(table, nodes, *args, filter_func=None, **kwargs):
-  for props in collect_props_list(nodes, *args, filter_func=filter_func, **kwargs):
+def populate_and_append_to_table(table, nodes, *args, list_transformer_func=None, **kwargs):
+  for props in collect_props_list(
+    nodes, *args, list_transformer_func=list_transformer_func, **kwargs):
     table.append(props)
 
 def find_unknown_paths(doc, known_paths):
@@ -152,7 +156,7 @@ default_field_mapping_by_table_name = {
     'version_id': 'version-id',
     'person_id': 'author-person-id',
     'seq': 'author-seq',
-    'is_corr': 'is-corr'
+    'is_corresponding_author': 'is-corr'
   },
   'manuscript_editor': {
     'version_id': 'version-id',
@@ -236,6 +240,29 @@ default_transformer_by_table_name = {
   })
 }
 
+def filter_duplicate_author_use_highest_corresponding(authors):
+  is_corresponding_author_by_person_id = {}
+  person_id_used = set()
+  filtered_authors = []
+  for author in authors:
+    person_id = author.get('person_id')
+    if author.get('is_corresponding_author'):
+      is_corresponding_author_by_person_id[person_id] = True
+    if not person_id in person_id_used:
+      person_id_used.add(person_id)
+      filtered_authors.append(author)
+  return [{
+    **author,
+    'is_corresponding_author': is_corresponding_author_by_person_id.get(
+      author.get('person_id'),
+      False
+    )
+  } for author in filtered_authors]
+
+default_list_transformer_by_table_name = {
+  'manuscript_author': filter_duplicate_author_use_highest_corresponding
+}
+
 all_version_table_names = [
   'manuscript_version',
   'emails_meta'
@@ -269,6 +296,42 @@ def get_sub_paths(xpaths, prefix):
 
 known_version_xml_paths = get_sub_paths(known_xml_paths, 'manuscript/version/')
 known_person_xml_paths = get_sub_paths(known_xml_paths, 'people/person/')
+
+def create_combined_list_transformer(table_name):
+  def chain_list_transformer(prev_t, next_t):
+    if prev_t is None:
+      return next_t
+    if next_t is None:
+      return prev_t
+    return lambda l: next_t(prev_t(l))
+  list_transformer = None
+  filter_func = default_filter_by_table_name.get(table_name)
+  item_transformer_func = default_transformer_by_table_name.get(table_name)
+  list_transformer_func = default_list_transformer_by_table_name.get(table_name)
+  if filter_func is not None:
+    list_transformer = lambda l: filter(filter_func, l)
+  if item_transformer_func is not None:
+    list_transformer = chain_list_transformer(
+      list_transformer,
+      lambda l: map(item_transformer_func, l)
+    )
+  list_transformer = chain_list_transformer(
+    list_transformer,
+    list_transformer_func
+  )
+  return list_transformer
+
+default_combined_list_transformer_by_table_name = {
+  k: create_combined_list_transformer(k)
+  for k in set(
+    default_filter_by_table_name.keys() |
+    default_list_transformer_by_table_name.keys() |
+    default_transformer_by_table_name.keys()
+  )
+}
+
+def get_combined_list_transformer(table_name):
+  return default_combined_list_transformer_by_table_name.get(table_name)
 
 def manuscript_number_to_no(x):
   return x.split('-')[-1]
@@ -350,8 +413,9 @@ def convert_xml(doc, tables, manuscript_number, field_mapping_by_table_name):
             itertools.chain.from_iterable([version.findall(xpath) for xpath in xpaths]),
             version_key_props,
             field_mapping=field_mapping_by_table_name[table_name],
-            filter_func=default_filter_by_table_name.get(table_name),
-            transformer_func=default_transformer_by_table_name.get(table_name),
+            # filter_func=default_filter_by_table_name.get(table_name),
+            # transformer_func=default_transformer_by_table_name.get(table_name),
+            list_transformer_func=get_combined_list_transformer(table_name),
             exclude=known_version_xml_paths)
 
   for person in doc.findall('people/person'):
