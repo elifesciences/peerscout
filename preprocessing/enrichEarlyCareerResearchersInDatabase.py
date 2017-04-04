@@ -85,6 +85,9 @@ def contains_author_with_name(item, first_name, last_name):
       author.get('family', '') == last_name
   ]) > 0
 
+def remove_duplicates(objs):
+  return pd.DataFrame(objs).drop_duplicates().to_dict(orient='records')
+
 def enrich_early_career_researchers(db):
   person_table = db.person
   person_membership_table = db.person_membership
@@ -179,28 +182,28 @@ def enrich_early_career_researchers(db):
     if m.get('doi') in new_dois
   ]
 
-  new_manuscripts = [{
+  new_manuscripts = remove_duplicates([{
     'manuscript_id': m.get('manuscript_id'),
     'doi': m.get('doi')
-  } for m in new_manuscript_info]
+  } for m in new_manuscript_info])
 
-  new_manuscript_versions = [{
+  new_manuscript_versions = remove_duplicates([{
     'version_id': m.get('version_id'),
     'manuscript_id': m.get('manuscript_id'),
     'title': m.get('title'),
     'abstract': m.get('abstract'),
     'created_timestamp': pd.to_datetime(m.get('created_timestamp'))
-  } for m in new_manuscript_info]
+  } for m in new_manuscript_info])
 
-  new_manuscript_subject_areas = flatten([[{
+  new_manuscript_subject_areas = remove_duplicates(flatten([[{
     'version_id': m.get('version_id'),
     'subject_area': subject_area
-  } for subject_area in m.get('subject_areas')] for m in new_manuscript_info])
+  } for subject_area in m.get('subject_areas')] for m in new_manuscript_info]))
 
-  new_manuscript_authors = [{
+  new_manuscript_authors = remove_duplicates([{
     'version_id': m.get('version_id'),
     'person_id': m.get('person_id')
-  } for m in new_manuscript_info]
+  } for m in new_manuscript_info])
 
   print("crossref_dois:", len(crossref_dois))
   print("existing_dois:", len(existing_dois))
