@@ -33,7 +33,7 @@ class ImportProcessed(Base):
 class Person(Base):
   __tablename__ = "person"
 
-  id = Column('id', String, primary_key=True)
+  person_id = Column('person_id', String, primary_key=True)
   title = Column(String)
   first_name = Column(String)
   middle_name = Column(String)
@@ -46,7 +46,7 @@ class Person(Base):
 def create_person_id_fk(**kwargs):
   return Column(
     String,
-    ForeignKey('person.id', onupdate="CASCADE", ondelete="CASCADE"),
+    ForeignKey('person.person_id', onupdate="CASCADE", ondelete="CASCADE"),
     **kwargs
   )
 

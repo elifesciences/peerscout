@@ -114,7 +114,7 @@ xml_copy_paths = {
 
 default_field_mapping_by_table_name = {
   'person': {
-    'id': 'person-id',
+    'person_id': 'person-id',
     'title': 'title',
     'first_name': 'first-name',
     'middle_name': 'middle_name-name',
@@ -361,7 +361,7 @@ def convert_xml(doc, tables, manuscript_number, field_mapping_by_table_name):
     }
     for table_name in all_persons_table_names:
       tables[table_name].remove_where_property_is(
-        'id' if table_name == 'person' else 'person_id',
+        'person_id',
         person_key
       )
     tables['person'].append(collect_props(
@@ -413,7 +413,7 @@ def insert_records(db, table_name, df):
 def filter_invalid_person_ids(frame_by_table_name):
   valid_person_ids = set()
   if len(frame_by_table_name['person']) > 0:
-    valid_person_ids = set(frame_by_table_name['person']['id'].unique())
+    valid_person_ids = set(frame_by_table_name['person']['person_id'].unique())
   for table_name in [
     'manuscript_author',
     'manuscript_author_funding',
@@ -433,7 +433,7 @@ def filter_invalid_person_ids(frame_by_table_name):
 def apply_early_career_researcher_flag(
   df, early_career_researcher_person_ids
 ):
-  df['is_early_career_researcher'] = df['id'].apply(
+  df['is_early_career_researcher'] = df['person_id'].apply(
     lambda person_id: person_id in early_career_researcher_person_ids
   )
   return df
@@ -508,7 +508,7 @@ def main():
   person_table = db['person']
   early_career_researcher_person_ids = set(
     x[0]
-    for x in person_table.session.query(person_table.table.id).filter(
+    for x in person_table.session.query(person_table.table.person_id).filter(
       person_table.table.is_early_career_researcher == True # pylint: disable=C0121
     ).all()
   )

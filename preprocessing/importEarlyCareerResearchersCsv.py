@@ -25,7 +25,7 @@ def frame_to_persons(df):
   for person_id in ecr_person_map.keys():
     p = ecr_person_map[person_id]
     persons.append({
-      'id': person_id,
+      'person_id': person_id,
       'first_name': unescape_and_strip_tags_if_not_none(p['first_nm']),
       'last_name': unescape_and_strip_tags_if_not_none(p['last_nm']),
       'status': 'Active',
@@ -53,7 +53,7 @@ def frame_to_subject_areas(df):
   return subject_areas
 
 def add_persons(db, persons):
-  person_df = pd.DataFrame(persons).set_index('id')
+  person_df = pd.DataFrame(persons).set_index('person_id')
   # print("person:", person_df)
   print("adding persons")
   db['person'].write_frame(person_df)
@@ -77,13 +77,13 @@ def update_early_career_researcher_status(db, person_ids):
   db.commit()
 
   db_table.session.query(db_table.table).filter(
-    ~db_table.table.id.in_(person_ids)
+    ~db_table.table.person_id.in_(person_ids)
   ).update({
     'is_early_career_researcher': False
   }, synchronize_session=False)
 
   db_table.session.query(db_table.table).filter(
-    db_table.table.id.in_(person_ids)
+    db_table.table.person_id.in_(person_ids)
   ).update({
     'is_early_career_researcher': True
   }, synchronize_session=False)
@@ -97,9 +97,12 @@ def convert_xml_file_to(filename, stream, db):
   )
   person_ids = set(df['p_id'].values)
   person_table = db['person']
-  existing_person_ids = set(x[0] for x in person_table.session.query(person_table.table.id).filter(
-    person_table.table.id.in_(person_ids)
-  ).all())
+  existing_person_ids = set(
+    x[0]
+    for x in person_table.session.query(person_table.table.person_id).filter(
+      person_table.table.person_id.in_(person_ids)
+    ).all()
+  )
   not_existing_person_ids = person_ids - existing_person_ids
   print("total_person_ids:", len(person_ids))
   print("existing_person_ids:", len(existing_person_ids))
