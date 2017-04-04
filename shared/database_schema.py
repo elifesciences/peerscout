@@ -94,6 +94,7 @@ class ManuscriptVersion(Base):
   manuscript_type = Column(String)
   decision = Column(String)
   decision_timestamp = Column(DateTime)
+  created_timestamp = Column(DateTime)
 
 def create_manuscript_version_id_fk(**kwargs):
   return Column(
