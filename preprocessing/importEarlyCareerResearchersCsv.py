@@ -10,6 +10,8 @@ from convertUtils import (
 
 from preprocessingUtils import get_downloads_csv_path
 
+from dataNormalisationUtils import normalise_subject_area
+
 from shared_proxy import database
 
 def frame_to_persons(df):
@@ -39,16 +41,19 @@ def frame_to_subject_areas(df):
     matching_df = df[
       df['p_id'] == person_id
     ]
-    matching_subject_area = sorted(
-      set(matching_df['First subject area'].unique()) |
-      set(matching_df['Second subject area'].unique())
-    )
+    matching_subject_area = sorted(set([
+      normalise_subject_area(subject_area)
+      for subject_area in (
+        set(matching_df['First subject area'].unique()) |
+        set(matching_df['Second subject area'].unique())
+      )
+    ]))
     for subject_area in matching_subject_area:
       subject_area = subject_area.strip()
       if len(subject_area) > 0:
         subject_areas.append({
           'person_id': person_id,
-          'subject_area': subject_area
+          'subject_area': normalise_subject_area(subject_area)
         })
   return subject_areas
 

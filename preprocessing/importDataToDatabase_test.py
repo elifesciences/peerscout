@@ -122,6 +122,13 @@ def test_with_empty_grant_ref():
       }]
     )
 
+def test_with_unnormalised_subject_area():
+  with convert_files(['with-unnormalised-subject-area-00001.xml']) as db:
+    assert (
+      set(db.manuscript_subject_area.read_frame()['subject_area']) ==
+      set(['Subject Area and Test 1'])
+    )
+
 def test_with_missing_persons():
   with convert_files(['with-missing-persons-00001.xml']) as db:
     df = db.manuscript_version.read_frame().reset_index()

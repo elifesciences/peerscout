@@ -16,6 +16,8 @@ from convertUtils import (
 
 from preprocessingUtils import get_downloads_xml_path
 
+from dataNormalisationUtils import normalise_subject_area
+
 from shared_proxy import database
 
 def auto_convert(name, value):
@@ -246,6 +248,10 @@ default_transformer_by_table_name = {
     **x,
     'suggested_to_include': x.get('suggested_to_include') == 'yes',
     'suggested_to_exclude': x.get('suggested_to_exclude') == 'yes'
+  }),
+  'manuscript_subject_area': lambda x: ({
+    **x,
+    'subject_area': normalise_subject_area(x.get('subject_area'))
   })
 }
 
