@@ -77,9 +77,9 @@ class Main extends React.Component {
         this.actuallyLoading = false;
         this.setState({
           results: resultsResponse && {
-            potentialReviewers: resultsResponse['potential-reviewers'],
-            matchingManuscripts: resultsResponse['matching-manuscripts'],
-            manuscriptsNotFound: resultsResponse['manuscripts-not-found'],
+            potentialReviewers: resultsResponse['potential_reviewers'],
+            matchingManuscripts: resultsResponse['matching_manuscripts'],
+            manuscriptsNotFound: resultsResponse['manuscripts_not_found'],
             search: resultsResponse['search']
           },
           resultsSearchOptions,

@@ -142,21 +142,21 @@ const formatPersonStatus = status =>
 const combinedPersonName = person =>
   [
     person['title'],
-    person['first-name'],
-    person['middle-name'],
-    person['last-name'],
-    person['is-early-career-researcher'] ? '(early career researcher)': undefined,
+    person['first_name'],
+    person['middle_name'],
+    person['last_name'],
+    person['is_early_career_researcher'] ? '(early career researcher)': undefined,
     person['status'] !== 'Active' && `(${formatPersonStatus(person['status'])})`
   ].filter(s => !!s).join(' ');
 
 const quote = s => s && `\u201c${s}\u201d`
 
-const formatManuscriptId = manuscript => manuscript['manuscript-no'];
+const formatManuscriptId = manuscript => manuscript['manuscript_id'];
 
 const doiUrl = doi => doi && 'http://dx.doi.org/' + doi;
 
 const hasMatchingSubjectAreas = (manuscript, requestedSubjectAreas) =>
-  requestedSubjectAreas.length === 0 || !!(manuscript['subject-areas'] || []).filter(
+  requestedSubjectAreas.length === 0 || !!(manuscript['subject_areas'] || []).filter(
     subjectArea => requestedSubjectAreas.has(subjectArea)
   )[0];
 
@@ -190,7 +190,7 @@ const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectArea
         <Text>{ quote(manuscript['title']) }</Text>
       </TooltipWrapper>
       <Text>{ ' ' }</Text>
-      <Text>{ formatDate(manuscript['published-date']) }</Text>
+      <Text>{ formatDate(manuscript['published_date']) }</Text>
       <Text>{ ' (' }</Text>
       <ManuscriptRefLink manuscript={ manuscript }/>
       <Text>{ ') ' }</Text>
@@ -213,10 +213,10 @@ const PersonInlineSummary = ({ person }) => (
 );
 
 const Membership = ({ membership }) => {
-  if (membership['member-type'] != 'ORCID') {
+  if (membership['member_type'] != 'ORCID') {
     return (
       <Text style={ styles.unrecognisedMembership }>
-        { `${membership['member-type']}: ${membership['member-id']}` }
+        { `${membership['member_type']}: ${membership['member_id']}` }
       </Text>
     );
   }
@@ -225,14 +225,14 @@ const Membership = ({ membership }) => {
       <Link
         style={ styles.membershipLink }
         target="_blank"
-        href={ `http://orcid.org/${membership['member-id']}` }
+        href={ `http://orcid.org/${membership['member_id']}` }
       >
         <Text>ORCID</Text>
       </Link>
       <Link
         style={ styles.membershipLink }
         target="_blank"
-        href={ `http://search.crossref.org/?q=${membership['member-id']}` }
+        href={ `http://search.crossref.org/?q=${membership['member_id']}` }
       >
         <Text>Crossref</Text>
       </Link>
@@ -241,9 +241,9 @@ const Membership = ({ membership }) => {
 };
 
 const personFullName = person => [
-  person['first-name'],
-  person['middle-name'],
-  person['last-name']
+  person['first_name'],
+  person['middle_name'],
+  person['last_name']
 ].filter(s => !!s).join(' ');
 
 const PersonWebSearchLink = ({ person }) => (
@@ -269,7 +269,7 @@ const PersonEmailLink = ({ person: { email } }) => (
 const formatDate = date => date && new Date(date).toLocaleDateString();
 
 const formatPeriodNotAvailable = periodNotAvailable =>
-  `${formatDate(periodNotAvailable['dna-start-date'])} - ${formatDate(periodNotAvailable['dna-end-date'])}`;
+  `${formatDate(periodNotAvailable['start_date'])} - ${formatDate(periodNotAvailable['end_date'])}`;
 
 const formatCount = (count, singular, plural, suffix) =>
   (count !== undefined) && `${count} ${count === 1 ? singular : plural} ${suffix || ''}`.trim();
@@ -284,15 +284,15 @@ const formatPeriodStats = periodStats => {
   } = periodStats['review-duration'] || {};
   return [
     mean && `${formatDays(mean)} (avg over ${formatCount(count, 'review', 'reviews')})`,
-    formatCount(periodStats['reviews-in-progress'], 'review', 'reviews', 'in progress'),
-    formatCount(periodStats['waiting-to-be-accepted'], 'review', 'reviews', 'awaiting response'),
+    formatCount(periodStats['reviews_in_progress'], 'review', 'reviews', 'in progress'),
+    formatCount(periodStats['waiting_to_be_accepted'], 'review', 'reviews', 'awaiting response'),
     formatCount(periodStats['declined'], 'review', 'reviews', 'declined')
   ].filter(s => !!s).join(', ');
 }
 
 const renderStats = stats => {
   const overallStats = formatPeriodStats((stats || {})['overall'] || {});
-  const last12mStats = formatPeriodStats((stats || {})['last-12m'] || {});
+  const last12mStats = formatPeriodStats((stats || {})['last_12m'] || {});
   if (!overallStats && !last12mStats) {
     return;
   }
@@ -319,14 +319,14 @@ const formatAssignmentStatus = assignmentStatus => assignmentStatus && assignmen
 const PotentialReviewer = ({
   potentialReviewer: {
     person = {},
-    'author-of-manuscripts': authorOfManuscripts = [],
-    'reviewer-of-manuscripts': reviewerOfManuscripts = [],
-    'assignment-status': assignmentStatus,
+    'author_of_manuscripts': authorOfManuscripts = [],
+    'reviewer_of_manuscripts': reviewerOfManuscripts = [],
+    'assignment_status': assignmentStatus,
     scores
   },
   requestedSubjectAreas
 }) => {
-  const manuscriptScoresByManuscriptNo = groupBy(scores['by-manuscript'] || [], s => s['manuscript-no']);
+  const manuscriptScoresByManuscriptNo = groupBy(scores['by_manuscript'] || [], s => s['manuscript_id']);
   const memberships = person.memberships || [];
   const membershipComponents = memberships.map((membership, index) => (
     <Membership key={ index } membership={ membership }/>
@@ -356,25 +356,25 @@ const PotentialReviewer = ({
     <ManuscriptInlineSummary
       key={ index }
       manuscript={ manuscript }
-      scores={ manuscriptScoresByManuscriptNo[manuscript['manuscript-no']] }
+      scores={ manuscriptScoresByManuscriptNo[manuscript['manuscript_id']] }
       requestedSubjectAreas={ requestedSubjectAreas }
     />
   ));
   const renderedStats = renderStats(person['stats']);
   return (
     <Card style={ styles.potentialReviewer.card }>
-      <Comment text={ `Person id: ${person['person-id']}` }/>
+      <Comment text={ `Person id: ${person['person_id']}` }/>
       <CardHeader
         title={ titleComponent }
         subtitle={ person['institution'] }
       />
       <CardText>
         {
-          person['dates-not-available'] && person['dates-not-available'].length > 0 && (
+          person['dates_not_available'] && person['dates_not_available'].length > 0 && (
             <View style={ styles.potentialReviewer.subSection }>
               <Text style={ styles.potentialReviewer.label }>Not Available: </Text>
               <Text style={ styles.potentialReviewer.value }>
-                { person['dates-not-available'].map(formatPeriodNotAvailable).join(', ') }
+                { person['dates_not_available'].map(formatPeriodNotAvailable).join(', ') }
               </Text>
             </View>
           )
@@ -393,7 +393,7 @@ const PotentialReviewer = ({
           (authorOfManuscripts.length > 0) && (
             <View
               style={ styles.potentialReviewer.subSection }
-              className="potential-reviewer-author-of"
+              className="potential_reviewer_author_of"
             >
               <Text style={ styles.potentialReviewer.label }>Author of: </Text>
               <View style={ styles.potentialReviewer.value }>
@@ -410,7 +410,7 @@ const PotentialReviewer = ({
           (reviewerOfManuscripts.length > 0) && (
             <View
               style={ styles.potentialReviewer.subSection }
-              className="potential-reviewer-reviewer-of"
+              className="potential_reviewer_reviewer_of"
             >
               <Text style={ styles.potentialReviewer.label }>Reviewer of: </Text>
               <View style={ styles.potentialReviewer.value }>
@@ -447,13 +447,13 @@ const PotentialReviewer = ({
 const ManuscriptSummary = ({
   manuscript: {
     title,
-    'manuscript-no': manuscriptNo,
+    'manuscript_id': manuscriptNo,
     abstract,
     authors,
     reviewers,
     editors,
-    'senior-editors': seniorEditors,
-    'subject-areas': subjectAreas
+    'senior_editors': seniorEditors,
+    'subject_areas': subjectAreas
   }
 }) => (
   <Card style={ styles.manuscriptSummary.container } initiallyExpanded={ true }>
@@ -529,7 +529,7 @@ const extractAllSubjectAreas = manuscripts => {
   const subjectAreas = new Set();
   if (manuscripts) {
     manuscripts.forEach(m => {
-      (m['subject-areas'] || []).forEach(subjectArea => {
+      (m['subject_areas'] || []).forEach(subjectArea => {
         subjectAreas.add(subjectArea);
       })
     });
@@ -539,10 +539,10 @@ const extractAllSubjectAreas = manuscripts => {
 
 const filterReviewsByEarlyCareerResearcherStatus = (potentialReviewers, earlyCareerReviewer) =>
   potentialReviewers.filter(potentialReviewer =>
-    potentialReviewer.person['is-early-career-researcher'] === earlyCareerReviewer
+    potentialReviewer.person['is_early_career_researcher'] === earlyCareerReviewer
   );
 
-const reviewerPersonId = reviewer => reviewer && reviewer.person && reviewer.person['person-id'];
+const reviewerPersonId = reviewer => reviewer && reviewer.person && reviewer.person['person_id'];
 
 const SearchResult = ({
   searchResult,

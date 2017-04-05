@@ -17,8 +17,8 @@ const recommendedReviewersToGraph = recommendedReviewers => {
   let mainManuscripts = [];
   let mainNodes = [];
 
-  const manuscriptToId = m => 'm' + m['manuscript-no'];
-  const personToId = m => 'p' + m['person-id'];
+  const manuscriptToId = m => 'm' + m['manuscript_id'];
+  const personToId = m => 'p' + m['person_id'];
 
   const addReviewerLink = (sourceNode, reviewerNode) => {
     const sourceId = sourceNode.id;
@@ -39,11 +39,11 @@ const recommendedReviewersToGraph = recommendedReviewers => {
     reviewerLinksMap[targetId] = link;
 
     const manuscript = sourceNode.manuscript;
-    const manuscriptNo = manuscript && manuscript['manuscript-no'];
+    const manuscriptNo = manuscript && manuscript['manuscript_id'];
     const r = reviewerNode.potentialReviewer;
-    if (manuscriptNo && r['scores'] && r['scores']['by-manuscript']) {
-      const score = r['scores']['by-manuscript'].filter(
-        s => s['manuscript-no'] === manuscriptNo
+    if (manuscriptNo && r['scores'] && r['scores']['by_manuscript']) {
+      const score = r['scores']['by_manuscript'].filter(
+        s => s['manuscript_id'] === manuscriptNo
       )[0];
       link.score = score;
       if (score) {
@@ -56,9 +56,6 @@ const recommendedReviewersToGraph = recommendedReviewers => {
 
   const addManuscript = (m, r) => {
     const id = manuscriptToId(m);
-    if (nodes.length > maxNodes) {
-      // return;
-    }
     if (nodeMap[id]) {
       return;
     }
@@ -103,15 +100,6 @@ const recommendedReviewersToGraph = recommendedReviewers => {
     };
     nodeMap[id] = node;
     nodes.push(node);
-    // if (r['author-of-manuscripts']) {
-    //   r['author-of-manuscripts'].forEach(m => addManuscript(m, r));
-    // }
-    // if (r['reviewer-of-manuscripts']) {
-    //   r['reviewer-of-manuscripts'].forEach(m => addManuscript(m, r));
-    // }
-    // mainManuscripts.forEach(m => {
-    //   addManuscriptReviewerLink(m, r);
-    // });
     mainNodes.forEach(mainNode => addReviewerLink(mainNode, node));
   }
 
@@ -131,11 +119,11 @@ const recommendedReviewersToGraph = recommendedReviewers => {
   }
 
   const addCommonReviewerLinks = r => {
-    if (r['author-of-manuscripts']) {
-      r['author-of-manuscripts'].forEach(m => addCommonReviewerManuscript(m, r));
+    if (r['author_of_manuscripts']) {
+      r['author_of_manuscripts'].forEach(m => addCommonReviewerManuscript(m, r));
     }
-    if (r['reviewer-of-manuscripts']) {
-      r['reviewer-of-manuscripts'].forEach(m => addCommonReviewerManuscript(m, r));
+    if (r['reviewer_of_manuscripts']) {
+      r['reviewer_of_manuscripts'].forEach(m => addCommonReviewerManuscript(m, r));
     }
   }
 
@@ -203,7 +191,7 @@ const getManuscriptTooltipHtml = m => {
 const getReviewerTooltipHtml = r => {
   const p = r['person'];
   let s = '<p class="person-name">' +
-    escapeHtml(p['first-name'] + ' ' + p['last-name']) +
+    escapeHtml(p['first_name'] + ' ' + p['last_name']) +
   '</p>';
   if (p['institution']) {
     s += '<p class="person-institution">' +
@@ -268,7 +256,7 @@ const nodeColor = d => {
   } else if (d.manuscript) {
     return '#8cc';
   } else if (d.potentialReviewer) {
-    if (d.potentialReviewer.person['is-early-career-researcher']) {
+    if (d.potentialReviewer.person['is_early_career_researcher']) {
       return '#f88';
     }
     return '#8f8';
@@ -315,8 +303,8 @@ const nodeReviewDurationEndAngle = d => {
   if (d.potentialReviewer) {
     const p = d.potentialReviewer['person'];
     const stats = p.stats;
-    const last12m = stats && stats['last-12m'];
-    const reviewDuration = last12m && last12m['review-duration'];
+    const last12m = stats && stats['last_12m'];
+    const reviewDuration = last12m && last12m['review_duration'];
     const meanReviewDuration = reviewDuration && reviewDuration['mean'];
     if (meanReviewDuration > 0) {
       return Math.min(2 * Math.PI, 2 * Math.PI * meanReviewDuration / 50);
@@ -409,8 +397,8 @@ const createLegend = (parent, showSearch) => {
     potentialReviewer: {
       person: {
         stats: {
-          'last-12m': {
-            'review-duration': {
+          'last_12m': {
+            'review_duration': {
               mean: 10
             }
           }
@@ -421,7 +409,7 @@ const createLegend = (parent, showSearch) => {
   }, {
     potentialReviewer: {
       person: {
-        'is-early-career-researcher': true
+        'is_early_career_researcher': true
       }
     },
     label: 'Early career researcher'

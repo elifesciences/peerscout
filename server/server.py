@@ -1,4 +1,3 @@
-from os.path import abspath
 import os
 import datetime
 
@@ -8,14 +7,13 @@ from flask.json import JSONEncoder
 from flask_cors import CORS
 from joblib import Memory
 
-from datasets import PickleDatasetLoader, CachedDatasetLoader
 from services import (
   ManuscriptModel,
-  DocumentSimilarityModel,
+  load_similarity_model_from_database,
   RecommendReviewers
 )
 
-from docvec_model_proxy import DocvecModelUtils # pylint: disable=E0611
+from shared_proxy import database
 
 CLIENT_FOLDER = '../client/dist'
 
@@ -32,23 +30,15 @@ memory = Memory(cachedir=cache_dir, verbose=0)
 print("cache directory:", cache_dir)
 memory.clear(warn=False)
 
+db = database.connect_configured_database()
+
 def load_recommender():
-  csv_path = abspath(config['csv']['path'])
-  datasets = CachedDatasetLoader(PickleDatasetLoader(csv_path))
-  lda_docvec_predict_model = DocvecModelUtils.load_predict_model(
-    os.path.join(csv_path, 'manuscript-abstracts-sense2vec-lda-docvecs-model.pickle')
-  )
-  doc2vec_docvec_predict_model = DocvecModelUtils.load_predict_model(
-    os.path.join(csv_path, 'manuscript-abstracts-sense2vec-doc2vec-model.pickle')
-  )
-  manuscript_model = ManuscriptModel(datasets)
-  similarity_model = DocumentSimilarityModel(
-    datasets, manuscript_model=manuscript_model,
-    lda_docvec_predict_model=lda_docvec_predict_model,
-    doc2vec_docvec_predict_model=doc2vec_docvec_predict_model
+  manuscript_model = ManuscriptModel(db)
+  similarity_model = load_similarity_model_from_database(
+    db, manuscript_model=manuscript_model
   )
   return RecommendReviewers(
-    datasets, manuscript_model=manuscript_model, similarity_model=similarity_model
+    db, manuscript_model=manuscript_model, similarity_model=similarity_model
   )
 
 recommend_reviewers = load_recommender()

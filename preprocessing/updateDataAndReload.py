@@ -2,13 +2,12 @@ from importlib import import_module
 
 def main():
   scripts = [
-    'convertFiles',
-    'convertEarlyCareerResearchersCsv',
-    'postProcessFiles',
-    'enrichEarlyCareerResearchers',
-    'generateSense2VecTokens',
-    'generateSense2VecLdaDocVec',
-    'generateSense2VecDoc2Vec',
+    'importDataToDatabase',
+    'importEarlyCareerResearchersCsv',
+    'enrichEarlyCareerResearchersInDatabase',
+    'generateTextTokens',
+    'generateLdaDocVec',
+    'generateDoc2Vec',
     'reloadServer'
   ]
   if not import_module('downloadFiles').main():
