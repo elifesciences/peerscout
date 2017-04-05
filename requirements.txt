@@ -5,6 +5,7 @@ requests==2.13.0
 tqdm==4.11.2
 bokeh==0.12.4
 boto3==1.4.4
+SQLAlchemy==1.1.7
 Flask==0.12
 Flask-Cors==3.0.2
 gensim==1.0.0
