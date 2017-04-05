@@ -5,3 +5,6 @@ source venv/bin/activate
 
 cd server
 pytest
+
+cd ../preprocessing
+pytest
