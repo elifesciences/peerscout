@@ -143,13 +143,16 @@ class Entity(object):
       id_field.in_(ids)
     ).all()])
 
-  def read_df(self):
+  def read_frame(self):
     primary_key = self.primary_key
     return pd.read_sql_table(
       self.table.__tablename__,
       self.session.get_bind(),
       index_col=primary_key[0].name if len(primary_key) == 1 else None
     )
+
+  def read_df(self):
+    return self.read_frame()
 
   def write_frame(self, df, **kwargs):
     df.to_sql(
@@ -196,11 +199,17 @@ class Database(object):
     self.commit()
     print("done")
 
+  def sorted_table_names(self):
+    return [t.name for t in Base.metadata.sorted_tables]
+
   def add(self, entity):
     self.session.add(entity)
 
   def commit(self):
     self.session.commit()
+
+  def close(self):
+    self.session.close()
 
   def __getitem__(self, name):
     return self.tables[name]
