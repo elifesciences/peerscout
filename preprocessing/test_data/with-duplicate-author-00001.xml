@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml>
+  <manuscript>
+    <country>Country 1</country>
+    <production-data>
+      <production-data-doi>11.1234/pub.1234</production-data-doi>
+    </production-data>
+    <version>
+      <key>00001|0</key>
+      <abstract>This is quite abstract.</abstract>
+      <author-approval-date>2017-01-01T12:34:56Z</author-approval-date>
+      <authors>
+        <author>
+          <author-person-id>author1</author-person-id>
+          <author-seq>1</author-seq>
+          <is-corr>false</is-corr>
+        </author>
+        <author>
+          <author-person-id>author1</author-person-id>
+          <author-seq>2</author-seq>
+          <is-corr>true</is-corr>
+        </author>
+      </authors>
+      <decision>Reject Full Submission</decision>
+      <decision-date>2017-02-01T12:13:14Z</decision-date>
+      <ejp-decision>Reject</ejp-decision>
+      <is_resubmission>false</is_resubmission>
+      <manuscript-number>regular-00001</manuscript-number>
+      <manuscript-type>Research Article</manuscript-type>
+      <submission-date>2017-01-01T12:13:14Z</submission-date>
+      <title>Title 1</title>
+      <version-number>0</version-number>
+    </version>
+  </manuscript>
+  <people>
+    <person>
+      <email>author1@test.com</email>
+      <first-name>Author</first-name>
+      <institution>Institution 1</institution>
+      <last-name>One</last-name>
+      <middle-name></middle-name>
+      <person-id>author1</person-id>
+      <status>Active</status>
+      <title>Mr.</title>
+    </person>
+  </people>
+</xml>

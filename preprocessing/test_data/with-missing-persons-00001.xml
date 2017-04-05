@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml>
+  <manuscript>
+    <country>Country 1</country>
+    <production-data>
+      <production-data-doi>11.1234/pub.1234</production-data-doi>
+    </production-data>
+    <version>
+      <key>00001|0</key>
+      <abstract>This is quite abstract.</abstract>
+      <author-approval-date>2017-01-01T12:34:56Z</author-approval-date>
+      <author-funding>
+        <author-funding>
+          <author-person-id>author1</author-person-id>
+          <funding-seq>1</funding-seq>
+          <funding-title>Funder Name 1</funding-title>
+          <grant-reference-number>Funder Reference 2</grant-reference-number>
+        </author-funding>
+      </author-funding>
+      <authors>
+        <author>
+          <author-person-id>author1</author-person-id>
+          <author-seq>1</author-seq>
+          <is-corr>false</is-corr>
+        </author>
+      </authors>
+      <decision>Reject Full Submission</decision>
+      <decision-date>2017-02-01T12:13:14Z</decision-date>
+      <editors>
+        <editor>
+          <editor-assigned-date>2017-01-01T11:12:13Z</editor-assigned-date>
+          <editor-decision>Reject</editor-decision>
+          <editor-decision-date>2017-02-01T12:13:14Z</editor-decision-date>
+          <editor-decision-due-date>2017-02-02T12:13:14Z</editor-decision-due-date>
+          <editor-person-id>editor1</editor-person-id>
+        </editor>
+      </editors>
+      <ejp-decision>Reject</ejp-decision>
+      <history>
+        <stage>
+          <stage-affective-person-id>reviewer1</stage-affective-person-id>
+          <stage-name>Contacting Reviewers</stage-name>
+          <stage-triggered-by-person-id>reviewer1</stage-triggered-by-person-id>
+          <start-date>2017-01-01T11:12:13Z</start-date>
+        </stage>
+      </history>
+      <is_resubmission>false</is_resubmission>
+      <manuscript-number>regular-00001</manuscript-number>
+      <manuscript-type>Research Article</manuscript-type>
+      <potential-editors>
+        <potential-editor>
+          <potential-editor-first-contact-date></potential-editor-first-contact-date>
+          <potential-editor-person-id>editor1</potential-editor-person-id>
+          <potential-editor-second-contact-date></potential-editor-second-contact-date>
+          <potential-editor-status>Accepted</potential-editor-status>
+          <potential-editor-status-date>2017-01-01T12:13:14Z</potential-editor-status-date>
+          <potential-editor-third-contact-date></potential-editor-third-contact-date>
+        </potential-editor>
+      </potential-editors>
+      <potential-referees>
+        <potential-referee>
+          <potential-referee-first-contact-date>2017-01-01T12:13:14Z</potential-referee-first-contact-date>
+          <potential-referee-next-contact-date>2017-01-02T12:13:14Z</potential-referee-next-contact-date>
+          <potential-referee-person-id>reviewer1</potential-referee-person-id>
+          <potential-referee-second-contact-date>2017-01-01T12:13:14Z</potential-referee-second-contact-date>
+          <potential-referee-sequence>1</potential-referee-sequence>
+          <potential-referee-status>Accepted</potential-referee-status>
+          <potential-referee-status-date>2017-01-02T12:13:14Z</potential-referee-status-date>
+          <potential-referee-suggested-to-exclude>no</potential-referee-suggested-to-exclude>
+          <potential-referee-suggested-to-include>no</potential-referee-suggested-to-include>
+          <potential-referee-third-contact-date></potential-referee-third-contact-date>
+        </potential-referee>
+      </potential-referees>
+      <referees>
+        <referee>
+          <referee-due-date>2017-01-01T12:13:14Z</referee-due-date>
+          <referee-next-chase-date>2017-01-01T12:13:14Z</referee-next-chase-date>
+          <referee-person-id>reviewer1</referee-person-id>
+          <referee-rank></referee-rank>
+          <referee-received-date>2017-02-01T12:13:14Z</referee-received-date>
+          <referee-recommendation>Accept, no revision</referee-recommendation>
+          <referee-sequence>1</referee-sequence>
+          <referee-started-date>2017-01-02T12:13:14Z</referee-started-date>
+        </referee>
+      </referees>
+      <senior-editors>
+        <senior-editor>
+          <senior-editor-assigned-date>2017-01-01T12:13:14Z</senior-editor-assigned-date>
+          <senior-editor-person-id>senior_editor1</senior-editor-person-id>
+        </senior-editor>
+      </senior-editors>
+      <submission-date>2017-01-01T12:13:14Z</submission-date>
+      <title>Title 1</title>
+      <version-number>0</version-number>
+    </version>
+  </manuscript>
+</xml>
