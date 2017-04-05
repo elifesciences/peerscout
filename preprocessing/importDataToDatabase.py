@@ -2,6 +2,7 @@ import itertools
 from os.path import basename, splitext
 
 import pandas as pd
+from tqdm import tqdm
 
 from convertUtils import (
   process_files_in_directory_or_zip,
@@ -9,7 +10,8 @@ from convertUtils import (
   has_children,
   parse_xml_file,
   unescape_and_strip_tags_if_str,
-  TableOutput
+  TableOutput,
+  rjust_and_shorten_text
 )
 
 from preprocessingUtils import get_downloads_xml_path
@@ -232,11 +234,18 @@ default_filter_by_table_name = {
 default_transformer_by_table_name = {
   'manuscript_funding': lambda x: ({
     **x,
+    'funder_name': x.get('funder_name') or '',
     'grant_reference_number': x.get('grant_reference_number') or ''
   }),
   'manuscript_author_funding': lambda x: ({
     **x,
+    'funder_name': x.get('funder_name') or '',
     'grant_reference_number': x.get('grant_reference_number') or ''
+  }),
+  'manuscript_potential_reviewer': lambda x: ({
+    **x,
+    'suggested_to_include': x.get('suggested_to_include') == 'yes',
+    'suggested_to_exclude': x.get('suggested_to_exclude') == 'yes'
   })
 }
 
@@ -259,8 +268,27 @@ def filter_duplicate_author_use_highest_corresponding(authors):
     )
   } for author in filtered_authors]
 
+def filter_duplicate_stage_use_highest_trigger_by_df(df):
+  if len(df) < 2:
+    return df
+  df = df.groupby(
+    ['version_id', 'person_id', 'stage_name', 'stage_timestamp']
+  ).agg({
+    'triggered_by_person_id': lambda l: sorted(l, key=lambda s: s or '')[-1]
+  }).reset_index()
+  return df
+
+def filter_duplicate_stage_use_highest_trigger_by(stages):
+  if len(stages) < 2:
+    return stages
+  return (
+    filter_duplicate_stage_use_highest_trigger_by_df(pd.DataFrame(stages))
+    .to_dict(orient='records')
+  )
+
 default_list_transformer_by_table_name = {
-  'manuscript_author': filter_duplicate_author_use_highest_corresponding
+  'manuscript_author': filter_duplicate_author_use_highest_corresponding,
+  # 'manuscript_stage': filter_duplicate_stage_use_highest_trigger_by
 }
 
 all_version_table_names = [
@@ -309,7 +337,7 @@ def create_combined_list_transformer(table_name):
   item_transformer_func = default_transformer_by_table_name.get(table_name)
   list_transformer_func = default_list_transformer_by_table_name.get(table_name)
   if filter_func is not None:
-    list_transformer = lambda l: filter(filter_func, l)
+    list_transformer = lambda l: [x for x in l if filter_func(x)]
   if item_transformer_func is not None:
     list_transformer = chain_list_transformer(
       list_transformer,
@@ -490,19 +518,23 @@ def filter_invalid_person_ids(frame_by_table_name):
   ]:
     df = frame_by_table_name[table_name]
     if len(df) > 0:
-      frame_by_table_name[table_name] = df[
-        df['person_id'].isin(valid_person_ids)
-      ]
+      try:
+        frame_by_table_name[table_name] = df[
+          df['person_id'].isin(valid_person_ids)
+        ]
+      except KeyError as e:
+        raise Exception('{}: columns({})'.format(table_name, df.columns.values)) from e
 
 def apply_early_career_researcher_flag(
   df, early_career_researcher_person_ids
 ):
-  df['is_early_career_researcher'] = df['person_id'].apply(
-    lambda person_id: person_id in early_career_researcher_person_ids
-  )
+  if len(df) > 0:
+    df['is_early_career_researcher'] = df['person_id'].apply(
+      lambda person_id: person_id in early_career_researcher_person_ids
+    )
   return df
 
-def convert_zip_files(
+def convert_zip_file(
   zip_filename, zip_stream, db, field_mapping_by_table_name,
   early_career_researcher_person_ids, export_emails=False):
 
@@ -549,14 +581,55 @@ def convert_zip_files(
     early_career_researcher_person_ids
   )
 
+  frame_by_table_name['manuscript_stage'] = filter_duplicate_stage_use_highest_trigger_by_df(
+    frame_by_table_name['manuscript_stage']
+  )
+
   # ignore entries with invalid person id (perhaps address that differently in the future)
   filter_invalid_person_ids(frame_by_table_name)
 
-  for table_name in reversed(table_names):
+  # we currently only support update or inserts with a single primary key
+  # updating relationships is more complicated,
+  # we would need to remove no longer existing relationships for example.
+  # removing parents of relationships seem to be costly (tend to have a single primary key),
+  # the speed gain of just supporting only those for now is still worth it.
+  table_names_supporting_update_or_insert_set = ([
+    t for t in table_names if len(db[t].primary_key) == 1
+  ])
+
+  table_names_supporting_update_or_insert = [
+    t for t in table_names if t in table_names_supporting_update_or_insert_set
+  ]
+
+  table_names_not_supporting_update_or_insert = [
+    t for t in table_names if t not in table_names_supporting_update_or_insert_set
+  ]
+
+  pbar = tqdm(list(reversed(table_names_not_supporting_update_or_insert)), leave=False)
+  for table_name in pbar:
+    pbar.set_description(rjust_and_shorten_text(
+      'remove {}'.format(table_name),
+      width=40
+    ))
     remove_records(db, table_name, frame_by_table_name[table_name], tables[table_name].key)
 
-  for table_name in table_names:
-    insert_records(db, table_name, frame_by_table_name[table_name])
+  pbar = tqdm(table_names_supporting_update_or_insert, leave=False)
+  for table_name in pbar:
+    df = frame_by_table_name[table_name]
+    pbar.set_description(rjust_and_shorten_text(
+      'update/insert {}({})'.format(table_name, len(df)),
+      width=40
+    ))
+    db[table_name].update_or_create_list(df.to_dict(orient='records'))
+
+  pbar = tqdm(table_names_not_supporting_update_or_insert, leave=False)
+  for table_name in pbar:
+    df = frame_by_table_name[table_name]
+    pbar.set_description(rjust_and_shorten_text(
+      'insert {}({})'.format(table_name, len(df)),
+      width=40
+    ))
+    insert_records(db, table_name, df)
 
   db.import_processed.update_or_create(id=zip_filename, version=current_version)
 
@@ -578,7 +651,7 @@ def main():
   )
 
   process_zip = lambda filename, stream:\
-    convert_zip_files(
+    convert_zip_file(
       filename, stream, db, field_mapping_by_table_name,
       early_career_researcher_person_ids
     )
