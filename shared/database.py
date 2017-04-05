@@ -226,12 +226,14 @@ def connect_configured_database():
   config.read('../app.cfg')
   db_config = config['database']
   name = db_config['name']
-  db_host = db_config['db_host']
-  db_user = db_config['db_user']
-  db_password = db_config['db_password']
+  db_host = db_config['host']
+  db_port = db_config['port']
+  db_user = db_config['user']
+  db_password = db_config['password']
   return connect_database(
     db=name,
     host=db_host,
+    port=db_port,
     user=db_user,
     password=db_password
   )
