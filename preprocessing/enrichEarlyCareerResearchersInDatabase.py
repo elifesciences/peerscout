@@ -86,6 +86,8 @@ def contains_author_with_name(item, first_name, last_name):
   ]) > 0
 
 def remove_duplicates(objs):
+  if len(objs) < 2:
+    return objs
   return pd.DataFrame(objs).drop_duplicates().to_dict(orient='records')
 
 def enrich_early_career_researchers(db):
