@@ -20,7 +20,7 @@ const styles = {
 
 
 const ManuscriptTooltipContent = ({
-  manuscript: { title, abstract, 'subject-areas': subjectAreas }
+  manuscript: { title, abstract, 'subject_areas': subjectAreas }
 }) => (
   <View>
     <HeaderTitle style={ styles.header }>{ title }</HeaderTitle>

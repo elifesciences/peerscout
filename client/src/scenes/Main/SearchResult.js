@@ -281,7 +281,7 @@ const formatPeriodStats = periodStats => {
   const {
     mean,
     count
-  } = periodStats['review-duration'] || {};
+  } = periodStats['review_duration'] || {};
   return [
     mean && `${formatDays(mean)} (avg over ${formatCount(count, 'review', 'reviews')})`,
     formatCount(periodStats['reviews_in_progress'], 'review', 'reviews', 'in progress'),
