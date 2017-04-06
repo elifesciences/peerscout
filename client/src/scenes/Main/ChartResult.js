@@ -265,6 +265,17 @@ const nodeColor = d => {
   }
 };
 
+const nodeReviewTimeColor = d => {
+  if (d.potentialReviewer) {
+    if (d.potentialReviewer.person['is_early_career_researcher']) {
+      return '#844';
+    }
+    return '#080';
+  } else {
+    return '#fff';
+  }
+};
+
 const nodeImage = d => {
   if (d.potentialReviewer) {
     return '/images/person.svg';
@@ -345,7 +356,7 @@ const createNode = (parent, nodes) => {
    .style('opacity', 0.4);
 
   node.append("path")
-    .style("fill", "#080")
+    .style("fill", nodeReviewTimeColor)
     .attr("d", d3.arc()
       .innerRadius(10)
       .outerRadius(15)
