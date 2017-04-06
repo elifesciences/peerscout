@@ -1,3 +1,3 @@
-from .DocumentSimilarityModel import DocumentSimilarityModel
+from .DocumentSimilarityModel import DocumentSimilarityModel, load_similarity_model_from_database
 from .ManuscriptModel import ManuscriptModel
 from .RecommendReviewers import RecommendReviewers

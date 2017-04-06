@@ -3,7 +3,6 @@ import itertools
 import xml.etree.ElementTree
 from os import listdir, makedirs
 from os.path import basename, splitext, isfile
-from textwrap import shorten
 from zipfile import ZipFile
 import html
 from html.parser import HTMLParser
@@ -48,9 +47,24 @@ def unescape_and_strip_tags(text):
   return strip_tags(html.unescape(text))
 
 def unescape_and_strip_tags_if_not_none(text):
-  return strip_tags(html.unescape(text)) if text else None
+  return unescape_and_strip_tags(text) if text else None
+
+def unescape_and_strip_tags_if_str(x):
+  return unescape_and_strip_tags(x) if isinstance(x, str) else x
 
 flatten = lambda l: [item for sublist in l for item in sublist]
+
+shorten_text = lambda s, width, placeholder='..': (
+  s
+  if len(s) <= width
+  else s[:width - len(placeholder)] + placeholder
+)
+
+rjust_and_shorten_text = lambda s, width, placeholder='..': (
+  shorten_text(s, width, placeholder)
+  if len(s) > width
+  else s.rjust(width)
+)
 
 def groupby_to_dict(l, kf, vf):
   return {
@@ -121,6 +135,10 @@ class TableOutput(object):
       a[v] = k
     return a
 
+  def to_frame(self):
+    m = self.matrix()
+    return pd.DataFrame(m[1:], columns=m[0])
+
   def matrix(self):
     column_count = len(self.columns)
     if self.key:
@@ -153,7 +171,7 @@ def write_tables_to_csv(csv_path, tables, pickle=False):
   makedirs(csv_path, exist_ok=True)
   pbar = tqdm(tables.keys(), leave=False)
   for name in pbar:
-    pbar.set_description("%40s" % shorten(name, width=40))
+    pbar.set_description(rjust_and_shorten_text(name, width=40))
     write_csv(csv_path + "/" + name + ".csv", tables[name].matrix())
     if pickle:
       write_pickle(csv_path + "/" + name + ".pickle", tables[name].matrix())
@@ -183,7 +201,7 @@ def process_files_in_zip(zip_filename, process_file, ext=None):
   with ZipFile(zip_filename) as zip_archive:
     pbar = tqdm(filter_filenames_by_ext(zip_archive.namelist(), ext), leave=False)
     for filename in pbar:
-      pbar.set_description("%40s" % shorten(filename, width=40))
+      pbar.set_description(rjust_and_shorten_text(filename, width=40))
       with zip_archive.open(filename, 'r') as zip_file:
         try:
           # process_file(filename, zip_file.read())
@@ -201,9 +219,9 @@ def process_files_in_directory(root_dir, process_file, ext=None):
       filter_filenames_by_ext(filenames, '.zip')
   pbar = tqdm(sorted(list(set(filenames))), leave=False)
   for filename in pbar:
-    pbar.set_description("%40s" % shorten(filename, width=40))
+    pbar.set_description(rjust_and_shorten_text(filename, width=40))
     full_filename = root_dir + "/" + filename
-    if get_filename_ext(filename) == '.zip':
+    if get_filename_ext(filename) == '.zip' and ext != '.zip':
       process_files_in_zip(full_filename, process_file, ext)
     else:
       with open(full_filename, 'rb') as f:
