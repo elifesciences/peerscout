@@ -245,7 +245,7 @@ class RecommendReviewers(object):
     self.similarity_model = similarity_model
 
     self.manuscript_versions_all_df = (
-      db.manuscript_version.read_df().reset_index()
+      db.manuscript_version.read_frame().reset_index()
       .rename(columns={'id': VERSION_ID})
     )
 
@@ -258,7 +258,7 @@ class RecommendReviewers(object):
     )
 
     self.manuscript_keywords_all_df = (
-      db.manuscript_keyword.read_df().reset_index()
+      db.manuscript_keyword.read_frame().reset_index()
     )
 
     self.manuscript_keywords_df = filter_by(
@@ -268,19 +268,19 @@ class RecommendReviewers(object):
     )
 
     self.authors_all_df = (
-      db.manuscript_author.read_df().reset_index()
+      db.manuscript_author.read_frame().reset_index()
     )
 
     self.editors_all_df = (
-      db.manuscript_editor.read_df().reset_index()
+      db.manuscript_editor.read_frame().reset_index()
     )
 
     self.senior_editors_all_df = (
-      db.manuscript_senior_editor.read_df().reset_index()
+      db.manuscript_senior_editor.read_frame().reset_index()
     )
 
     self.manuscript_history_all_df = (
-      db.manuscript_stage.read_df().reset_index()
+      db.manuscript_stage.read_frame().reset_index()
     )
 
     self.manuscript_history_df = filter_by(
@@ -290,7 +290,7 @@ class RecommendReviewers(object):
     )
 
     self.manuscript_subject_areas_all_df = (
-      db.manuscript_subject_area.read_df().reset_index()
+      db.manuscript_subject_area.read_frame().reset_index()
     )
 
     self.manuscript_subject_areas_df = filter_by(
@@ -300,22 +300,22 @@ class RecommendReviewers(object):
     )
 
     manuscripts_df = (
-      db.manuscript.read_df().reset_index()
+      db.manuscript.read_frame().reset_index()
       .rename(columns={'id': MANUSCRIPT_ID})
     )
 
     self.persons_df = (
-      db.person.read_df().reset_index()
+      db.person.read_frame().reset_index()
       .rename(columns={'id': PERSON_ID})
     )
 
     memberships_df = (
-      db.person_membership.read_df()
+      db.person_membership.read_frame()
       .rename(columns={'person_id': PERSON_ID})
     )
 
     dates_not_available_df = (
-      db.person_dates_not_available.read_df().reset_index()
+      db.person_dates_not_available.read_frame().reset_index()
       .rename(columns={'person_id': PERSON_ID})
     )
 
@@ -330,7 +330,7 @@ class RecommendReviewers(object):
     )
 
     self.assigned_reviewers_df = (
-      db.manuscript_potential_reviewer.read_df().reset_index()
+      db.manuscript_potential_reviewer.read_frame().reset_index()
       .rename(columns={'version_id': VERSION_ID})
     )
 

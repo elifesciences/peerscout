@@ -151,9 +151,6 @@ class Entity(object):
       index_col=primary_key[0].name if len(primary_key) == 1 else None
     )
 
-  def read_df(self):
-    return self.read_frame()
-
   def write_frame(self, df, **kwargs):
     df.to_sql(
       self.table.__tablename__,
