@@ -1,7 +1,6 @@
 from itertools import groupby
 import itertools
 import ast
-from datetime import datetime
 
 import pandas as pd
 
@@ -142,85 +141,33 @@ def unescape_if_string(s):
     return unescape_and_strip_tags(s)
   return s
 
-def create_stage_pivot(stage_history):
-  return stage_history.pivot_table(
-    index=[VERSION_ID, PERSON_ID],
-    columns='stage_name',
-    values='stage_timestamp',
-    aggfunc='first')
-
-def duration_stats_between_by_person(stage_pivot, from_stage, to_stage):
-  min_duration = pd.Timedelta(minutes=10)
-  if (from_stage in stage_pivot.columns) and (to_stage in stage_pivot.columns):
-    duration = stage_pivot[to_stage] - stage_pivot[from_stage]
-    duration = duration[duration > min_duration]
-  else:
-    return pd.DataFrame([])
-  duration = duration.astype('timedelta64[s]')
-  SECONDS_PER_DAY = 24 * 60 * 60
-  df = duration.dropna()\
-  .to_frame('duration')\
-  .reset_index()\
-  .groupby(PERSON_ID, as_index=False)\
-  .agg([
-    pd.np.min, pd.np.mean, pd.np.max, pd.np.size
-  ])['duration'].rename(columns={
-    'amin': 'min',
-    'amax': 'max',
-    'size': 'count'
-  })
-  for c in ['min', 'max', 'mean']:
-    df[c] = df[c] / SECONDS_PER_DAY
-  return df
-
-def filter_stage_pivot_by_stage(stage_pivot, stage, condition):
-  if condition is not None and stage in stage_pivot.columns:
-    return stage_pivot[
-      stage_pivot[stage].apply(lambda dt: not is_null(dt) and condition(dt))
-    ]
-  else:
-    return stage_pivot
-
-def get_stage(stage_pivot, stage_name):
-  return (
-    stage_pivot[stage_name]
-    if stage_name in stage_pivot.columns
-    else [pd.NaT] * len(stage_pivot)
-  )
-
-def stats_by_person_for_period(stage_pivot, condition=None):
-  debug("stage_pivot:", stage_pivot)
-  if len(stage_pivot) == 0:
+def stats_by_person_for_period(table):
+  df = table.read_frame()
+  debug("person stats frame ({}):\n".format(table.table.__tablename__), df)
+  if len(df) == 0:
     return {}
-  review_duration_by_person_map = duration_stats_between_by_person(
-    filter_stage_pivot_by_stage(stage_pivot, 'Review Received', condition),
-    'Reviewers Accept', 'Review Received'
-  ).to_dict(orient='index')
-  reviews_in_progress_map = stage_pivot[
-    pd.notnull(get_stage(stage_pivot, 'Reviewers Accept')) &
-    pd.isnull(get_stage(stage_pivot, 'Review Received'))
-  ].reset_index().groupby(PERSON_ID).size().to_dict()
-  waiting_to_be_accepted_map = stage_pivot[
-    pd.notnull(get_stage(stage_pivot, 'Contacting Reviewers')) &
-    (
-      pd.isnull(get_stage(stage_pivot, 'Reviewers Accept')) &
-      pd.isnull(get_stage(stage_pivot, 'Reviewers Decline'))
-    )
-  ].reset_index().groupby(PERSON_ID).size().to_dict()
-  declined_map = stage_pivot[
-    pd.notnull(get_stage(stage_pivot, 'Reviewers Decline'))
-  ].reset_index().groupby(PERSON_ID).size().to_dict()
-  return clean_result(dict((k, {
-    'review_duration': review_duration_by_person_map.get(k),
-    'reviews_in_progress': int(reviews_in_progress_map.get(k, 0)),
-    'waiting_to_be_accepted': int(waiting_to_be_accepted_map.get(k, 0)),
-    'declined': int(declined_map.get(k, 0))
-  }) for k in (
-    set(review_duration_by_person_map.keys()) |
-    set(reviews_in_progress_map.keys()) |
-    set(waiting_to_be_accepted_map.keys()) |
-    set(declined_map.keys())
-  )))
+
+  def get_review_duration_details(v):
+    if v['reviewed_count'] == 0:
+      return
+    return {
+      'min': v['reviewed_duration_min'],
+      'max': v['reviewed_duration_max'],
+      'mean': v['reviewed_duration_avg'],
+      'count': v['reviewed_count']
+    }
+
+  m = clean_result({
+    k: {
+      'review_duration': get_review_duration_details(v),
+      'reviews_in_progress': v['awaiting_review_count'],
+      'waiting_to_be_accepted': v['awaiting_accept_count'],
+      'declined': v['declined_count']
+    }
+    for k, v in df.to_dict(orient='index').items()
+  })
+  debug("person stats map:\n", m)
+  return m
 
 def select_dict_keys(d, keys):
   return {k: d[k] for k in keys}
@@ -339,12 +286,8 @@ class RecommendReviewers(object):
     # early_career_researchers_person_ids = set(early_career_researchers_df[PERSON_ID].values)
 
     print("gathering stats")
-    stage_pivot = create_stage_pivot(self.manuscript_history_all_df)
-    overall_stats_map = stats_by_person_for_period(stage_pivot)
-
-    today = datetime.today()
-    from_12m = pd.Timestamp(today.replace(year=today.year - 1))
-    last12m_stats_map = stats_by_person_for_period(stage_pivot, lambda dt: dt >= from_12m)
+    overall_stats_map = stats_by_person_for_period(db.person_review_stats_overall)
+    last12m_stats_map = stats_by_person_for_period(db.person_review_stats_last12m)
 
     print("building person list")
     persons_list = [{

@@ -14,6 +14,8 @@ from .database_schema import (
   TABLES
 )
 
+from .database_views import create_views
+
 class CustomJSONEncoder(JSONEncoder):
   def default(self, obj): # pylint: disable=E0202
     try:
@@ -177,35 +179,70 @@ class Database(object):
   def __init__(self, engine):
     self.engine = engine
     self.session = sessionmaker(engine)()
+    self.views = create_views(engine.dialect.name)
     self.tables = {
       t.__tablename__: Entity(self.session, t)
-      for t in TABLES
+      for t in TABLES + self.views
     }
 
-  def update_schema(self):
+  def get_current_schema_version(self):
     try:
       version = self.tables['schema_version'].get(DEFAULT_SCHEMA_VERSION_ID)
-      if version is not None and version.version == SCHEMA_VERSION:
-        Base.metadata.create_all(self.engine)
-        return
-      else:
-        print("schema out of sync, re-creating schema (was: {}, required: {})".format(
-          version.version if version else None, SCHEMA_VERSION
-        ))
+      return version
     except sqlalchemy.exc.ProgrammingError:
-      print("creating schema")
+      return None
     except sqlalchemy.exc.OperationalError:
-      print("creating schema")
+      return None
+
+  def drop_views(self):
+    for view in reversed(self.views):
+      self.engine.execute('DROP VIEW IF EXISTS {}'.format(
+        view.__tablename__
+      ))
+    self.commit()
+
+  def create_views(self):
+    for view in self.views:
+      print('creating view {}'.format(view.__tablename__))
+      self.engine.execute('CREATE VIEW {} AS {}'.format(
+        view.__tablename__,
+        view.__query__
+      ))
+    self.commit()
+
+  def _shallow_migrate_schema(self):
+    print('shallow migrate schema (no data modification)')
+    Base.metadata.create_all(self.engine)
+    self.drop_views()
+    self.create_views()
+
+  def _full_migrate_schema(self):
+    self.drop_views()
     # the commit is necessary to prevent freezing
     self.commit()
     Base.metadata.drop_all(self.engine)
     Base.metadata.create_all(self.engine)
+    self.create_views()
+
     self.tables['schema_version'].update_or_create(
       schema_version_id=DEFAULT_SCHEMA_VERSION_ID,
       version=SCHEMA_VERSION
     )
     self.commit()
-    print("done")
+
+  def update_schema(self):
+    version = self.get_current_schema_version()
+    if version is not None and version.version == SCHEMA_VERSION:
+      self._shallow_migrate_schema()
+    else:
+      if version is None:
+        print("creating schema")
+      else:
+        print("schema out of sync, re-creating schema (was: {}, required: {})".format(
+          version.version if version else None, SCHEMA_VERSION
+        ))
+      self._full_migrate_schema()
+      print("done")
 
   def sorted_table_names(self):
     return [t.name for t in Base.metadata.sorted_tables]
@@ -234,6 +271,8 @@ def connect_configured_database():
   config.read('../app.cfg')
   db_config = config['database']
   name = db_config['name']
+  if name.startswith('sqlite:'):
+    return Database(sqlalchemy.create_engine(name, echo=False))
   db_host = db_config['host']
   db_port = db_config['port']
   db_user = db_config['user']
