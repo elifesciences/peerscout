@@ -76,7 +76,7 @@ def process_article_abstracts(db, vec_size=100, n_epochs=10):
 
     ml_model_data_table = db['ml_model_data']
     ml_model_data_table.update_or_create(
-      id=ml_model_data_table.table.DOC2VEC_MODEL_ID,
+      model_id=ml_model_data_table.table.DOC2VEC_MODEL_ID,
       data=predict_model_binary
     )
 

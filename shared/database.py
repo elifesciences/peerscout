@@ -57,6 +57,19 @@ class Entity(object):
     if self.auto_commit:
       self.session.commit()
 
+  def _assert_single_primary_key(self):
+    if len(self.primary_key) != 1:
+      raise Exception("operation only supported for simple primary key, but found: {}".format(
+        self.primary_key
+      ))
+
+  def _get_single_primary_key_name(self):
+    self._assert_single_primary_key()
+    return self.primary_key[0].name
+
+  def _get_single_primary_key_field(self):
+    return getattr(self.table, self._get_single_primary_key_name())
+
   def delete_all(self):
     self.session.query(self.table).delete()
     self._auto_commit_if_enabled()
@@ -90,8 +103,9 @@ class Entity(object):
     self._auto_commit_if_enabled()
 
   def update_or_create(self, *args, **kwargs):
+    id_name = self._get_single_primary_key_name()
     instance = self._get_instance(*args, **kwargs)
-    if self.exists(instance.id):
+    if self.exists(getattr(instance, id_name)):
       self.session.merge(instance)
     else:
       self.session.add(instance)
@@ -118,8 +132,9 @@ class Entity(object):
       self.create_list(not_existing_objs)
 
   def exists(self, entity_id):
+    id_field = self._get_single_primary_key_field()
     return self.session.query(self.table).filter(
-      self.table.id == entity_id
+      id_field == entity_id
     ).count() > 0
 
   def get(self, entity_id):
@@ -132,11 +147,7 @@ class Entity(object):
     return q.all()
 
   def get_existing_ids(self, ids):
-    if len(self.primary_key) != 1:
-      raise Exception("operation only supported for simple primary key, but found: {}".format(
-        self.primary_key
-      ))
-    id_field = getattr(self.table, self.primary_key[0].name)
+    id_field = self._get_single_primary_key_field()
     return set([x[0] for x in self.session.query(
       id_field
     ).filter(
@@ -190,7 +201,7 @@ class Database(object):
     Base.metadata.drop_all(self.engine)
     Base.metadata.create_all(self.engine)
     self.tables['schema_version'].update_or_create(
-      id=DEFAULT_SCHEMA_VERSION_ID,
+      schema_version_id=DEFAULT_SCHEMA_VERSION_ID,
       version=SCHEMA_VERSION
     )
     self.commit()
