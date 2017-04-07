@@ -15,25 +15,25 @@ from sqlalchemy.dialects import postgresql
 
 Base = declarative_base()
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 class SchemaVersion(Base):
   __tablename__ = "schema_version"
 
-  id = Column('id', String, primary_key=True)
-  version = Column('version', Integer)
+  schema_version_id = Column(String, primary_key=True)
+  version = Column(Integer)
 
 class ImportProcessed(Base):
   __tablename__ = "import_processed"
 
-  id = Column('id', String, primary_key=True)
-  version = Column('version', Integer)
-  when = Column('data', TIMESTAMP)
+  import_processed_id = Column(String, primary_key=True)
+  version = Column(Integer)
+  when = Column(TIMESTAMP)
 
 class Person(Base):
   __tablename__ = "person"
 
-  person_id = Column('person_id', String, primary_key=True)
+  person_id = Column(String, primary_key=True)
   title = Column(String)
   first_name = Column(String)
   middle_name = Column(String)
@@ -206,7 +206,7 @@ class ML_ModelData(Base):
   LDA_MODEL_ID = 'lda'
   DOC2VEC_MODEL_ID = 'doc2vec'
 
-  id = Column(String, primary_key=True)
+  model_id = Column(String, primary_key=True)
   data = Column(LargeBinary)
 
 TABLES = [

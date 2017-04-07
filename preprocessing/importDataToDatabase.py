@@ -637,7 +637,7 @@ def convert_zip_file(
     ))
     insert_records(db, table_name, df)
 
-  db.import_processed.update_or_create(id=zip_filename, version=current_version)
+  db.import_processed.update_or_create(import_processed_id=zip_filename, version=current_version)
 
   db.commit()
 

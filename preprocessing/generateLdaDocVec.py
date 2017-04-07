@@ -71,7 +71,7 @@ def process_article_abstracts(db, n_topics=10):
 
     ml_model_data_table = db['ml_model_data']
     ml_model_data_table.update_or_create(
-      id=ml_model_data_table.table.LDA_MODEL_ID,
+      model_id=ml_model_data_table.table.LDA_MODEL_ID,
       data=predict_model_binary
     )
 

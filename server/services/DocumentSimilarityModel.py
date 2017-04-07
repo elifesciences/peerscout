@@ -151,11 +151,11 @@ def load_similarity_model_from_database(db, manuscript_model):
   ])
 
   model_data = pd.DataFrame(db.session.query(
-    ml_model_data_table.table.id,
+    ml_model_data_table.table.model_id,
     ml_model_data_table.table.data
   ).filter(
-    ml_model_data_table.table.id.in_(required_model_ids)
-  ).all(), columns=['id', 'data']).set_index('id')
+    ml_model_data_table.table.model_id.in_(required_model_ids)
+  ).all(), columns=['model_id', 'data']).set_index('model_id')
 
   if set(model_data.index.values) != required_model_ids:
     print("Warning: required model data for {} but only found data for {}".format(
