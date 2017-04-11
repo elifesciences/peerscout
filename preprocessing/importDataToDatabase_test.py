@@ -137,3 +137,21 @@ def test_with_missing_persons():
       set(df['version_id']) ==
       set([VERSION_ID1])
     )
+
+def test_with_manuscript_suffix():
+  with convert_files(['with-manuscript-suffix-00001-suffix.xml']) as db:
+    df = db.manuscript_version.read_frame().reset_index()
+    print(df)
+    assert (
+      set(df['version_id']) ==
+      set([VERSION_ID1])
+    )
+
+def test_with_invalid_manuscript_ref():
+  with convert_files(['with-invalid-manuscript-ref.xml']) as db:
+    df = db.manuscript_version.read_frame().reset_index()
+    print(df)
+    assert (
+      set(df['version_id']) ==
+      set(['with-invalid-manuscript-ref-1'])
+    )
