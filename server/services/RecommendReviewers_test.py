@@ -245,6 +245,20 @@ MANUSCRIPT_VERSION3_RESULT = {
 
 MANUSCRIPT_VERSION3 = MANUSCRIPT_VERSION3_RESULT
 
+MANUSCRIPT_VERSION4_RESULT = {
+  **MANUSCRIPT_VERSION1_RESULT,
+  **MANUSCRIPT_ID_FIELDS4
+}
+
+MANUSCRIPT_VERSION4 = MANUSCRIPT_VERSION4_RESULT
+
+MANUSCRIPT_VERSION5_RESULT = {
+  **MANUSCRIPT_VERSION1_RESULT,
+  **MANUSCRIPT_ID_FIELDS5
+}
+
+MANUSCRIPT_VERSION5 = MANUSCRIPT_VERSION5_RESULT
+
 KEYWORD1 = 'keyword1'
 
 MANUSCRIPT_KEYWORD1 = {
@@ -354,6 +368,11 @@ def create_recommend_reviewers(datasets):
       } for row in datasets[table_name].to_dict(orient='records')]
       print("objs", table_name, ":\n", objs)
       db[table_name].create_list(objs)
+
+  print("view manuscript_person_review_times:\n",
+    db.manuscript_person_review_times.read_frame())
+  print("view person_review_stats_overall:\n",
+    db.person_review_stats_overall.read_frame())
 
   manuscript_model = ManuscriptModel(db)
   similarity_model = DocumentSimilarityModel(
@@ -617,6 +636,49 @@ def test_matching_one_keyword_author_should_not_return_author_of_rejected_manusc
   print("result:", PP.pformat(result))
   assert result['potential_reviewers'] == []
 
+def _review_complete_stages(id_fields, contacted, accepted, reviewed):
+  return [{
+    **id_fields,
+    'stage_name': STAGE_CONTACTING_REVIEWERS,
+    'stage_timestamp': contacted
+  }, {
+    **id_fields,
+    'stage_name': STAGE_REVIEW_ACCEPTED,
+    'stage_timestamp': accepted
+  }, {
+    **id_fields,
+    'stage_name': STAGE_REVIEW_COMPLETE,
+    'stage_timestamp': reviewed
+  }]
+
+def _declined_stages(id_fields, contacted, declined):
+  return [{
+    **id_fields,
+    'stage_name': STAGE_CONTACTING_REVIEWERS,
+    'stage_timestamp': contacted
+  }, {
+    **id_fields,
+    'stage_name': STAGE_REVIEW_DECLINE,
+    'stage_timestamp': declined
+  }]
+
+def _awaiting_accept_stages(id_fields, contacted):
+  return [{
+    **id_fields,
+    'stage_name': STAGE_CONTACTING_REVIEWERS,
+    'stage_timestamp': contacted
+  }]
+
+def _awaiting_review_stages(id_fields, contacted, accepted):
+  return [{
+    **id_fields,
+    'stage_name': STAGE_CONTACTING_REVIEWERS,
+    'stage_timestamp': contacted
+  }, {
+    **id_fields,
+    'stage_name': STAGE_REVIEW_ACCEPTED,
+    'stage_timestamp': accepted
+  }]
 
 def test_matching_one_keyword_author_should_return_stats():
   datasets = dict(DATASETS)
@@ -624,7 +686,11 @@ def test_matching_one_keyword_author_should_return_stats():
     PERSON1
   ], columns=PERSON.columns)
   datasets['manuscript_version'] = pd.DataFrame([
-    MANUSCRIPT_VERSION1
+    MANUSCRIPT_VERSION1,
+    MANUSCRIPT_VERSION2,
+    MANUSCRIPT_VERSION3,
+    MANUSCRIPT_VERSION4,
+    MANUSCRIPT_VERSION5
   ], columns=MANUSCRIPT_VERSION.columns)
   datasets['manuscript_author'] = pd.DataFrame([
     AUTHOR1
@@ -634,37 +700,51 @@ def test_matching_one_keyword_author_should_return_stats():
   ], columns=MANUSCRIPT_KEYWORD.columns)
   # add two review durations (two stages each)
   # also add an open review (accepted)
-  datasets['manuscript_stage'] = pd.DataFrame([{
-    **MANUSCRIPT_ID_FIELDS1,
-    PERSON_ID: PERSON_ID1,
-    'stage_name': STAGE_REVIEW_ACCEPTED,
-    'stage_timestamp': pd.Timestamp('2017-01-01')
-  }, {
-    **MANUSCRIPT_ID_FIELDS1,
-    PERSON_ID: PERSON_ID1,
-    'stage_name': STAGE_REVIEW_COMPLETE,
-    'stage_timestamp': pd.Timestamp('2017-01-02')
-  }, {
-    **MANUSCRIPT_ID_FIELDS2,
-    PERSON_ID: PERSON_ID1,
-    'stage_name': STAGE_REVIEW_ACCEPTED,
-    'stage_timestamp': pd.Timestamp('2017-02-01')
-  }, {
-    **MANUSCRIPT_ID_FIELDS2,
-    PERSON_ID: PERSON_ID1,
-    'stage_name': STAGE_REVIEW_COMPLETE,
-    'stage_timestamp': pd.Timestamp('2017-02-03')
-  }, {
-    **MANUSCRIPT_ID_FIELDS3,
-    PERSON_ID: PERSON_ID1,
-    'stage_name': STAGE_REVIEW_ACCEPTED,
-    'stage_timestamp': pd.Timestamp('2017-02-01')
-  }, {
-    **MANUSCRIPT_ID_FIELDS4,
-    PERSON_ID: PERSON_ID1,
-    'stage_name': STAGE_CONTACTING_REVIEWERS,
-    'stage_timestamp': pd.Timestamp('2017-02-01')
-  }], columns=MANUSCRIPT_STAGE.columns)
+  datasets['manuscript_stage'] = pd.DataFrame(
+    (
+      _review_complete_stages(
+        {
+          **MANUSCRIPT_ID_FIELDS1,
+          PERSON_ID: PERSON_ID1
+        },
+        contacted=pd.Timestamp('2017-01-01'),
+        accepted=pd.Timestamp('2017-01-02'),
+        reviewed=pd.Timestamp('2017-01-03')
+      ) +
+      _review_complete_stages(
+        {
+          **MANUSCRIPT_ID_FIELDS2,
+          PERSON_ID: PERSON_ID1
+        },
+        contacted=pd.Timestamp('2017-02-01'),
+        accepted=pd.Timestamp('2017-02-02'),
+        reviewed=pd.Timestamp('2017-02-04')
+      ) +
+      _awaiting_accept_stages(
+        {
+          **MANUSCRIPT_ID_FIELDS3,
+          PERSON_ID: PERSON_ID1
+        },
+        contacted=pd.Timestamp('2017-02-01')
+      ) +
+      _awaiting_review_stages(
+        {
+          **MANUSCRIPT_ID_FIELDS4,
+          PERSON_ID: PERSON_ID1
+        },
+        contacted=pd.Timestamp('2017-02-01'),
+        accepted=pd.Timestamp('2017-02-02')
+      ) +
+      _declined_stages(
+        {
+          **MANUSCRIPT_ID_FIELDS5,
+          PERSON_ID: PERSON_ID1
+        },
+        contacted=pd.Timestamp('2017-02-01'),
+        declined=pd.Timestamp('2017-02-02')
+      )
+    ), columns=MANUSCRIPT_STAGE.columns
+  )
   recommend_reviewers = create_recommend_reviewers(datasets)
   review_duration = {
     'min': 1.0,
@@ -676,7 +756,7 @@ def test_matching_one_keyword_author_should_return_stats():
     'review_duration': review_duration,
     'reviews_in_progress': 1,
     'waiting_to_be_accepted': 1,
-    'declined': 0
+    'declined': 1
   }
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   result_person = result['potential_reviewers'][0]['person']
