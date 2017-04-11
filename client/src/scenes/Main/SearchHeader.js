@@ -169,6 +169,7 @@ class SearchHeader extends React.Component {
                     searchText={ currentSubjectArea || subjectArea || '' }
                     onUpdateInput={ newValue => this.setState({currentSubjectArea: newValue}) }
                     onNewRequest={ newValue => updateSearchOption('subjectArea', newValue) }
+                    onClose={ () => updateSearchOption('subjectArea', currentSubjectArea || '') }
                     dataSource={ allSubjectAreas }
                     filter={ AutoComplete.fuzzyFilter }
                     style={ styles.textField }
