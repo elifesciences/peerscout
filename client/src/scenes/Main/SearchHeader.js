@@ -109,7 +109,7 @@ class SearchHeader extends React.Component {
           searchOptions.keywords &&
           searchOptions.keywords.length > 0 &&
           searchOptions.keywords.split(',').map(k => k.trim())
-        ),
+        ) || [],
         [BY_SEARCH]: searchOptions
       }
     }
