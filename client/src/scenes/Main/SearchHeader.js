@@ -14,6 +14,10 @@ import {
 } from '../../components';
 
 const styles = {
+  container: {
+    overflow: 'hidden',
+    zIndex: 1
+  },
   field: {
     marginLeft: 20
   },
@@ -135,7 +139,7 @@ class SearchHeader extends React.Component {
     const { subjectArea, abstract } = (state[BY_SEARCH] || {});
 
     return (
-      <Paper style={{ overflow: 'hidden' }} zDepth={ 2 }>
+      <Paper style={ styles.container } zDepth={ 2 }>
         <Tabs
           value={ currentTab }
           onChange={ this.handleTabChange }
