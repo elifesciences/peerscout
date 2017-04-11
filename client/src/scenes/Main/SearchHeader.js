@@ -113,7 +113,9 @@ class SearchHeader extends React.Component {
         [BY_SEARCH]: searchOptions
       }
     }
-    return this.state;
+    return {
+      currentTab: this.state.currentTab
+    };
   }
 
   componentWillReceiveProps(nextProps) {
