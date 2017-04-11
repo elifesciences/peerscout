@@ -1,5 +1,6 @@
 import itertools
 from os.path import basename, splitext
+import re
 
 import pandas as pd
 from tqdm import tqdm
@@ -367,8 +368,15 @@ default_combined_list_transformer_by_table_name = {
 def get_combined_list_transformer(table_name):
   return default_combined_list_transformer_by_table_name.get(table_name)
 
+MANUSCRIPT_NO_REGEX = re.compile(r'^.*-(\d{3,})\D?.*$')
+
 def manuscript_number_to_no(x):
-  return x.split('-')[-1]
+  m = MANUSCRIPT_NO_REGEX.match(x)
+  if m:
+    return m.group(1)
+  else:
+    # fallback, return full manuscript reference instead
+    return x
 
 def version_key_to_no(x):
   return 1 + int(x.split('|')[-1])
