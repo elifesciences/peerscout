@@ -127,6 +127,12 @@ class SearchHeader extends React.Component {
       this.setState(this.getInitialiseState(nextProps.searchOptions));
     }
   }
+
+  updateManuscriptNumber(value) {
+    const m = /^.*\D(\d{5}$)/.exec(value);
+    const manuscriptNumber = m ? m[1] : value;
+    this.updateSearchOption('manuscriptNumber', manuscriptNumber);
+  }
   
   render() {
     const { state, updateSearchOption, props } = this;
@@ -152,9 +158,9 @@ class SearchHeader extends React.Component {
                 </View>
                 <View style={ styles.field }>
                   <TextField
-                    floatingLabelText="Manuscript number"
+                    floatingLabelText="Manuscript number (last 5 digits)"
                     value={ manuscriptNumber || '' }
-                    onChange={ (event, newValue) => updateSearchOption('manuscriptNumber', newValue) }
+                    onChange={ (event, newValue) => this.updateManuscriptNumber(newValue) }
                     style={ styles.textField }
                   />
                 </View>
