@@ -29,7 +29,8 @@
     "react-portal-tooltip": "^1.1.5",
     "react-split-pane": "^0.1.59",
     "react-tap-event-plugin": "^2.0.1",
-    "reselect": "^2.5.4"
+    "reselect": "^2.5.4",
+    "whatwg-fetch": "^2.0.3"
   },
   "devDependencies": {
     "babel-core": "^6.21.0",
