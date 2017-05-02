@@ -14,16 +14,21 @@ export { default as SelectField } from 'material-ui/SelectField';
 export { default as Slider } from 'material-ui/Slider';
 export { default as Snackbar } from 'material-ui/Snackbar';
 
+import Radium from 'radium';
 import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
 SelectField.Item = MenuItem;
 
 import { Tabs, Tab } from 'material-ui/Tabs';
-Tabs.Tab = Tab;
+
+const RadiumTabs = Radium(Tabs);
+const RadiumTab = Radium(Tab);
+RadiumTabs.Tab = RadiumTab;
 
 export {
-  Tabs, Tab
-}
+  RadiumTabs as Tabs,
+  RadiumTab as Tab
+};
 
 export * from 'material-ui/Card';
 

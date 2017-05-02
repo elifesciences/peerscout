@@ -4,8 +4,11 @@ import debounce from 'debounce';
 import createHashHistory from 'history/createHashHistory';
 import equals from 'deep-equal';
 import SplitPane from 'react-split-pane';
+import Radium from 'radium';
 
 import {
+  FlexColumn,
+  FlexRow,
   LoadingIndicator,
   View
 } from '../../components';
@@ -15,18 +18,25 @@ import SearchResult from './SearchResult';
 import ChartResult from './ChartResult';
 
 const styles = {
-  containerWithMargin: {
+  outerResultsContainer: {
     flex: 1
   },
   resultsContainer: {
     position: 'relative',
-    flex: 1,
-    display: 'flex'
-  },
-  sceneContainer: {
     flex: 1
+  },
+  splitPane: {
+    display: 'flex',
+    flex: 1
+  },
+  loadingIndicator: {
+    position: 'absolute',
+    marginTop: 10,
+    marginLeft: 10
   }
-}
+};
+
+const RadiumSplitPane = Radium(SplitPane);
 
 const parseSearch = search => {
   const q = search[0] === '?' ? search.substring(1) : search;
@@ -215,16 +225,16 @@ class Main extends React.Component {
     const hasPotentialReviewers =
       results && (results.potentialReviewers) && (results.potentialReviewers.length > 0);
     return (
-      <View style={ styles.sceneContainer }>
+      <FlexColumn>
         <SearchHeader
           searchOptions={ searchOptions }
           onSearchOptionsChanged={ this.onSearchOptionsChanged }
           allSubjectAreas={ allSubjectAreas }
           allKeywords={ allKeywords }
         />
-        <View style={ styles.containerWithMargin } className="results-container">
-          <LoadingIndicator loading={ loading }>
-            <View style={ styles.resultsContainer } className="inner-results-container">
+        <FlexRow style={ styles.outerResultsContainer } className="results-container">
+          <LoadingIndicator style={ styles.loadingIndicator } loading={ loading }>
+            <FlexRow style={ styles.resultsContainer } className="inner-results-container">
               {
                 results && !hasPotentialReviewers && (
                   <SearchResult
@@ -237,7 +247,7 @@ class Main extends React.Component {
               }
               {
                 results && hasPotentialReviewers && (
-                  <SplitPane split="vertical" defaultSize="50%">
+                  <SplitPane style={ styles.splitPane } split="vertical" defaultSize="50%">
                     <ChartResult
                       searchResult={ results }
                       onNodeClicked={ this.onNodeClicked }
@@ -252,10 +262,10 @@ class Main extends React.Component {
                   </SplitPane>
                 )
               }
-            </View>
+            </FlexRow>
           </LoadingIndicator>
-        </View>
-      </View>
+        </FlexRow>
+      </FlexColumn>
     );
   }
 }
