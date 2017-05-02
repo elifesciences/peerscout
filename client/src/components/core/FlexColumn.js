@@ -10,7 +10,7 @@ const styles = {
 };
 
 const FlexColumn = props => (
-  <View style={ styles.flexColumn }>
+  <View style={ Object.assign({}, styles.flexColumn, props.style) }>
     { props.children }
   </View>
 );

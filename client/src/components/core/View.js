@@ -1,4 +1,5 @@
 import React from 'react';
+import Radium from 'radium';
 
 const View = props => (
   <div { ...props }>
@@ -6,4 +7,4 @@ const View = props => (
   </div>
 );
 
-export default View;
+export default Radium(View);

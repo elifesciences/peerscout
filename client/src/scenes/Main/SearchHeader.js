@@ -25,8 +25,10 @@ const styles = {
     display: 'inline-block'
   },
   header: {
-    padding: 8,
     paddingTop: 0,
+    paddingLeft: 8,
+    paddingRight: 8,
+    paddingBottom: 8,
     marginTop: -10,
     overflow: 'hidden'
   },
@@ -38,7 +40,7 @@ const styles = {
     marginRight: 4,
     marginBottom: 4
   }
-}
+};
 
 const BY_MANUSCRIPT = 'by-manuscript';
 const BY_SEARCH = 'by-search';
