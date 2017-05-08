@@ -82,6 +82,7 @@ def groupby_to_dict(l, kf, vf):
   }
 
 def groupby_columns_to_dict(groupby_keys, version_keys, vf):
+  get_groupby_key = lambda x: x[0]
   return {
     k: [
       item for item in [
@@ -89,7 +90,10 @@ def groupby_columns_to_dict(groupby_keys, version_keys, vf):
         set([version_key for _, version_key in list(v)])
       ] if item
     ]
-    for k, v in groupby(zip(groupby_keys, version_keys), lambda x: x[0])
+    for k, v in groupby(sorted(
+      zip(groupby_keys, version_keys),
+      key=get_groupby_key
+    ), get_groupby_key)
   }
 
 def filter_dict_keys(d, f):

@@ -511,6 +511,33 @@ def test_matching_manuscript_should_return_draft_version_with_authors():
   assert [m[MANUSCRIPT_ID] for m in result['matching_manuscripts']] == [MANUSCRIPT_ID1]
   assert [p[PERSON_ID] for p in result['matching_manuscripts'][0]['authors']] == [PERSON_ID1]
 
+def test_matching_manuscript_should_return_multiple_authors():
+  datasets = dict(DATASETS)
+  datasets['person'] = pd.DataFrame([
+    PERSON1,
+    PERSON2
+  ], columns=PERSON.columns)
+  datasets['manuscript_version'] = pd.DataFrame([
+    MANUSCRIPT_VERSION1,
+    MANUSCRIPT_VERSION2
+  ], columns=MANUSCRIPT_VERSION.columns)
+  datasets['manuscript_author'] = pd.DataFrame([
+    AUTHOR1,
+    {
+      **AUTHOR1,
+      **MANUSCRIPT_ID_FIELDS2
+    },
+    {
+      **AUTHOR2,
+      **MANUSCRIPT_ID_FIELDS1
+    }
+  ], columns=MANUSCRIPT_AUTHOR.columns)
+  recommend_reviewers = create_recommend_reviewers(datasets)
+  result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_ID1)
+  print("result:", PP.pformat(result))
+  author_person_ids = [p[PERSON_ID] for p in result['matching_manuscripts'][0]['authors']]
+  assert set(author_person_ids) == set([PERSON_ID1, PERSON_ID2])
+
 def test_matching_manuscript_should_not_recommend_its_authors():
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
