@@ -648,6 +648,8 @@ class RecommendReviewers(object):
       ))))
       best_score = get_first(scores_by_manuscript, {})
 
+      author_of_manuscript_ids = set([m[VERSION_ID] for m in author_of_manuscripts])
+
       potential_reviewer = {
         'person': self.persons_map.get(person_id, None),
         'author_of_manuscripts': clean_manuscripts(author_of_manuscripts),
@@ -655,7 +657,11 @@ class RecommendReviewers(object):
           'keyword': best_score.get('keyword'),
           'similarity': best_score.get('similarity'),
           'combined': best_score.get('combined'),
-          'by_manuscript': scores_by_manuscript
+          'by_manuscript': [
+            m
+            for m in scores_by_manuscript
+            if m[VERSION_ID] in author_of_manuscript_ids
+          ]
         }
       }
       return potential_reviewer
