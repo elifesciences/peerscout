@@ -653,7 +653,6 @@ class RecommendReviewers(object):
       potential_reviewer = {
         'person': self.persons_map.get(person_id, None),
         'author_of_manuscripts': clean_manuscripts(author_of_manuscripts),
-        'reviewer_of_manuscripts': clean_manuscripts(reviewer_of_manuscripts),
         'scores': {
           'keyword': best_score.get('keyword'),
           'similarity': best_score.get('similarity'),

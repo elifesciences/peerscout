@@ -892,10 +892,11 @@ def test_matching_one_keyword_should_return_previous_reviewer():
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", PP.pformat(result))
   assert [r['person'][PERSON_ID] for r in result['potential_reviewers']] == [PERSON_ID1]
-  assert ([
-    m[MANUSCRIPT_ID]
-    for m in result['potential_reviewers'][0]['reviewer_of_manuscripts']
-  ] == [MANUSCRIPT_ID1])
+  # Note: reviewer_of_manuscripts no longer returned
+  # assert ([
+  #   m[MANUSCRIPT_ID]
+  #   for m in result['potential_reviewers'][0]['reviewer_of_manuscripts']
+  # ] == [MANUSCRIPT_ID1])
   # Note: reviewers are no longer returned
   # assert ([
   #   p[PERSON_ID]
