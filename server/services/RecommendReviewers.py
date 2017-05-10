@@ -648,8 +648,6 @@ class RecommendReviewers(object):
       ))))
       best_score = get_first(scores_by_manuscript, {})
 
-      assignment_status = get_first(assigned_reviewers_by_person_id.get(person_id, []))
-
       potential_reviewer = {
         'person': self.persons_map.get(person_id, None),
         'author_of_manuscripts': clean_manuscripts(author_of_manuscripts),
@@ -660,8 +658,6 @@ class RecommendReviewers(object):
           'by_manuscript': scores_by_manuscript
         }
       }
-      if assignment_status is not None:
-        potential_reviewer['assignment_status'] = assignment_status
       return potential_reviewer
 
     potential_reviewers = [
