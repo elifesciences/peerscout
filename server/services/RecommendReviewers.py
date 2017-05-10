@@ -191,6 +191,17 @@ def parse_list_if_str(x):
     return ast.literal_eval(x)
   return x
 
+HIDDEN_MANUSCRIPT_PROPS = set(['editors', 'reviewers'])
+
+def is_visible_manuscript_prop(key):
+  return key not in HIDDEN_MANUSCRIPT_PROPS
+
+def clean_manuscript(m):
+  return filter_dict_keys(m, is_visible_manuscript_prop)
+
+def clean_manuscripts(manuscripts):
+  return [clean_manuscript(m) for m in manuscripts]
+
 class RecommendReviewers(object):
   def __init__(self, db, manuscript_model, similarity_model=None):
     self.similarity_model = similarity_model
@@ -641,8 +652,8 @@ class RecommendReviewers(object):
 
       potential_reviewer = {
         'person': self.persons_map.get(person_id, None),
-        'author_of_manuscripts': author_of_manuscripts,
-        'reviewer_of_manuscripts': reviewer_of_manuscripts,
+        'author_of_manuscripts': clean_manuscripts(author_of_manuscripts),
+        'reviewer_of_manuscripts': clean_manuscripts(reviewer_of_manuscripts),
         'scores': {
           'keyword': best_score.get('keyword'),
           'similarity': best_score.get('similarity'),
@@ -688,10 +699,10 @@ class RecommendReviewers(object):
 
     result = {
       'potential_reviewers': potential_reviewers,
-      'matching_manuscripts': map_to_dict(
+      'matching_manuscripts': clean_manuscripts(map_to_dict(
         matching_manuscripts[VERSION_ID],
         self.manuscripts_by_version_id_map
-      )
+      ))
     }
     if manuscripts_not_found is not None:
       result['manuscripts_not_found'] = manuscripts_not_found
