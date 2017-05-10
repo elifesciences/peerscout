@@ -217,9 +217,7 @@ MANUSCRIPT_VERSION1_RESULT = {
   **MANUSCRIPT_ID_FIELDS1,
   MANUSCRIPT_ID: MANUSCRIPT_ID1,
   'authors': [],
-  'editors': [],
   'senior_editors': [],
-  'reviewers': [],
   'doi': None,
   'title': MANUSCRIPT_TITLE1,
   'decision': DECISSION_ACCEPTED,
@@ -894,14 +892,16 @@ def test_matching_one_keyword_should_return_previous_reviewer():
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   print("result:", PP.pformat(result))
   assert [r['person'][PERSON_ID] for r in result['potential_reviewers']] == [PERSON_ID1]
-  assert ([
-    m[MANUSCRIPT_ID]
-    for m in result['potential_reviewers'][0]['reviewer_of_manuscripts']
-  ] == [MANUSCRIPT_ID1])
-  assert ([
-    p[PERSON_ID]
-    for p in result['potential_reviewers'][0]['reviewer_of_manuscripts'][0]['reviewers']
-  ] == [PERSON_ID1])
+  # Note: reviewer_of_manuscripts no longer returned
+  # assert ([
+  #   m[MANUSCRIPT_ID]
+  #   for m in result['potential_reviewers'][0]['reviewer_of_manuscripts']
+  # ] == [MANUSCRIPT_ID1])
+  # Note: reviewers are no longer returned
+  # assert ([
+  #   p[PERSON_ID]
+  #   for p in result['potential_reviewers'][0]['reviewer_of_manuscripts'][0]['reviewers']
+  # ] == [PERSON_ID1])
 
 def test_matching_one_keyword_previous_reviewer_should_return_reviewer_only_once():
   datasets = dict(DATASETS)
@@ -932,9 +932,10 @@ def test_matching_one_keyword_previous_reviewer_should_return_reviewer_only_once
       r['person'][PERSON_ID]
       for r in result['potential_reviewers']
     ] == [PERSON_ID1]
-  assert\
-    [
-      r[PERSON_ID]
-      for r in result['potential_reviewers'][0]\
-        ['reviewer_of_manuscripts'][0]['reviewers']
-    ] == [PERSON_ID1]
+  # Note: reviewers are no longer returned
+  # assert\
+  #   [
+  #     r[PERSON_ID]
+  #     for r in result['potential_reviewers'][0]\
+  #       ['reviewer_of_manuscripts'][0]['reviewers']
+  #   ] == [PERSON_ID1]
