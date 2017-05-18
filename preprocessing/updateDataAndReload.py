@@ -1,6 +1,11 @@
+import logging
+
 from importlib import import_module
 
+NAME = 'updateDataAndReload'
+
 def main():
+  logger = logging.getLogger(NAME)
   scripts = [
     'importDataToDatabase',
     'importEarlyCareerResearchersCsv',
@@ -11,14 +16,17 @@ def main():
     'reloadServer'
   ]
   if not import_module('downloadFiles').main():
-    print("no files downloaded, skipping further processing")
+    logger.info("no files downloaded, skipping further processing")
     return False
   for script in scripts:
-    print("running:", script)
+    logger.info("running: %s", script)
     pkg = import_module(script)
     pkg.main()
-  print("done")
+  logger.info("done")
   return True
 
 if __name__ == "__main__":
+  from shared_proxy import configure_logging
+  configure_logging()
+
   main()

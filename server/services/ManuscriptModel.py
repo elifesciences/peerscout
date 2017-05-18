@@ -1,4 +1,8 @@
+import logging
+
 import sqlalchemy
+
+NAME = 'ManuscriptModel'
 
 DECISIONS_ACCEPTED = set([
   'Accept Full Submission', 'Auto-Accept'
@@ -14,7 +18,9 @@ def filter_accepted_manuscript_versions(manuscript_versions):
   ]
 
 def filter_research_articles(manuscript_versions):
-  print("manuscript types:", manuscript_versions['manuscript-type'].unique())
+  logging.getLogger(NAME).debug(
+    "manuscript types: %s", manuscript_versions['manuscript-type'].unique()
+  )
   return manuscript_versions[
     manuscript_versions['manuscript-type'].isin(
       ['Research Article', 'Initial Submission: Research Article'])

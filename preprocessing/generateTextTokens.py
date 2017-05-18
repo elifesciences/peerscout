@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 from tqdm import tqdm
 import sqlalchemy
@@ -8,8 +10,12 @@ from convertUtils import unescape_and_strip_tags_if_not_none
 
 from shared_proxy import database
 
+NAME = 'generateTextTokens'
+
 def process_manuscript_versions(
   db, extract_keywords_from_list):
+
+  logger = logging.getLogger(NAME)
 
   ml_manuscript_data_table = db['ml_manuscript_data']
   manuscript_version_table = db['manuscript_version']
@@ -28,8 +34,9 @@ def process_manuscript_versions(
       manuscript_version_table.table.abstract != None
     )
   ).all(), columns=['version_id', 'abstract'])
-  print("number of manuscript versions requiring tokens:", len(versions_requiring_tokens_df))
-  # print("versions_requiring_tokens_df:", versions_requiring_tokens_df)
+  logger.debug(
+    "number of manuscript versions requiring tokens: %d", len(versions_requiring_tokens_df)
+  )
 
   if len(versions_requiring_tokens_df) > 0:
     ml_data_df = versions_requiring_tokens_df[['version_id']]
@@ -58,4 +65,7 @@ def main():
   process_manuscript_versions(db, extract_keywords_from_list)
 
 if __name__ == "__main__":
+  from shared_proxy import configure_logging
+  configure_logging()
+
   main()

@@ -4,6 +4,7 @@ Unit test
 import zipfile
 import io
 from contextlib import contextmanager
+import logging
 
 import sqlalchemy
 
@@ -14,12 +15,16 @@ from importDataToDatabase import (
   convert_zip_file
 )
 
+logging.basicConfig(level=logging.DEBUG)
+
+logger = logging.getLogger('test')
+
 VERSION_ID1 = '00001-1'
 
 @contextmanager
 def convert_files(filenames):
   engine = sqlalchemy.create_engine('sqlite://', echo=False)
-  print("engine driver:", engine.driver)
+  logger.debug("engine driver: %s", engine.driver)
   db = database.Database(engine)
   db.update_schema()
 
@@ -45,7 +50,7 @@ def convert_files(filenames):
 def test_regular():
   with convert_files(['regular-00001.xml']) as db:
     df = db.manuscript_version.read_frame().reset_index()
-    print(df)
+    logger.debug('df:\n%s', df)
     assert (
       set(df['version_id']) ==
       set([VERSION_ID1])
@@ -54,7 +59,7 @@ def test_regular():
 def test_minimal():
   with convert_files(['minimal-00001.xml']) as db:
     df = db.manuscript_version.read_frame().reset_index()
-    print(df)
+    logger.debug('df:\n%s', df)
     assert (
       set(df['version_id']) ==
       set([VERSION_ID1])
@@ -132,7 +137,7 @@ def test_with_unnormalised_subject_area():
 def test_with_missing_persons():
   with convert_files(['with-missing-persons-00001.xml']) as db:
     df = db.manuscript_version.read_frame().reset_index()
-    print(df)
+    logger.debug('df:\n%s', df)
     assert (
       set(df['version_id']) ==
       set([VERSION_ID1])
@@ -141,7 +146,7 @@ def test_with_missing_persons():
 def test_with_manuscript_suffix():
   with convert_files(['with-manuscript-suffix-00001-suffix.xml']) as db:
     df = db.manuscript_version.read_frame().reset_index()
-    print(df)
+    logger.debug('df:\n%s', df)
     assert (
       set(df['version_id']) ==
       set([VERSION_ID1])
@@ -150,7 +155,7 @@ def test_with_manuscript_suffix():
 def test_with_invalid_manuscript_ref():
   with convert_files(['with-invalid-manuscript-ref.xml']) as db:
     df = db.manuscript_version.read_frame().reset_index()
-    print(df)
+    logger.debug('df:\n%s', df)
     assert (
       set(df['version_id']) ==
       set(['with-invalid-manuscript-ref-1'])

@@ -1,3 +1,5 @@
+import logging
+
 import pickle
 
 import numpy as np
@@ -5,6 +7,8 @@ import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 
 from .utils import filter_by
+
+NAME = 'DocumentSimilarityModel'
 
 VERSION_ID = 'version_id'
 
@@ -28,7 +32,7 @@ def load_docvecs(db, manuscript_model, column_name):
     VERSION_ID,
     manuscript_model.get_valid_manuscript_version_ids()
   )
-  print("valid docvecs:", len(abstract_docvecs_df))
+  logging.getLogger(NAME).info("valid docvecs: %d", len(abstract_docvecs_df))
 
   return abstract_docvecs_all_df, abstract_docvecs_df
 
@@ -56,6 +60,7 @@ class DocumentSimilarityModel(object):
   def __find_similar_manuscripts_to_docvecs(
     self, to_lda_docvecs, to_doc2vec, exclude_version_ids=None):
 
+    logger = logging.getLogger(NAME)
     if len(to_lda_docvecs) == 0 or len(to_doc2vec) != len(to_lda_docvecs):
       return self.__empty_similarity_result()
     version_ids = (
@@ -83,10 +88,10 @@ class DocumentSimilarityModel(object):
       other_doc2vec_docvecs,\
       to_doc2vec
     )[:, 0].reshape(-1)
-    print("lda_similarity:", lda_similarity.shape)
-    print("doc2vec_similarity:", doc2vec_similarity.shape)
+    logger.debug("lda_similarity: %s", lda_similarity.shape)
+    logger.debug("doc2vec_similarity: %s", doc2vec_similarity.shape)
     combined_similarity = (lda_similarity + doc2vec_similarity) / 2
-    print("combined_similarity:", combined_similarity.shape)
+    logger.debug("combined_similarity: %s", combined_similarity.shape)
     similarity = pd.DataFrame({
       VERSION_ID: version_ids,
       SIMILARITY_COLUMN: combined_similarity
@@ -118,7 +123,7 @@ class DocumentSimilarityModel(object):
       if self.doc2vec_docvec_predict_model is not None
       else []
     )
-    print("abstract docvec:", to_lda_docvecs, abstract)
+    logging.getLogger(NAME).debug("abstract docvec: %s, %s", to_lda_docvecs, abstract)
     return self.__find_similar_manuscripts_to_docvecs(to_lda_docvecs, to_doc2vec_docvecs)
 
   def find_similar_manuscripts(self, version_ids):
@@ -135,7 +140,7 @@ class DocumentSimilarityModel(object):
       )
     ][ABSTRACT_DOCVEC_COLUMN].values
     if len(to_lda_docvecs) == 0 or len(to_doc2vec_docvecs) == 0:
-      print("no docvecs for:", version_ids)
+      logging.getLogger(NAME).debug("no docvecs for: %s", version_ids)
     return self.__find_similar_manuscripts_to_docvecs(
       to_lda_docvecs.tolist(),
       to_doc2vec_docvecs.tolist(),
@@ -158,9 +163,10 @@ def load_similarity_model_from_database(db, manuscript_model):
   ).all(), columns=['model_id', 'data']).set_index('model_id')
 
   if set(model_data.index.values) != required_model_ids:
-    print("Warning: required model data for {} but only found data for {}".format(
+    logging.getLogger(NAME).warning(
+      "required model data for %s but only found data for %s",
       required_model_ids, set(model_data.index.values)
-    ))
+    )
     return DocumentSimilarityModel(
       db, manuscript_model=manuscript_model,
       lda_docvec_predict_model=None,

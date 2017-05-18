@@ -1,6 +1,7 @@
 from itertools import groupby
 import itertools
 import ast
+import logging
 
 import pandas as pd
 
@@ -15,15 +16,17 @@ from .collection_utils import (
   deep_get_list
 )
 
-debug_enabled = False
+NAME = 'RecommendReviewers'
 
-def set_debug_enabled(enabled):
-  global debug_enabled
-  debug_enabled = enabled
+debugv_enabled = False
 
-def debug(*args):
-  if debug_enabled:
-    print(*args)
+def set_debugv_enabled(enabled):
+  global debugv_enabled
+  debugv_enabled = enabled
+
+def debugv(*args):
+  if debugv_enabled:
+    logging.getLogger(NAME).debug(*args)
 
 to_int = lambda x, default_value=None: int(x) if x is not None else default_value
 
@@ -147,7 +150,7 @@ def unescape_if_string(s):
 
 def stats_by_person_for_period(table):
   df = table.read_frame()
-  debug("person stats frame ({}):\n".format(table.table.__tablename__), df)
+  debugv("person stats frame ({}):\n".format(table.table.__tablename__), df)
   if len(df) == 0:
     return {}
 
@@ -170,7 +173,7 @@ def stats_by_person_for_period(table):
     }
     for k, v in df.to_dict(orient='index').items()
   })
-  debug("person stats map:\n", m)
+  debugv("person stats map:\n", m)
   return m
 
 def select_dict_keys(d, keys):
@@ -204,6 +207,8 @@ def clean_manuscripts(manuscripts):
 
 class RecommendReviewers(object):
   def __init__(self, db, manuscript_model, similarity_model=None):
+    logger = logging.getLogger(NAME)
+    self.logger = logger
     self.similarity_model = similarity_model
 
     self.manuscript_versions_all_df = (
@@ -300,11 +305,11 @@ class RecommendReviewers(object):
     dates_not_available_map = groupby_column_to_dict(dates_not_available_df, PERSON_ID)
     # early_career_researchers_person_ids = set(early_career_researchers_df[PERSON_ID].values)
 
-    print("gathering stats")
+    logger.debug("gathering stats")
     overall_stats_map = stats_by_person_for_period(db.person_review_stats_overall)
     last12m_stats_map = stats_by_person_for_period(db.person_review_stats_last12m)
 
-    print("building person list")
+    logger.debug("building person list")
     persons_list = [{
       **person,
       # 'is-early-career-researcher': person['person-id'] in early_career_researchers_person_ids,
@@ -318,8 +323,8 @@ class RecommendReviewers(object):
 
     self.persons_map = dict((p[PERSON_ID], p) for p in persons_list)
 
-    debug("self.persons_df:", self.persons_df)
-    debug("persons_map:", self.persons_map)
+    debugv("self.persons_df:", self.persons_df)
+    debugv("persons_map:", self.persons_map)
 
     temp_authors_map = groupby_columns_to_dict(
       self.authors_all_df[VERSION_ID].values,
@@ -355,9 +360,11 @@ class RecommendReviewers(object):
       })
     )
 
-    debug("self.manuscript_history_review_received_df:", self.manuscript_history_review_received_df)
-    debug("temp_authors_map:", temp_authors_map)
-    debug("temp_reviewers_map:", temp_reviewers_map)
+    debugv(
+      "self.manuscript_history_review_received_df: %s", self.manuscript_history_review_received_df
+    )
+    debugv("temp_authors_map: %s", temp_authors_map)
+    debugv("temp_reviewers_map: %s", temp_reviewers_map)
 
     temp_doi_by_manuscript_no_map = groupby_column_to_dict(
       manuscripts_df,
@@ -373,7 +380,7 @@ class RecommendReviewers(object):
 
     self.all_keywords = sorted(set(self.manuscript_keywords_df['keyword']))
 
-    print("building manuscript list")
+    logger.debug("building manuscript list")
     manuscripts_all_list = clean_result(
       self.manuscript_versions_all_df[
         MANUSCRIPT_ID_COLUMNS +
@@ -392,13 +399,13 @@ class RecommendReviewers(object):
     } for manuscript in manuscripts_all_list]
     self.manuscripts_by_version_id_map = dict((
       m[VERSION_ID], m) for m in manuscripts_all_list)
-    debug("manuscripts_by_version_id_map:", self.manuscripts_by_version_id_map)
+    debugv("manuscripts_by_version_id_map: %s", self.manuscripts_by_version_id_map)
 
     self.manuscripts_by_author_map = {}
     self.manuscripts_by_reviewer_map = {}
     for m in manuscripts_all_list:
       if is_manuscript_relevant(m):
-        debug("manuscript:", m)
+        debugv("manuscript: %s", m)
         for author in m['authors']:
           self.manuscripts_by_author_map.setdefault(author[PERSON_ID], [])\
           .append(m)
@@ -406,7 +413,7 @@ class RecommendReviewers(object):
           self.manuscripts_by_reviewer_map.setdefault(reviewer[PERSON_ID], [])\
           .append(m)
       else:
-        debug("ignoring manuscript:", m)
+        debugv("ignoring manuscript: %s", m)
 
     self.manuscripts_by_author_map = applymap_dict(
       self.manuscripts_by_author_map, sort_manuscripts_by_date
@@ -416,8 +423,8 @@ class RecommendReviewers(object):
       self.manuscripts_by_reviewer_map, sort_manuscripts_by_date
     )
 
-    debug("manuscripts_by_author_map:", self.manuscripts_by_author_map)
-    debug("manuscripts_by_reviewer_map:", self.manuscripts_by_reviewer_map)
+    debugv("manuscripts_by_author_map: %s", self.manuscripts_by_author_map)
+    debugv("manuscripts_by_reviewer_map: %s", self.manuscripts_by_reviewer_map)
 
     early_career_researcher_person_id_query = db.session.query(
       db.person.table.person_id
@@ -437,8 +444,8 @@ class RecommendReviewers(object):
       lambda row: row[0].lower(),
       lambda row: row[1]
     )
-    debug(
-      "early career researcher subject area keys:",
+    debugv(
+      "early career researcher subject area keys: %s",
       self.early_career_researcher_ids_by_subject_area.keys())
 
   def __find_manuscripts_by_keywords(self, keywords):
@@ -493,7 +500,9 @@ class RecommendReviewers(object):
       self.early_career_researcher_ids_by_subject_area.get(subject_area.lower(), [])
       for subject_area in subject_areas
     ]))
-    print("found {} early career researchers for subject areas:".format(len(result)), subject_areas)
+    self.logger.debug(
+      "found %d early career researchers for subject areas: %s", len(result), subject_areas
+    )
     return result
 
   def get_all_subject_areas(self):
@@ -537,8 +546,8 @@ class RecommendReviewers(object):
         lambda item: item[PERSON_ID],
         lambda item: filter_dict_keys(item, lambda key: key != PERSON_ID)
       )
-      print("assigned_reviewers_by_person_id:", assigned_reviewers_by_person_id)
-      print("subject_areas:", subject_areas)
+      self.logger.debug("assigned_reviewers_by_person_id: %s", assigned_reviewers_by_person_id)
+      self.logger.debug("subject_areas: %s", subject_areas)
       authors = flatten([m['authors'] for m in matching_manuscripts_dicts])
       author_ids = [a[PERSON_ID] for a in authors]
       editors = flatten([m['editors'] for m in matching_manuscripts_dicts])
@@ -548,11 +557,11 @@ class RecommendReviewers(object):
       exclude_person_ids |= (set(author_ids) | set(editor_ids) | set(senior_editor_ids))
     else:
       matching_manuscripts = self.__find_manuscripts_by_key(None)
-    print("keyword_list:", keyword_list)
+    self.logger.debug("keyword_list: %s", keyword_list)
     other_manuscripts = self.__find_manuscripts_by_keywords(
       keyword_list
     )
-    print("subject_areas:", subject_areas)
+    self.logger.debug("subject_areas: %s", subject_areas)
     if len(subject_areas) > 0:
       other_manuscripts = self._filter_manuscripts_by_subject_areas(
         other_manuscripts, subject_areas
@@ -565,9 +574,13 @@ class RecommendReviewers(object):
       all_similar_manuscripts = self.similarity_model.find_similar_manuscripts(
         matching_manuscripts[VERSION_ID]
       )
-    print("all_similar_manuscripts:", len(all_similar_manuscripts), all_similar_manuscripts[
-      all_similar_manuscripts[VERSION_ID].isin(["10.1155/2013/435093"])
-    ])
+    self.logger.debug(
+      "all_similar_manuscripts: %d, %s",
+      len(all_similar_manuscripts),
+      all_similar_manuscripts[
+        all_similar_manuscripts[VERSION_ID].isin(["10.1155/2013/435093"])
+      ]
+    )
     similar_manuscripts = all_similar_manuscripts
     if len(subject_areas) > 0:
       similar_manuscripts = self._filter_manuscripts_by_subject_areas(
@@ -578,10 +591,12 @@ class RecommendReviewers(object):
     most_similar_manuscripts = similar_manuscripts[
       similar_manuscripts[SIMILARITY_COLUMN] >= similarity_threshold
     ]
-    print("found {}/{} similar manuscripts beyond threshold {}".format(
-      len(most_similar_manuscripts), len(similar_manuscripts),
+    self.logger.debug(
+      "found %d/%d similar manuscripts beyond threshold %f",
+      len(most_similar_manuscripts),
+      len(similar_manuscripts),
       similarity_threshold
-    ))
+    )
     if len(most_similar_manuscripts) > max_similarity_count:
       most_similar_manuscripts = most_similar_manuscripts\
       .sort_values(SIMILARITY_COLUMN, ascending=False)[:max_similarity_count]
@@ -601,16 +616,12 @@ class RecommendReviewers(object):
         subject_areas
       ) | assigned_reviewers_by_person_id.keys()) - exclude_person_ids
     )
-    # print("potential_reviewers_ids", potential_reviewers_ids)
-    # for m in other_manuscripts_dicts:
-    #   print("author_ids", m[VERSION_KEY], [p[PERSON_ID] for p in m['authors']])
 
     keyword_match_count_by_by_version_key_map = {
       k: v['count']
       for k, v in other_manuscripts[[VERSION_ID, 'count']]\
       .set_index(VERSION_ID).to_dict(orient='index').items()
     }
-    # print("keyword_match_count_by_by_version_key_map:", keyword_match_count_by_by_version_key_map)
 
     def populate_potential_reviewer(person_id):
       author_of_manuscripts = self.manuscripts_by_author_map.get(person_id, [])

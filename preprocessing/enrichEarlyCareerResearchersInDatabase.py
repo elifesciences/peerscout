@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 import json
 from textwrap import shorten
+import logging
 
 import dateutil
 import requests
@@ -15,6 +16,8 @@ from preprocessingUtils import get_data_path
 
 from shared_proxy import database
 
+NAME = 'enrichEarlyCareerResearchersInDatabase'
+
 PERSON_ID = 'person_id'
 
 def get(url):
@@ -26,13 +29,14 @@ def create_cache(f, cache_dir, serializer, deserializer, suffix=''):
   cache_path = Path(cache_dir)
   cache_path.mkdir(exist_ok=True, parents=True)
   clean_pattern = re.compile(r'[^\w]')
+  logger = logging.getLogger(NAME)
 
   def clean_fn(fn):
     return clean_pattern.sub('_', fn)
 
   def cached_f(*args):
     cache_file = cache_path.joinpath(Path(clean_fn(','.join([str(x) for x in args]))).name + suffix)
-    # print("filename:", cache_file)
+    logger.debug("filename: %s", cache_file)
     if cache_file.is_file():
       return deserializer(cache_file.read_bytes())
     result = f(*args)
@@ -91,6 +95,8 @@ def remove_duplicates(objs):
   return pd.DataFrame(objs).drop_duplicates().to_dict(orient='records')
 
 def enrich_early_career_researchers(db):
+  logger = logging.getLogger(NAME)
+
   person_table = db.person
   person_membership_table = db.person_membership
   df = pd.DataFrame(
@@ -113,8 +119,8 @@ def enrich_early_career_researchers(db):
     ).all(),
     columns=[PERSON_ID, 'first_name', 'last_name', 'ORCID']
   )
-  print("number of early career researchers:", len(df))
-  print("number of early career researchers with orcid:", sum(pd.notnull(df['ORCID'])))
+  logger.info("number of early career researchers: %d", len(df))
+  logger.info("number of early career researchers with orcid: %d", sum(pd.notnull(df['ORCID'])))
   cached_get = create_str_cache(
     get,
     cache_dir=get_data_path('cache-http'),
@@ -129,7 +135,7 @@ def enrich_early_career_researchers(db):
     pbar.set_description("%40s" % shorten(full_name, width=40))
     orcid = row['ORCID']
     if orcid is not None and len(orcid) > 0:
-      # print("orcid:", orcid, first_name, last_name)
+      # logger.debug("orcid: %s, %s, %s", orcid, first_name, last_name)
       url = (
         "http://api.crossref.org/works?filter=orcid:{}&rows=30&sort=published&order=asc"
         .format(orcid)
@@ -142,7 +148,7 @@ def enrich_early_career_researchers(db):
         if contains_author_with_orcid(item, orcid)
       ]
     else:
-      # print("name:", row['first-name'], row['last-name'])
+      # logger.debug("name: %s, %s", row['first-name'], row['last-name'])
       url = (
         "http://api.crossref.org/works?query.author={}&rows=1000"
         .format(full_name)
@@ -207,14 +213,14 @@ def enrich_early_career_researchers(db):
     'person_id': m.get('person_id')
   } for m in new_manuscript_info])
 
-  print("crossref_dois:", len(crossref_dois))
-  print("existing_dois:", len(existing_dois))
-  print("new_dois:", len(new_dois))
-  print("new_manuscript_info:", len(new_manuscript_info))
-  print("new_manuscripts:", len(new_manuscripts))
-  print("new_manuscript_versions:", len(new_manuscript_versions))
-  print("new_manuscript_subject_areas:", len(new_manuscript_subject_areas))
-  print("new_manuscript_authors:", len(new_manuscript_authors))
+  logger.debug("crossref_dois: %d", len(crossref_dois))
+  logger.debug("existing_dois: %d", len(existing_dois))
+  logger.debug("new_dois: %d", len(new_dois))
+  logger.debug("new_manuscript_info: %d", len(new_manuscript_info))
+  logger.debug("new_manuscripts: %d", len(new_manuscripts))
+  logger.debug("new_manuscript_versions: %d", len(new_manuscript_versions))
+  logger.debug("new_manuscript_subject_areas: %d", len(new_manuscript_subject_areas))
+  logger.debug("new_manuscript_authors: %d", len(new_manuscript_authors))
   if len(new_manuscript_info) > 0:
     db.manuscript.create_list(new_manuscripts)
     db.manuscript_version.create_list(new_manuscript_versions)
@@ -227,7 +233,10 @@ def main():
 
   enrich_early_career_researchers(db)
 
-  print("Done")
+  logging.getLogger(NAME).info('done')
 
 if __name__ == "__main__":
+  from shared_proxy import configure_logging
+  configure_logging()
+
   main()

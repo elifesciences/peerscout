@@ -1,10 +1,13 @@
 from time import time
 from collections import namedtuple
+import logging
 
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
+
+NAME = 'lda_utils'
 
 LdaResult = namedtuple('LdaResult', ['docvecs', 'vectorized', 'vectorizer', 'lda'])
 
@@ -31,6 +34,8 @@ def train_lda(
   learning_offset=50,
   learning_method='batch'):
 
+  logger = logging.getLogger(NAME)
+
   if vectorizer is None:
     vectorizer = TfidfVectorizer(
       max_df=max_df,
@@ -43,7 +48,7 @@ def train_lda(
   if vectorized is None:
     t0 = time()
     vectorized = vectorizer.fit_transform(data[indices])
-    print("vectorized in %0.3fs." % (time() - t0))
+    logger.info("vectorized in %0.3fs.", time() - t0)
 
   if lda is None:
     lda = LatentDirichletAllocation(
@@ -55,8 +60,7 @@ def train_lda(
   t0 = time()
   matching_docvecs = list(lda.fit_transform(vectorized))
   docvecs = [None] * len(data)
-  # print("indices:", indices)
   for index, docvec in zip(indices, matching_docvecs):
     docvecs[index] = docvec
-  print("lda in %0.3fs." % (time() - t0))
+  logger.info("lda in %0.3fs.", time() - t0)
   return LdaResult(docvecs=docvecs, vectorized=vectorized, vectorizer=vectorizer, lda=lda)

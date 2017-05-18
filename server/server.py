@@ -1,5 +1,6 @@
 import os
 import datetime
+import logging
 
 from flask import Flask, request, send_from_directory, jsonify, url_for
 from flask.json import JSONEncoder
@@ -12,7 +13,9 @@ from services import (
   RecommendReviewers
 )
 
-from shared_proxy import database, app_config
+from shared_proxy import database, app_config, configure_logging
+
+NAME = 'server'
 
 CLIENT_FOLDER = '../client/dist'
 
@@ -24,8 +27,14 @@ app_config = app_config.get_app_config()
 port = app_config.get('server', 'port', fallback=8080)
 host = app_config.get('server', 'host', fallback=None)
 
+configure_logging()
+
+logging.getLogger('summa.preprocessing.cleaner').setLevel(logging.WARNING)
+
+logger = logging.getLogger(NAME)
+
 memory = Memory(cachedir=cache_dir, verbose=0)
-print("cache directory:", cache_dir)
+logger.debug("cache directory: %s", cache_dir)
 memory.clear(warn=False)
 
 db = database.connect_configured_database()
@@ -111,7 +120,7 @@ def control_reload():
   global recommend_reviewers
   if request.remote_addr != '127.0.0.1':
     return jsonify({'ip': request.remote_addr}), 403
-  print("reloading...")
+  logger.info("reloading...")
   recommend_reviewers = load_recommender()
   recommend_reviewers_as_json.clear()
   return jsonify({'status': 'OK'})

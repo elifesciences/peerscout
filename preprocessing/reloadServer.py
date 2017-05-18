@@ -1,13 +1,21 @@
+import logging
+
 import requests
 
+NAME = 'reloadServer'
+
 def main():
+  logger = logging.getLogger(NAME)
   try:
     response = requests.post('http://localhost:8080/control/reload')
     response.raise_for_status()
-    print("response:", response.text)
+    logger.debug("response: %s", response.text)
   except requests.exceptions.ConnectionError:
-    print("server doesn't seem to be running")
-  print("done")
+    logger.warning("server doesn't seem to be running")
+  logger.info("done")
 
 if __name__ == "__main__":
+  from shared_proxy import configure_logging
+  configure_logging()
+
   main()

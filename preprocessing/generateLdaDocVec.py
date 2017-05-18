@@ -1,9 +1,13 @@
+import logging
+
 import pandas as pd
 import sqlalchemy
 
 from docvec_model_proxy import SpacyTransformer, DocvecModelUtils, lda_utils # pylint: disable=E0611
 
 from shared_proxy import database
+
+NAME = 'generateLdaDocVec'
 
 train_lda = lda_utils.train_lda
 
@@ -15,6 +19,8 @@ def process_article_abstracts(db, n_topics=10):
   #    Pros: Faster; Vectors are more stable
 
   # Option a) is implemented below
+
+  logger = logging.getLogger(NAME)
 
   ml_manuscript_data_table = db['ml_manuscript_data']
 
@@ -30,8 +36,8 @@ def process_article_abstracts(db, n_topics=10):
 
   if ml_data_requiring_lda_docvec_count > 0:
     # Yes, get all of the data
-    print(
-      "number of new manuscript versions requiring LDA document vectors:",
+    logger.info(
+      "number of new manuscript versions requiring LDA document vectors: %d",
       ml_data_requiring_lda_docvec_count
     )
     ml_data_requiring_lda_docvec_df = pd.DataFrame(db.session.query(
@@ -45,11 +51,10 @@ def process_article_abstracts(db, n_topics=10):
   else:
     ml_data_requiring_lda_docvec_df = pd.DataFrame([])
 
-  print(
-    "number of manuscript versions requiring LDA document vectors:",
+  logger.info(
+    "number of manuscript versions requiring LDA document vectors: %d",
     len(ml_data_requiring_lda_docvec_df)
   )
-  # print("ml_data_requiring_lda_docvec_df:", ml_data_requiring_lda_docvec_df)
 
   if len(ml_data_requiring_lda_docvec_df) > 0:
     texts = ml_data_requiring_lda_docvec_df['abstract_tokens'].values
@@ -85,4 +90,7 @@ def main():
   process_article_abstracts(db)
 
 if __name__ == "__main__":
+  from shared_proxy import configure_logging
+  configure_logging()
+
   main()
