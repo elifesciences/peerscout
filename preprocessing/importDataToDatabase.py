@@ -265,7 +265,7 @@ def filter_duplicate_author_use_highest_corresponding(authors):
   filtered_authors = []
   for author in authors:
     person_id = author.get('person_id')
-    if author.get('is_corresponding_author'):
+    if author.get('is_corresponding_author') == 'true':
       is_corresponding_author_by_person_id[person_id] = True
     if not person_id in person_id_used:
       person_id_used.add(person_id)
