@@ -23,9 +23,11 @@ CLIENT_FOLDER = '../client/dist'
 data_dir = os.path.join('..', '.data')
 cache_dir = os.path.join(data_dir, 'server-cache')
 
-app_config = app_config.get_app_config()
-port = app_config.get('server', 'port', fallback=8080)
-host = app_config.get('server', 'host', fallback=None)
+config = app_config.get_app_config()
+port = config.get('server', 'port', fallback=8080)
+host = config.get('server', 'host', fallback=None)
+
+client_config = dict(config['client']) if 'client' in config else {}
 
 configure_logging()
 
@@ -68,6 +70,9 @@ def api_root():
   return jsonify({
     'links': {
       'recommend-reviewers': url_for('recommend_reviewers_api'),
+      'subject-areas': url_for('subject_areas_api'),
+      'keywords': url_for('keywords_api'),
+      'config': url_for('config_api'),
       'run': url_for('run')
     }
   })
@@ -110,6 +115,10 @@ def subject_areas_api():
 @app.route("/api/keywords")
 def keywords_api():
   return jsonify(list(recommend_reviewers.get_all_keywords()))
+
+@app.route("/api/config")
+def config_api():
+  return jsonify(client_config)
 
 @app.route("/api/hello")
 def run():

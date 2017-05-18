@@ -9,7 +9,7 @@ import {
   formatScoreWithDetails
 } from './formatUtils';
 
-const recommendedReviewersToGraph = recommendedReviewers => {
+const recommendedReviewersToGraph = (recommendedReviewers, options={}) => {
   const nodes = [];
   let links = [];
   const nodeMap = {};
@@ -103,27 +103,32 @@ const recommendedReviewersToGraph = recommendedReviewers => {
     mainNodes.forEach(mainNode => addReviewerLink(mainNode, node));
   }
 
-  const addCommonReviewerManuscript = (m, r) => {
+  const addReviewerManuscriptWithMinimumConnections = (m, r, minConnections) => {
     const mid = manuscriptToId(m);
     if (nodeMap[mid]) {
       return;
     }
-    // const pid = personToId(r['person']);
     const relatedPersons = (m['authors'] || []).concat(m['reviewers'] || []);
     const relatedPersonIds = relatedPersons.map(p => personToId(p));
     const reviewerPersonIds = relatedPersonIds.filter(personId => !!nodeMap[personId]);
-    if (reviewerPersonIds.length > 1) {
+    if (reviewerPersonIds.length >= minConnections) {
       const manuscriptNode = addManuscript(m, r);
       reviewerPersonIds.forEach(personId => addReviewerLink(manuscriptNode, nodeMap[personId]));
     }
   }
 
-  const addCommonReviewerLinks = r => {
+  const addAllReviewerManuscript = (m, r) =>
+    addReviewerManuscriptWithMinimumConnections(m, r, 1);
+
+  const addCommonReviewerManuscript = (m, r) =>
+    addReviewerManuscriptWithMinimumConnections(m, r, 2);
+
+  const processReviewerLinks = linkProcessor => r => {
     if (r['author_of_manuscripts']) {
-      r['author_of_manuscripts'].forEach(m => addCommonReviewerManuscript(m, r));
+      r['author_of_manuscripts'].forEach(m => linkProcessor(m, r));
     }
     if (r['reviewer_of_manuscripts']) {
-      r['reviewer_of_manuscripts'].forEach(m => addCommonReviewerManuscript(m, r));
+      r['reviewer_of_manuscripts'].forEach(m => linkProcessor(m, r));
     }
   }
 
@@ -142,7 +147,11 @@ const recommendedReviewersToGraph = recommendedReviewers => {
   }
   if (potentialReviewers) {
     potentialReviewers.forEach(addReviewer);
-    potentialReviewers.forEach(addCommonReviewerLinks);
+    potentialReviewers.forEach(processReviewerLinks(
+      options.showAllRelatedManuscripts ?
+      addAllReviewerManuscript :
+      addCommonReviewerManuscript
+    ));
   }
 
   // console.log("node keys:", Object.keys(nodeMap));
@@ -377,7 +386,7 @@ const createNode = (parent, nodes) => {
   return nodeParent;
 }
 
-const createLegend = (parent, showSearch) => {
+const createLegend = (parent, showSearch, options) => {
   const legend = parent.append("g")
     .style('opacity', 0.7)
     .attr('class', 'legend')
@@ -430,7 +439,11 @@ const createLegend = (parent, showSearch) => {
     legendData.push({
       manuscript: {
       },
-      label: 'Common manuscript'
+      label: (
+        options.showAllRelatedManuscripts ?
+        'Related manuscript' :
+        'Common manuscript'
+      )
     });
   }
   legendData.push({
@@ -595,7 +608,7 @@ const createChart = (parent, graph, options) => {
   addNodeTooltipBehavior(node, tip);
 
   const showSearch = !!graph.nodes[0].search;
-  createLegend(svg, showSearch);
+  createLegend(svg, showSearch, options);
 
   const selectNode = selectedNode => {
     console.log("select node:", selectedNode);
@@ -649,19 +662,23 @@ class ChartResult extends React.Component {
   updateChart(props) {
     const { searchResult, onNodeClicked } = props;
     if (searchResult) {
-      const graph = recommendedReviewersToGraph(searchResult);
+      const graph = recommendedReviewersToGraph(searchResult, {
+        showAllRelatedManuscripts: props.showAllRelatedManuscripts
+      });
       if (this.chart) {
         this.chart.destroy();
       }
       this.chart = createChart(this.node, graph, {
-        onNodeClicked 
+        onNodeClicked,
+        showAllRelatedManuscripts: props.showAllRelatedManuscripts
       });
       this.chart.selectNode(props.selectNode);
     }
   }
 
   componentWillReceiveProps(nextProps) {
-    if ((nextProps.searchResult != this.props.searchResult) && (nextProps.searchResult)) {
+    if (((nextProps.searchResult != this.props.searchResult) && (nextProps.searchResult)) ||
+        (nextProps.showAllRelatedManuscripts != this.props.showAllRelatedManuscripts)) {
       this.updateChart(nextProps);
     } else if (this.chart && (nextProps.selectedNode != this.props.selectedNode)) {
       this.chart.selectNode(nextProps.selectedNode);

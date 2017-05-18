@@ -28,10 +28,12 @@ const fetchJson = url => fetch(url, {
 .then(text => JSON.parse(text, datetimeReviver))
 
 const api = baseUrl => {
+  const getConfigUrl = baseUrl + '/config';
   const getAllSubjectAreasUrl = baseUrl + '/subject-areas';
   const getAllKeywordsUrl = baseUrl + '/keywords';
   const recommendReviewersUrl = baseUrl + '/recommend-reviewers';
   return {
+    getConfig: () => fetchJson(urlWithParams(getConfigUrl, {})),
     getAllSubjectAreas: () => fetchJson(urlWithParams(getAllSubjectAreasUrl, {})),
     getAllKeywords: () => fetchJson(urlWithParams(getAllKeywordsUrl, {})),
     recommendReviewers: params => fetchJson(urlWithParams(recommendReviewersUrl, params))
