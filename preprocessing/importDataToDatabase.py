@@ -24,6 +24,11 @@ from shared_proxy import database
 
 NAME = 'importDataToDatabase'
 
+# The data version is similar to the schema version,
+# but rather means that the way the data should be interpreted has changed
+# (and therefore previously processed files may need to be processed again)
+DATA_VERSION = 5
+
 def auto_convert(name, value):
   if name.endswith('-date'):
     return pd.to_datetime(value)
@@ -558,9 +563,8 @@ def convert_zip_file(
 
   logger = logging.getLogger(NAME)
 
-  current_version = 4
   processed = db.import_processed.get(zip_filename)
-  if processed is not None and processed.version == current_version:
+  if processed is not None and processed.version == DATA_VERSION:
     return
 
   table_names = set([
@@ -656,8 +660,8 @@ def convert_zip_file(
     if len(df) > 0:
       insert_records(db, table_name, df)
 
-  logger.debug('marking file as processed: %s (%d)', zip_filename, current_version)
-  db.import_processed.update_or_create(import_processed_id=zip_filename, version=current_version)
+  logger.debug('marking file as processed: %s (%d)', zip_filename, DATA_VERSION)
+  db.import_processed.update_or_create(import_processed_id=zip_filename, version=DATA_VERSION)
 
   db.commit()
 
