@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml>
+  <people>
+    <person>
+      <email>author1@test.com</email>
+      <first-name>Author</first-name>
+      <institution>Institution 1</institution>
+      <last-name>One</last-name>
+      <middle-name></middle-name>
+      <memberships>
+        <membership>
+          <member-id></member-id>
+          <member-type>ORCID</member-type>
+        </membership>
+      </memberships>
+      <person-id>author1</person-id>
+      <status>Active</status>
+      <title>Mr.</title>
+    </person>
+  </people>
+</xml>
