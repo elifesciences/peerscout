@@ -1,7 +1,10 @@
 import re
+import logging
 
 import spacy
 from tqdm import tqdm
+
+NAME = 'SpacyTransformer'
 
 LABELS = {
   'ENT': 'ENT',
@@ -90,9 +93,10 @@ global_nlp = None
 def get_nlp():
   global global_nlp
   if global_nlp is None:
-    print("loading spacy...")
+    logger = logging.getLogger(NAME)
+    logger.debug("loading spacy...")
     global_nlp = spacy.load('en')
-    print("done")
+    logger.debug("done")
   return global_nlp
 
 class SpacyTransformer(object):

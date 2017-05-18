@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 import sqlalchemy
 from sklearn.pipeline import Pipeline
@@ -10,6 +12,12 @@ from docvec_model_proxy import ( # pylint: disable=E0611
 
 from shared_proxy import database
 
+NAME = 'generateDoc2Vec'
+
+def configure_doc2vec_logging():
+  logging.getLogger('gensim.models.doc2vec').setLevel(logging.WARNING)
+  logging.getLogger('gensim.models.word2vec').setLevel(logging.WARNING)
+
 def process_article_abstracts(db, vec_size=100, n_epochs=10):
   # We need to either:
   # a) train the model on all of the data (not just new ones)
@@ -18,6 +26,10 @@ def process_article_abstracts(db, vec_size=100, n_epochs=10):
   #    Pros: Faster; Vectors are more stable
 
   # Option a) is implemented below
+
+  configure_doc2vec_logging()
+
+  logger = logging.getLogger(NAME)
 
   ml_manuscript_data_table = db['ml_manuscript_data']
 
@@ -33,8 +45,8 @@ def process_article_abstracts(db, vec_size=100, n_epochs=10):
 
   if ml_data_requiring_doc2vec_docvec_count > 0:
     # Yes, get all of the data
-    print(
-      "number of new manuscript versions requiring Doc2Vec document vectors:",
+    logger.info(
+      "number of new manuscript versions requiring Doc2Vec document vectors: %d",
       ml_data_requiring_doc2vec_docvec_count
     )
     ml_data_requiring_doc2vec_docvec_df = pd.DataFrame(db.session.query(
@@ -48,8 +60,8 @@ def process_article_abstracts(db, vec_size=100, n_epochs=10):
   else:
     ml_data_requiring_doc2vec_docvec_df = pd.DataFrame([])
 
-  print(
-    "number of manuscript versions requiring Doc2Vec document vectors:",
+  logger.info(
+    "number of manuscript versions requiring Doc2Vec document vectors: %d",
     len(ml_data_requiring_doc2vec_docvec_df)
   )
 
@@ -88,4 +100,7 @@ def main():
   process_article_abstracts(db)
 
 if __name__ == "__main__":
+  from shared_proxy import configure_logging
+  configure_logging()
+
   main()

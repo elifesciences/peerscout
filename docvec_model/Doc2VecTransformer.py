@@ -1,4 +1,8 @@
+import logging
+
 import gensim
+
+NAME = 'Doc2VecTransformer'
 
 # Doc2Vec sklearn wrapper
 class Doc2VecTransformer(object):
@@ -45,8 +49,10 @@ class Doc2VecTransformer(object):
     model.build_vocab(sentences)
     current_epoch = 0
 
+    logger = logging.getLogger(NAME)
+
     for _ in range(self.n_epochs):
-      print("epoch", current_epoch, ", alpha:", model.alpha)
+      logger.info("epoch: %d, alpha: %f", current_epoch, model.alpha)
       model.train(sentences)
       model.alpha = model.alpha * 0.95 # decrease the learning rate
       model.min_alpha = model.alpha # fix the learning rate, no deca

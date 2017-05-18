@@ -1,11 +1,14 @@
 from os import makedirs
 from os.path import isfile
 from textwrap import shorten
+import logging
 
 import boto3
 from tqdm import tqdm
 
 from preprocessingUtils import get_downloads_csv_path, get_downloads_xml_path
+
+NAME = 'downloadFiles'
 
 # Prerequisites:
 # * Credentials setup in user profile
@@ -23,8 +26,14 @@ def download_objects(client, obj_list, download_path, downloaded_files=None):
       if downloaded_files is not None:
         downloaded_files.append(remote_file)
 
+def configure_boto_logging():
+  logging.getLogger('boto3').setLevel(logging.WARNING)
+  logging.getLogger('botocore').setLevel(logging.WARNING)
+  logging.getLogger('nose').setLevel(logging.WARNING)
 
 def main():
+  configure_boto_logging()
+
   s3 = boto3.resource('s3')
 
   client = boto3.client('s3')
@@ -45,9 +54,14 @@ def main():
     get_downloads_csv_path(),
     downloaded_files)
 
-  print("{} files downloaded".format(len(downloaded_files)))
-  print("Done")
+  logger = logging.getLogger(NAME)
+  logger.info('%d files downloaded', len(downloaded_files))
+  logger.info('done')
+
   return len(downloaded_files) > 0
 
 if __name__ == "__main__":
+  from shared_proxy import configure_logging
+  configure_logging()
+
   main()

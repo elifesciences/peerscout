@@ -1,5 +1,6 @@
 from os import listdir
 import os
+import logging
 
 import pandas as pd
 
@@ -13,6 +14,8 @@ from preprocessingUtils import get_downloads_csv_path
 from dataNormalisationUtils import normalise_subject_area
 
 from shared_proxy import database
+
+NAME = 'importEarlyCareerResearchersCsv'
 
 def frame_to_persons(df):
   ecr_person_map = (
@@ -78,15 +81,13 @@ def frame_to_person_membership(df):
 
 def add_persons(db, persons):
   person_df = pd.DataFrame(persons).set_index('person_id')
-  # print("person:", person_df)
-  print("adding persons")
+  logging.getLogger(NAME).debug("adding persons")
   db['person'].write_frame(person_df)
 
 def update_subject_areas(db, subject_areas, person_ids):
   subject_area_df = pd.DataFrame(subject_areas)
-  # print("subject_area:", subject_area_df)
 
-  print("updating subject areas")
+  logging.getLogger(NAME).debug("updating subject areas")
   db_table = db['person_subject_area']
   db_table.delete_where(
     db_table.table.person_id.in_(person_ids)
@@ -97,7 +98,7 @@ def update_subject_areas(db, subject_areas, person_ids):
 def update_person_membership(db, person_membership, person_ids):
   person_membership_df = pd.DataFrame(person_membership)
 
-  print("updating person memberships")
+  logging.getLogger(NAME).debug("updating person memberships")
   db_table = db['person_membership']
   db_table.delete_where(
     db_table.table.person_id.in_(person_ids)
@@ -106,7 +107,7 @@ def update_person_membership(db, person_membership, person_ids):
   db_table.write_frame(person_membership_df, index=False)
 
 def update_early_career_researcher_status(db, person_ids):
-  print("updating early career researcher status")
+  logging.getLogger(NAME).debug("updating early career researcher status")
   db_table = db['person']
 
   db.commit()
@@ -125,7 +126,8 @@ def update_early_career_researcher_status(db, person_ids):
 
 
 def convert_csv_file_to(filename, stream, db):
-  print("converting:", filename)
+  logger = logging.getLogger(NAME)
+  logger.info("converting: %s", filename)
   df = (
     pd.read_csv(stream, skiprows=3, dtype={'p_id': str})
     [['p_id', 'first_nm', 'last_nm', 'ORCID', 'First subject area', 'Second subject area']]
@@ -139,12 +141,12 @@ def convert_csv_file_to(filename, stream, db):
     ).all()
   )
   not_existing_person_ids = person_ids - existing_person_ids
-  print("total_person_ids:", len(person_ids))
-  print("existing_person_ids:", len(existing_person_ids))
-  print("not_existing_person_ids:", len(not_existing_person_ids))
+  logger.info("total_person_ids: %d", len(person_ids))
+  logger.info("existing_person_ids: %d", len(existing_person_ids))
+  logger.info("not_existing_person_ids: %d", len(not_existing_person_ids))
 
   if len(not_existing_person_ids) == 0:
-    print("no new persons to add")
+    logger.info("no new persons to add")
   else:
     persons = frame_to_persons(df[
       df['p_id'].isin(not_existing_person_ids)
@@ -153,7 +155,7 @@ def convert_csv_file_to(filename, stream, db):
     add_persons(db, persons)
 
   if len(person_ids) == 0:
-    print("no persons found")
+    logger.info("no persons found")
   else:
     subject_areas = frame_to_subject_areas(df)
     person_membership = frame_to_person_membership(df)
@@ -192,7 +194,10 @@ def main():
 
   db.commit()
 
-  print("Done")
+  logging.getLogger(NAME).info("Done")
 
 if __name__ == "__main__":
+  from shared_proxy import configure_logging
+  configure_logging()
+
   main()

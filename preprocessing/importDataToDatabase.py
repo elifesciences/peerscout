@@ -1,6 +1,7 @@
 import itertools
 from os.path import basename, splitext
 import re
+import logging
 
 import pandas as pd
 from tqdm import tqdm
@@ -20,6 +21,8 @@ from preprocessingUtils import get_downloads_xml_path
 from dataNormalisationUtils import normalise_subject_area
 
 from shared_proxy import database
+
+NAME = 'importDataToDatabase'
 
 def auto_convert(name, value):
   if name.endswith('-date'):
@@ -90,7 +93,7 @@ def find_unknown_paths(doc, known_paths):
 def sanity_check_unknown_paths(doc, known_paths):
   unknown_paths = find_unknown_paths(doc, known_paths)
   if len(unknown_paths) > 0:
-    print("unknown_paths:", unknown_paths)
+    logging.getLogger(NAME).warning("unknown_paths: %s", unknown_paths)
 
 version_copy_paths = {
   'manuscript_author': ['authors/author'],
@@ -674,7 +677,10 @@ def main():
 
   process_files_in_directory_or_zip(source, process_zip, ext=".zip")
 
-  print("done")
+  logging.getLogger(NAME).info("done")
 
 if __name__ == "__main__":
+  from shared_proxy import configure_logging
+  configure_logging()
+
   main()

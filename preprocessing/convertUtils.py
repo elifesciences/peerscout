@@ -6,27 +6,20 @@ from os.path import basename, splitext, isfile
 from zipfile import ZipFile
 import html
 from html.parser import HTMLParser
+import logging
 
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
 
-debug_enabled = False
-
-def debug(*args):
-  if debug_enabled:
-    print(*args)
-
-def set_debug(enabled):
-  global debug_enabled
-  debug_enabled = enabled
+NAME = 'convertUtils'
 
 class MLStripper(HTMLParser):
   def __init__(self):
     super().__init__()
     self.reset()
     self.strict = False
-    self.convert_charrefs= True
+    self.convert_charrefs = True
     self.fed = []
 
   def handle_data(self, d):
@@ -92,6 +85,7 @@ class TableOutput(object):
     if key:
       self.set_index(key)
     self.rows_by_key = {}
+    self.logger = logging.getLogger(NAME)
 
   def append(self, props):
     for k, v in props.items():
@@ -102,15 +96,21 @@ class TableOutput(object):
       index = self.columns[k]
       a[index] = v
     if self.key:
-      debug("adding:", self.name, self.key, props[self.key], len(self.rows_by_key))
+      self.logger.debug(
+        "adding: %s, %s, %s, %d",
+        self.name, self.key, props[self.key], len(self.rows_by_key)
+      )
       self.rows_by_key.setdefault(props[self.key], []).append(a)
-      debug("added:", self.name, self.key, props[self.key], len(self.rows_by_key))
+      self.logger.debug(
+        "added: %s, %s, %s, %d",
+        self.name, self.key, props[self.key], len(self.rows_by_key)
+      )
     else:
       self.rows.append(a)
 
   def set_index(self, key):
     if self.key != key:
-      debug("setting index to:", self.name, key)
+      self.logger.debug("setting index to: %s, %s", self.name, key)
       if not key:
         self.rows = flatten(self.rows_by_key.values())
         self.rows_by_key = {}
@@ -125,7 +125,7 @@ class TableOutput(object):
   def remove_where_property_is(self, col, value):
     self.set_index(col)
     if value in self.rows_by_key:
-      debug("removing:", self.name, self.key, value)
+      self.logger.debug("removing: %s, %s, %s", self.name, self.key, value)
       del self.rows_by_key[value]
     # self.remove_where(condition=lambda row: row[self.columns[prop]] == value)
 
@@ -143,7 +143,10 @@ class TableOutput(object):
     column_count = len(self.columns)
     if self.key:
       rows = flatten(self.rows_by_key.values())
-      debug("rows after flattening:", self.name, self.key, len(rows), len(self.rows_by_key))
+      self.logger.debug(
+        "rows after flattening: %s, %s, %d, %d",
+        self.name, self.key, len(rows), len(self.rows_by_key)
+      )
     else:
       rows = self.rows
     m = np.full((len(rows) + 1, column_count), fill_value=None, dtype=object)
