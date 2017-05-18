@@ -262,7 +262,7 @@ const PersonEmailLink = ({ person: { email } }) => (
     target="_blank"
     href={ `mailto:${email}` }
   >
-    <Text><FontAwesomeIcon name="envelope"/></Text>
+    <Text>{ email }</Text>
   </Link>
 );
 
@@ -344,12 +344,17 @@ const PotentialReviewer = ({
           </Text>
         )
       }
+      { membershipComponents }
+    </View>
+  );
+  const subtitleComponent = (
+    <View style={ styles.inlineContainer }>
+      <Text>{ person['institution'] }</Text>
       {
         person['email'] && (
           <PersonEmailLink person={ person } />
         )
       }
-      { membershipComponents }
     </View>
   );
   const renderManuscripts = manuscripts => manuscripts && manuscripts.map((manuscript, index) => (
@@ -366,7 +371,7 @@ const PotentialReviewer = ({
       <Comment text={ `Person id: ${person['person_id']}` }/>
       <CardHeader
         title={ titleComponent }
-        subtitle={ person['institution'] }
+        subtitle={ subtitleComponent }
       />
       <CardText>
         {
