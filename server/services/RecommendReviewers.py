@@ -150,7 +150,7 @@ def unescape_if_string(s):
 
 def stats_by_person_for_period(table):
   df = table.read_frame()
-  debugv("person stats frame ({}):\n".format(table.table.__tablename__), df)
+  debugv("person stats frame (%s):\n%s", table.table.__tablename__, df)
   if len(df) == 0:
     return {}
 
@@ -173,7 +173,7 @@ def stats_by_person_for_period(table):
     }
     for k, v in df.to_dict(orient='index').items()
   })
-  debugv("person stats map:\n", m)
+  debugv("person stats map:\n%s", m)
   return m
 
 def select_dict_keys(d, keys):
@@ -312,8 +312,8 @@ class RecommendReviewers(object):
 
     self.persons_map = dict((p[PERSON_ID], p) for p in persons_list)
 
-    debugv("self.persons_df:", self.persons_df)
-    debugv("persons_map:", self.persons_map)
+    debugv("self.persons_df: %s", self.persons_df)
+    debugv("persons_map: %s", self.persons_map)
 
     temp_authors_map = groupby_columns_to_dict(
       self.authors_all_df[VERSION_ID].values,
