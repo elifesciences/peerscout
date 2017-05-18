@@ -224,7 +224,7 @@ default_field_mapping_by_table_name = {
 default_filter_by_table_name = {
   'person_membership': lambda x: (
     isinstance(x, dict) and
-    len(x.get('member_id', '')) > 0
+    len(x.get('member_id', '') or '') > 0
   ),
   'manuscript_keyword': lambda x: (
     isinstance(x, dict) and
@@ -483,6 +483,7 @@ def convert_xml(doc, tables, manuscript_number, field_mapping_by_table_name):
           itertools.chain.from_iterable([person.findall(xpath) for xpath in xpaths]),
           person_key_props,
           field_mapping=field_mapping_by_table_name[table_name],
+          list_transformer_func=get_combined_list_transformer(table_name),
           exclude=known_person_xml_paths)
 
   # sanity check (to verify that we haven't missed any tags)

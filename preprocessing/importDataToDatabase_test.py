@@ -160,3 +160,15 @@ def test_with_invalid_manuscript_ref():
       set(df['version_id']) ==
       set(['with-invalid-manuscript-ref-1'])
     )
+
+def test_with_empty_oricid_id():
+  with convert_files(['with-empty-orcid-id.xml']) as db:
+    df = db.person.read_frame().reset_index()
+    logger.debug('df:\n%s', df)
+    assert (
+      set(df['person_id']) ==
+      set(['author1'])
+    )
+    df = db.person_membership.read_frame().reset_index()
+    logger.debug('df:\n%s', df)
+    assert len(df) == 0
