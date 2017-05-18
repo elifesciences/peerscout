@@ -641,7 +641,8 @@ def convert_zip_file(
       'update/insert {}({})'.format(table_name, len(df)),
       width=40
     ))
-    db[table_name].update_or_create_list(df.to_dict(orient='records'))
+    if len(df) > 0:
+      db[table_name].update_or_create_list(df.to_dict(orient='records'))
 
   logger.debug('inserting records: %s', table_names_not_supporting_update_or_insert)
   pbar = tqdm(table_names_not_supporting_update_or_insert, leave=False)
@@ -651,7 +652,8 @@ def convert_zip_file(
       'insert {}({})'.format(table_name, len(df)),
       width=40
     ))
-    insert_records(db, table_name, df)
+    if len(df) > 0:
+      insert_records(db, table_name, df)
 
   logger.debug('marking file as processed: %s (%d)', zip_filename, current_version)
   db.import_processed.update_or_create(import_processed_id=zip_filename, version=current_version)
