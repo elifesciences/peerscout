@@ -1,7 +1,6 @@
 import os
 import datetime
 
-import json
 from flask import Flask, request, send_from_directory, jsonify, url_for
 from flask.json import JSONEncoder
 from flask_cors import CORS
@@ -13,18 +12,17 @@ from services import (
   RecommendReviewers
 )
 
-from shared_proxy import database
+from shared_proxy import database, app_config
 
 CLIENT_FOLDER = '../client/dist'
 
 
-port = 8080
 data_dir = os.path.join('..', '.data')
 cache_dir = os.path.join(data_dir, 'server-cache')
 
-with open('config.json') as config_file:
-  config = json.load(config_file)
-  port = config.get('port', port)
+app_config = app_config.get_app_config()
+port = app_config.get('server', 'port', fallback=8080)
+host = app_config.get('server', 'host', fallback=None)
 
 memory = Memory(cachedir=cache_dir, verbose=0)
 print("cache directory:", cache_dir)
@@ -127,4 +125,4 @@ def send_client_files(path):
   return send_from_directory(CLIENT_FOLDER, path)
 
 if __name__ == "__main__":
-  app.run(port=port)
+  app.run(port=port, host=host)

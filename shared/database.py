@@ -16,6 +16,8 @@ from .database_schema import (
 
 from .database_views import create_views
 
+from .app_config import get_app_config
+
 class CustomJSONEncoder(JSONEncoder):
   def default(self, obj): # pylint: disable=E0202
     try:
@@ -267,8 +269,7 @@ def connect_database(*args, **kwargs):
   return Database(engine)
 
 def connect_configured_database():
-  config = configparser.ConfigParser()
-  config.read('../app.cfg')
+  config = get_app_config()
   db_config = config['database']
   name = db_config['name']
   if name.startswith('sqlite:'):
