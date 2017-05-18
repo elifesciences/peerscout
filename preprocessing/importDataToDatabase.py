@@ -555,6 +555,8 @@ def convert_zip_file(
   zip_filename, zip_stream, db, field_mapping_by_table_name,
   early_career_researcher_person_ids, export_emails=False):
 
+  logger = logging.getLogger(NAME)
+
   current_version = 4
   processed = db.import_processed.get(zip_filename)
   if processed is not None and processed.version == current_version:
@@ -622,6 +624,7 @@ def convert_zip_file(
     t for t in table_names if t not in table_names_supporting_update_or_insert_set
   ]
 
+  logger.debug('removing records: %s', table_names_not_supporting_update_or_insert)
   pbar = tqdm(list(reversed(table_names_not_supporting_update_or_insert)), leave=False)
   for table_name in pbar:
     pbar.set_description(rjust_and_shorten_text(
@@ -630,6 +633,7 @@ def convert_zip_file(
     ))
     remove_records(db, table_name, frame_by_table_name[table_name], tables[table_name].key)
 
+  logger.debug('updating/creating records: %s', table_names_supporting_update_or_insert)
   pbar = tqdm(table_names_supporting_update_or_insert, leave=False)
   for table_name in pbar:
     df = frame_by_table_name[table_name]
@@ -639,6 +643,7 @@ def convert_zip_file(
     ))
     db[table_name].update_or_create_list(df.to_dict(orient='records'))
 
+  logger.debug('inserting records: %s', table_names_not_supporting_update_or_insert)
   pbar = tqdm(table_names_not_supporting_update_or_insert, leave=False)
   for table_name in pbar:
     df = frame_by_table_name[table_name]
@@ -648,6 +653,7 @@ def convert_zip_file(
     ))
     insert_records(db, table_name, df)
 
+  logger.debug('marking file as processed: %s (%d)', zip_filename, current_version)
   db.import_processed.update_or_create(import_processed_id=zip_filename, version=current_version)
 
   db.commit()
