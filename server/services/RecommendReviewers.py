@@ -315,10 +315,13 @@ class RecommendReviewers(object):
     debugv("self.persons_df: %s", self.persons_df)
     debugv("persons_map: %s", self.persons_map)
 
-    temp_authors_map = groupby_columns_to_dict(
-      self.authors_all_df[VERSION_ID].values,
-      self.authors_all_df[PERSON_ID].values,
-      lambda person_id: self.persons_map.get(person_id, None)
+    temp_authors_map = groupby_column_to_dict(
+      self.authors_all_df,
+      VERSION_ID,
+      lambda author: {
+        **self.persons_map.get(author[PERSON_ID], None),
+        'is_corresponding_author': author['is_corresponding_author']
+      }
     )
 
     temp_editors_map = groupby_columns_to_dict(
