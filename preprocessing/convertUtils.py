@@ -59,6 +59,12 @@ rjust_and_shorten_text = lambda s, width, placeholder='..': (
   else s.rjust(width)
 )
 
+debugv_enabled = False
+
+def debugv(*args):
+  if debugv_enabled:
+    logging.getLogger(NAME).debug(*args)
+
 def groupby_to_dict(l, kf, vf):
   return {
     k: vf(list(v))
@@ -96,12 +102,12 @@ class TableOutput(object):
       index = self.columns[k]
       a[index] = v
     if self.key:
-      self.logger.debug(
+      debugv(
         "adding: %s, %s, %s, %d",
         self.name, self.key, props[self.key], len(self.rows_by_key)
       )
       self.rows_by_key.setdefault(props[self.key], []).append(a)
-      self.logger.debug(
+      debugv(
         "added: %s, %s, %s, %d",
         self.name, self.key, props[self.key], len(self.rows_by_key)
       )
@@ -110,7 +116,7 @@ class TableOutput(object):
 
   def set_index(self, key):
     if self.key != key:
-      self.logger.debug("setting index to: %s, %s", self.name, key)
+      debugv("setting index to: %s, %s", self.name, key)
       if not key:
         self.rows = flatten(self.rows_by_key.values())
         self.rows_by_key = {}
@@ -125,7 +131,7 @@ class TableOutput(object):
   def remove_where_property_is(self, col, value):
     self.set_index(col)
     if value in self.rows_by_key:
-      self.logger.debug("removing: %s, %s, %s", self.name, self.key, value)
+      debugv("removing: %s, %s, %s", self.name, self.key, value)
       del self.rows_by_key[value]
     # self.remove_where(condition=lambda row: row[self.columns[prop]] == value)
 
@@ -143,7 +149,7 @@ class TableOutput(object):
     column_count = len(self.columns)
     if self.key:
       rows = flatten(self.rows_by_key.values())
-      self.logger.debug(
+      debugv(
         "rows after flattening: %s, %s, %d, %d",
         self.name, self.key, len(rows), len(self.rows_by_key)
       )
