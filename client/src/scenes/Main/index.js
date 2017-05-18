@@ -58,9 +58,13 @@ class Main extends React.Component {
       manuscriptNumber: '',
       keywords: ''
     };
+    this.defaultConfig = {
+      showAllRelatedManuscripts: true
+    };
     this.state = {
       searchOptions: this.defaultSearchOptions,
-      reqId: 0
+      reqId: 0,
+      config: this.defaultConfig
     };
 
     this.getResults = createSelector(
@@ -180,11 +184,23 @@ class Main extends React.Component {
     ));
   }
 
+  translateConfig(configResult) {
+    return {
+      showAllRelatedManuscripts:
+        configResult.chart_show_all_manuscripts != undefined ?
+        configResult.chart_show_all_manuscripts == 'true' :
+        this.defaultConfig.showAllRelatedManuscripts
+    }
+  }
+
   componentDidMount() {
     this.updateSearchOptionsFromLocation(this.history.location);
     this.unlisten = this.history.listen((location, action) => {
       this.updateSearchOptionsFromLocation(location);
     });
+    this.props.reviewerRecommendationApi.getConfig().then(config => this.setState({
+      config: this.translateConfig(config)
+    }));
     this.props.reviewerRecommendationApi.getAllSubjectAreas().then(allSubjectAreas => this.setState({
       allSubjectAreas
     }));
@@ -213,6 +229,9 @@ class Main extends React.Component {
 
   render() {
     const {
+      config: {
+        showAllRelatedManuscripts
+      },
       loading,
       searchOptions,
       results,
@@ -252,6 +271,7 @@ class Main extends React.Component {
                       searchResult={ results }
                       onNodeClicked={ this.onNodeClicked }
                       selectedNode={ selectedNode }
+                      showAllRelatedManuscripts={ showAllRelatedManuscripts }
                     />
                     <SearchResult
                       searchResult={ results }
