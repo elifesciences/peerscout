@@ -618,12 +618,37 @@ const createChart = (parent, graph, options) => {
     node.classed('node-corresponding-author', isCorrespondingAuthor);
   };
 
+  const manuscriptHasCorrespondingAuthor = (manuscript, personId) =>
+    manuscript.authors
+    .filter(author => author.person_id == personId && author.is_corresponding_author)
+    .length > 0;
+
+  const selectManuscriptsOfCorrespondingAuthorsNode = selectedNode => {
+    const potentialReviewer = selectedNode && selectedNode.potentialReviewer;
+    const person = potentialReviewer && potentialReviewer.person;
+    const personId = person && person.person_id;
+    const authorOf = (potentialReviewer && potentialReviewer.author_of_manuscripts) || [];
+    const correspondingAuthorOf = authorOf.filter(
+      m => manuscriptHasCorrespondingAuthor(m, personId)
+    );
+    const correspondingAuthorOfVersionIds = new Set(
+      correspondingAuthorOf.map(m => m.version_id)
+    );
+    console.log('correspondingAuthorOfVersionIds:', correspondingAuthorOfVersionIds);
+    const isManuscriptOfCorrespondingAuthor = d => {
+      const versionId = d.manuscript && d.manuscript.version_id;
+      return versionId && correspondingAuthorOfVersionIds.has(versionId);
+    };
+    node.classed('node-manuscript-of-corresponding-author', isManuscriptOfCorrespondingAuthor);
+  };
+
   const selectNode = selectedNode => {
     console.log("select node:", selectedNode);
     const selectedId = selectedNode && selectedNode.id;
     const isSelected = d => d.id === selectedId;
     node.classed('selected', isSelected);
     selectCorrespondingAuthorsOfNode(selectedNode);
+    selectManuscriptsOfCorrespondingAuthorsNode(selectedNode);
   }
 
   if (options.onNodeClicked) {

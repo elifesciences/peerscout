@@ -85,6 +85,10 @@ a {
   fill: #8cc;
 }
 
+.node-manuscript-of-corresponding-author circle {
+  fill: #488;
+}
+
 .node-search circle,
 .node-main-manuscript circle {
   fill: #88f;
