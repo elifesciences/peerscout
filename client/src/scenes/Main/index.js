@@ -49,7 +49,9 @@ const parseSearch = search => {
     params[name] = value;
   });
   return params;
-}
+};
+
+const HELP_OPEN_KEY = 'helpOpen';
 
 class Main extends React.Component {
   constructor(props) {
@@ -66,7 +68,7 @@ class Main extends React.Component {
       searchOptions: this.defaultSearchOptions,
       reqId: 0,
       config: this.defaultConfig,
-      helpOpen: true
+      helpOpen: localStorage.getItem(HELP_OPEN_KEY) !== 'false'
     };
 
     this.getResults = createSelector(
@@ -229,12 +231,17 @@ class Main extends React.Component {
     this.setSearchOptions(searchOptions);
   }
 
+  setHelpOpen(helpOpen) {
+    this.setState({helpOpen});
+    localStorage.setItem(HELP_OPEN_KEY, '' + helpOpen);
+  }
+
   onCloseHelp = () => {
-    this.setState({helpOpen: false});
+    this.setHelpOpen(false);
   }
 
   onOpenHelp = () => {
-    this.setState({helpOpen: true});
+    this.setHelpOpen(true);
   }
 
   render() {
