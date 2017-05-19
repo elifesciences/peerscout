@@ -65,7 +65,8 @@ class Main extends React.Component {
     this.state = {
       searchOptions: this.defaultSearchOptions,
       reqId: 0,
-      config: this.defaultConfig
+      config: this.defaultConfig,
+      helpOpen: true
     };
 
     this.getResults = createSelector(
@@ -228,6 +229,14 @@ class Main extends React.Component {
     this.setSearchOptions(searchOptions);
   }
 
+  onCloseHelp = () => {
+    this.setState({helpOpen: false});
+  }
+
+  onOpenHelp = () => {
+    this.setState({helpOpen: true});
+  }
+
   render() {
     const {
       config: {
@@ -240,7 +249,8 @@ class Main extends React.Component {
       allKeywords,
       selectedNode,
       selectedReviewer,
-      selectedManuscript
+      selectedManuscript,
+      helpOpen
     } = this.state;
     const hasPotentialReviewers =
       results && (results.potentialReviewers) && (results.potentialReviewers.length > 0);
@@ -286,7 +296,11 @@ class Main extends React.Component {
             </FlexRow>
           </LoadingIndicator>
         </FlexRow>
-        <Help/>
+        <Help
+          open={ helpOpen }
+          onClose={ this.onCloseHelp }
+          onOpen={ this.onOpenHelp }
+        />
       </FlexColumn>
     );
   }
