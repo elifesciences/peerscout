@@ -218,6 +218,9 @@ DECISSION_REJECTED = 'Reject Full Submission'
 
 TYPE_RESEARCH_ARTICLE = 'Research Article'
 
+VALID_DECISIONS = {DECISSION_ACCEPTED}
+VALID_MANUSCRIPT_TYPES = {TYPE_RESEARCH_ARTICLE}
+
 MANUSCRIPT_VERSION1_RESULT = {
   **MANUSCRIPT_ID_FIELDS1,
   MANUSCRIPT_ID: MANUSCRIPT_ID1,
@@ -377,7 +380,11 @@ def create_recommend_reviewers(datasets):
   logger.debug("view person_review_stats_overall:\n%s",
     db.person_review_stats_overall.read_frame())
 
-  manuscript_model = ManuscriptModel(db)
+  manuscript_model = ManuscriptModel(
+    db,
+    valid_decisions=VALID_DECISIONS,
+    valid_manuscript_types=VALID_MANUSCRIPT_TYPES
+  )
   similarity_model = DocumentSimilarityModel(
     db,
     manuscript_model=manuscript_model

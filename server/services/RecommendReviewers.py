@@ -5,8 +5,6 @@ import logging
 
 import pandas as pd
 
-from .ManuscriptModel import is_manuscript_relevant
-
 from .utils import unescape_and_strip_tags, filter_by
 
 from .collection_utils import (
@@ -410,7 +408,7 @@ class RecommendReviewers(object):
     self.manuscripts_by_author_map = {}
     self.manuscripts_by_reviewer_map = {}
     for m in manuscripts_all_list:
-      if is_manuscript_relevant(m):
+      if manuscript_model.is_manuscript_relevant(m):
         debugv("manuscript: %s", m)
         for author in m['authors']:
           self.manuscripts_by_author_map.setdefault(author[PERSON_ID], [])\
