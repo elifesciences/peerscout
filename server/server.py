@@ -27,6 +27,15 @@ config = app_config.get_app_config()
 port = config.get('server', 'port', fallback=8080)
 host = config.get('server', 'host', fallback=None)
 
+def parse_list(s, sep=','):
+  s = s.strip()
+  if len(s) == 0:
+    return []
+  return [item.strip() for item in s.split(sep)]
+
+valid_decisions = parse_list(config.get('model', 'valid_decisions', fallback=''))
+valid_manuscript_types = parse_list(config.get('model', 'valid_manuscript_types', fallback=''))
+
 client_config = dict(config['client']) if 'client' in config else {}
 
 configure_logging()
@@ -42,7 +51,11 @@ memory.clear(warn=False)
 db = database.connect_configured_database()
 
 def load_recommender():
-  manuscript_model = ManuscriptModel(db)
+  manuscript_model = ManuscriptModel(
+    db,
+    valid_decisions=valid_decisions,
+    valid_manuscript_types=valid_manuscript_types
+  )
   similarity_model = load_similarity_model_from_database(
     db, manuscript_model=manuscript_model
   )
