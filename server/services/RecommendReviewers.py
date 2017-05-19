@@ -102,14 +102,16 @@ def groupby_columns_to_dict(groupby_keys, version_keys, vf):
 def filter_dict_keys(d, f):
   return {k: v for k, v in d.items() if f(k)}
 
-def groupby_column_to_dict(df, groupby_col, value_col=None):
+def groupby_column_to_dict(df, groupby_col, value_col=None, sort_by=None):
   if value_col is None:
     value_f = lambda item: filter_dict_keys(item, lambda col: col != groupby_col)
   elif callable(value_col):
     value_f = value_col
   else:
     value_f = lambda item: item[value_col]
-  a = df.sort_values(groupby_col).to_dict(orient='records')
+  if sort_by is None:
+    sort_by = groupby_col
+  a = df.sort_values(sort_by).to_dict(orient='records')
   return {
     k: [value_f(item) for item in v]
     for k, v in groupby(a, lambda item: item[groupby_col])
@@ -321,7 +323,8 @@ class RecommendReviewers(object):
       lambda author: {
         **self.persons_map.get(author[PERSON_ID], None),
         'is_corresponding_author': author['is_corresponding_author']
-      }
+      },
+      sort_by=[VERSION_ID, 'seq']
     )
 
     temp_editors_map = groupby_columns_to_dict(
