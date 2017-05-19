@@ -677,8 +677,11 @@ class RecommendReviewers(object):
     available_potential_reviewer_mean_durations = filter_none(deep_get_list(
       potential_reviewers, review_duration_mean_keys
     ))
-    potential_reviewer_mean_duration = float(pd.np.mean(
-      available_potential_reviewer_mean_durations))
+    potential_reviewer_mean_duration = (
+      float(pd.np.mean(available_potential_reviewer_mean_durations))
+      if len(available_potential_reviewer_mean_durations) > 0
+      else None
+    )
 
     potential_reviewers = sorted(
       potential_reviewers,
