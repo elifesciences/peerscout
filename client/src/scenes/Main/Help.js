@@ -89,7 +89,7 @@ const HelpContents = props => (
       <Text>On the right, you can see other relevant statistics, such as average review time or availability. That information is shown alongside past manuscripts that the reviewers suggested have been authors or reviewers of.</Text>
     </View>
     <View style={ styles.paragraph }>
-      <Text>If you have any questions, please email editorial@elifesciences.org</Text>
+      <Text>If you have any questions, please email</Text>
       <EmailLink email="editorial@elifesciences.org"/>
     </View>
   </View>
