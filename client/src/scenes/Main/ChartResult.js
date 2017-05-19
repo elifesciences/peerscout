@@ -424,7 +424,7 @@ const createLegend = (parent, showSearch, options) => {
         'is_early_career_researcher': true
       }
     },
-    label: 'Early career researcher'
+    label: 'Early career reviewer'
   }];
   const includeOtherManuscripts = true;
   if (includeOtherManuscripts) {

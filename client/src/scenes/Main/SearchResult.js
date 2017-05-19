@@ -145,7 +145,7 @@ const combinedPersonName = person =>
     person['first_name'],
     person['middle_name'],
     person['last_name'],
-    person['is_early_career_researcher'] ? '(early career researcher)': undefined,
+    person['is_early_career_researcher'] ? '(early career reviewer)': undefined,
     person['status'] !== 'Active' && `(${formatPersonStatus(person['status'])})`
   ].filter(s => !!s).join(' ');
 
