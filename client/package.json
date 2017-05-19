@@ -17,6 +17,7 @@
     "d3-tip": "^0.7.1",
     "debounce": "^1.0.0",
     "deep-equal": "^1.0.1",
+    "es6-set": "^0.1.5",
     "font-awesome": "^4.7.0",
     "history": "^4.5.1",
     "markov-strings": "^1.3.2",

@@ -3,6 +3,7 @@ import ResizeObserver from 'resize-observer-polyfill';
 
 import * as d3 from 'd3';
 import d3Tip from 'd3-tip';
+import Set from 'es6-set';
 
 import {
   formatCombinedScore,
@@ -259,29 +260,21 @@ const nodeOpacity = d => {
   );
 }
 
-const nodeColor = d => {
-  if (d.isMain || d.search) {
-    return '#88f';
+const nodeStyleClass = d => {
+  if (d.search) {
+    return 'node-search';
+  } else if (d.isMain) {
+    return 'node-main-manuscript';
   } else if (d.manuscript) {
-    return '#8cc';
+    return 'node-manuscript';
   } else if (d.potentialReviewer) {
+    let s = 'node-potential-reviewer';
     if (d.potentialReviewer.person['is_early_career_researcher']) {
-      return '#f88';
+      s += ' node-early-career-researcher';
     }
-    return '#8f8';
+    return s;
   } else {
-    return '#fff';
-  }
-};
-
-const nodeReviewTimeColor = d => {
-  if (d.potentialReviewer) {
-    if (d.potentialReviewer.person['is_early_career_researcher']) {
-      return '#844';
-    }
-    return '#080';
-  } else {
-    return '#fff';
+    return 'node-unknown';
   }
 };
 
@@ -348,13 +341,13 @@ const createNode = (parent, nodes) => {
     .data(nodes)
     .enter()
     .append('g')
+    .attr("class", nodeStyleClass)
     .style('opacity', nodeOpacity);
 
   const node = nodeParent.append('g');
     
   node.append("circle")
-    .attr("r", 15)
-    .attr("fill", nodeColor)
+    .attr("r", 15);
 
   node.append("svg:image")
    .attr('x',-11)
@@ -365,7 +358,7 @@ const createNode = (parent, nodes) => {
    .style('opacity', 0.4);
 
   node.append("path")
-    .style("fill", nodeReviewTimeColor)
+    .attr("class", "reviewer-duration-indicator")
     .attr("d", d3.arc()
       .innerRadius(10)
       .outerRadius(15)
@@ -378,7 +371,6 @@ const createNode = (parent, nodes) => {
       const singleScore = nodeSingleScore(d);
       return (singleScore && !d.isMain && formatCombinedScore(singleScore)) || '';
     })
-    .style("fill", "#000")
     .style("text-anchor", "middle")
     .attr("class", "node-text")
     .attr("transform", d => "translate(0, 6)");
@@ -610,11 +602,28 @@ const createChart = (parent, graph, options) => {
   const showSearch = !!graph.nodes[0].search;
   createLegend(svg, showSearch, options);
 
+  const selectCorrespondingAuthorsOfNode = selectedNode => {
+    const manuscript = selectedNode && selectedNode.manuscript;
+    const authors = (manuscript && manuscript.authors) || [];
+    const correspondingAuthors = authors.filter(author => author.is_corresponding_author);
+    const correspondingAuthorPersonIds = new Set(
+      correspondingAuthors.map(author => author.person_id)
+    );
+    console.log('correspondingAuthorPersonIds:', correspondingAuthorPersonIds);
+    const isCorrespondingAuthor = d => {
+      const person = d.potentialReviewer && d.potentialReviewer.person;
+      const personId = person && person.person_id;
+      return personId && correspondingAuthorPersonIds.has(personId);
+    };
+    node.classed('node-corresponding-author', isCorrespondingAuthor);
+  };
+
   const selectNode = selectedNode => {
     console.log("select node:", selectedNode);
     const selectedId = selectedNode && selectedNode.id;
     const isSelected = d => d.id === selectedId;
     node.classed('selected', isSelected);
+    selectCorrespondingAuthorsOfNode(selectedNode);
   }
 
   if (options.onNodeClicked) {

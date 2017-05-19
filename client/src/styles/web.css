@@ -73,6 +73,56 @@ a {
   height: 100%;
 }
 
+.node-text {
+  fill: #000;
+}
+
+.node-unknown circle {
+  fill: #fff;
+}
+
+.node-manuscript circle {
+  fill: #8cc;
+}
+
+.node-search circle,
+.node-main-manuscript circle {
+  fill: #88f;
+}
+
+.node-potential-reviewer circle {
+  fill: #8f8;
+}
+
+.node-early-career-researcher circle {
+  fill: #f88;
+}
+
+.node-corresponding-author circle {
+  fill: #484;
+}
+
+.node-corresponding-author.node-early-career-researcher circle {
+  fill: #844;
+}
+
+.node-corresponding-author .node-text {
+  fill: #fff;
+}
+
+.node-potential-reviewer .reviewer-duration-indicator {
+  fill: #080;
+}
+
+.node-corresponding-author .reviewer-duration-indicator {
+  fill: #848;
+}
+
+.node-early-career-researcher .reviewer-duration-indicator {
+  fill: #844;
+}
+
+
 .links line {
   stroke: #999;
 }
