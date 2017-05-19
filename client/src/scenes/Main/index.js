@@ -16,6 +16,7 @@ import {
 import SearchHeader from './SearchHeader';
 import SearchResult from './SearchResult';
 import ChartResult from './ChartResult';
+import Help from './Help';
 
 const styles = {
   outerResultsContainer: {
@@ -48,7 +49,9 @@ const parseSearch = search => {
     params[name] = value;
   });
   return params;
-}
+};
+
+const HELP_OPEN_KEY = 'helpOpen';
 
 class Main extends React.Component {
   constructor(props) {
@@ -64,7 +67,8 @@ class Main extends React.Component {
     this.state = {
       searchOptions: this.defaultSearchOptions,
       reqId: 0,
-      config: this.defaultConfig
+      config: this.defaultConfig,
+      helpOpen: localStorage.getItem(HELP_OPEN_KEY) !== 'false'
     };
 
     this.getResults = createSelector(
@@ -227,6 +231,19 @@ class Main extends React.Component {
     this.setSearchOptions(searchOptions);
   }
 
+  setHelpOpen(helpOpen) {
+    this.setState({helpOpen});
+    localStorage.setItem(HELP_OPEN_KEY, '' + helpOpen);
+  }
+
+  onCloseHelp = () => {
+    this.setHelpOpen(false);
+  }
+
+  onOpenHelp = () => {
+    this.setHelpOpen(true);
+  }
+
   render() {
     const {
       config: {
@@ -239,7 +256,8 @@ class Main extends React.Component {
       allKeywords,
       selectedNode,
       selectedReviewer,
-      selectedManuscript
+      selectedManuscript,
+      helpOpen
     } = this.state;
     const hasPotentialReviewers =
       results && (results.potentialReviewers) && (results.potentialReviewers.length > 0);
@@ -285,6 +303,11 @@ class Main extends React.Component {
             </FlexRow>
           </LoadingIndicator>
         </FlexRow>
+        <Help
+          open={ helpOpen }
+          onClose={ this.onCloseHelp }
+          onOpen={ this.onOpenHelp }
+        />
       </FlexColumn>
     );
   }
