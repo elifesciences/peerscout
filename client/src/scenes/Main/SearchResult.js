@@ -207,7 +207,11 @@ const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectArea
 };
 
 const PersonInlineSummary = ({ person }) => (
-  <Chip style={ styles.personChip }>
+  <Chip
+    style={ styles.personChip }
+    backgroundColor={ person.is_corresponding_author ? '#888' : '' }
+    labelColor={ person.is_corresponding_author ? '#fff' : '' }
+  >
     <Text>{ combinedPersonName(person) }</Text>
   </Chip>  
 );

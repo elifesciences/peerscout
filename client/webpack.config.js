@@ -3,6 +3,8 @@ var webpack = require('webpack');
 var HtmlWebpackPlugin = require('html-webpack-plugin');
 var CopyWebpackPlugin = require('copy-webpack-plugin');
 
+const API_URL = process.env.API_URL || 'http://localhost:8080/api';
+
 module.exports = {
   entry: [
     'babel-polyfill',
@@ -38,7 +40,7 @@ module.exports = {
   plugins: [
     new webpack.DefinePlugin({
       'process.env': {
-        API_URL: process.env.API_URL && `'${process.env.API_URL}'`
+        API_URL: `'${API_URL}'`
       }
     }),
     new HtmlWebpackPlugin({

@@ -172,3 +172,12 @@ def test_with_empty_oricid_id():
     df = db.person_membership.read_frame().reset_index()
     logger.debug('df:\n%s', df)
     assert len(df) == 0
+
+def test_with_corresponding_author():
+  with convert_files(['with-corresponding-author.xml']) as db:
+    df = db.manuscript_author.read_frame().reset_index().sort_values('seq')
+    logger.debug('df:\n%s', df)
+    assert (
+      [tuple(x) for x in df[['person_id', 'is_corresponding_author']].values] ==
+      [('author1', False), ('author2', True)]
+    )

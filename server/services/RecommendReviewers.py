@@ -102,14 +102,16 @@ def groupby_columns_to_dict(groupby_keys, version_keys, vf):
 def filter_dict_keys(d, f):
   return {k: v for k, v in d.items() if f(k)}
 
-def groupby_column_to_dict(df, groupby_col, value_col=None):
+def groupby_column_to_dict(df, groupby_col, value_col=None, sort_by=None):
   if value_col is None:
     value_f = lambda item: filter_dict_keys(item, lambda col: col != groupby_col)
   elif callable(value_col):
     value_f = value_col
   else:
     value_f = lambda item: item[value_col]
-  a = df.sort_values(groupby_col).to_dict(orient='records')
+  if sort_by is None:
+    sort_by = groupby_col
+  a = df.sort_values(sort_by).to_dict(orient='records')
   return {
     k: [value_f(item) for item in v]
     for k, v in groupby(a, lambda item: item[groupby_col])
@@ -150,7 +152,7 @@ def unescape_if_string(s):
 
 def stats_by_person_for_period(table):
   df = table.read_frame()
-  debugv("person stats frame ({}):\n".format(table.table.__tablename__), df)
+  debugv("person stats frame (%s):\n%s", table.table.__tablename__, df)
   if len(df) == 0:
     return {}
 
@@ -173,7 +175,7 @@ def stats_by_person_for_period(table):
     }
     for k, v in df.to_dict(orient='index').items()
   })
-  debugv("person stats map:\n", m)
+  debugv("person stats map:\n%s", m)
   return m
 
 def select_dict_keys(d, keys):
@@ -323,13 +325,17 @@ class RecommendReviewers(object):
 
     self.persons_map = dict((p[PERSON_ID], p) for p in persons_list)
 
-    debugv("self.persons_df:", self.persons_df)
-    debugv("persons_map:", self.persons_map)
+    debugv("self.persons_df: %s", self.persons_df)
+    debugv("persons_map: %s", self.persons_map)
 
-    temp_authors_map = groupby_columns_to_dict(
-      self.authors_all_df[VERSION_ID].values,
-      self.authors_all_df[PERSON_ID].values,
-      lambda person_id: self.persons_map.get(person_id, None)
+    temp_authors_map = groupby_column_to_dict(
+      self.authors_all_df,
+      VERSION_ID,
+      lambda author: {
+        **self.persons_map.get(author[PERSON_ID], None),
+        'is_corresponding_author': author['is_corresponding_author']
+      },
+      sort_by=[VERSION_ID, 'seq']
     )
 
     temp_editors_map = groupby_columns_to_dict(

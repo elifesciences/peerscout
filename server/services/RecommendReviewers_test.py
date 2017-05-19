@@ -29,7 +29,7 @@ PERSON_ID_COLUMNS = [PERSON_ID]
 
 MANUSCRIPT_AUTHOR = pd.DataFrame(
   [],
-  columns=MANUSCRIPT_ID_COLUMNS + [PERSON_ID]
+  columns=MANUSCRIPT_ID_COLUMNS + [PERSON_ID] + ['is_corresponding_author']
 )
 
 MANUSCRIPT_EDITOR = pd.DataFrame(
@@ -540,6 +540,40 @@ def test_matching_manuscript_should_return_multiple_authors():
   logger.debug("result: %s", PP.pformat(result))
   author_person_ids = [p[PERSON_ID] for p in result['matching_manuscripts'][0]['authors']]
   assert set(author_person_ids) == set([PERSON_ID1, PERSON_ID2])
+
+def test_matching_manuscript_should_indicate_corresponding_authors():
+  datasets = dict(DATASETS)
+  datasets['person'] = pd.DataFrame([
+    PERSON1,
+    PERSON2
+  ], columns=PERSON.columns)
+  datasets['manuscript_version'] = pd.DataFrame([
+    MANUSCRIPT_VERSION1,
+    MANUSCRIPT_VERSION2
+  ], columns=MANUSCRIPT_VERSION.columns)
+  datasets['manuscript_author'] = pd.DataFrame([
+    {
+      **AUTHOR1,
+      'is_corresponding_author': True
+    },
+    {
+      **AUTHOR2,
+      **MANUSCRIPT_ID_FIELDS1,
+      'is_corresponding_author': False
+    },
+    {
+      # make author1 not the corresponding author of another manuscript
+      **AUTHOR1,
+      **MANUSCRIPT_ID_FIELDS2,
+      'is_corresponding_author': False
+    }
+  ], columns=MANUSCRIPT_AUTHOR.columns)
+  recommend_reviewers = create_recommend_reviewers(datasets)
+  result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_ID1)
+  logger.debug("result: %s", PP.pformat(result))
+  authors = sorted(result['matching_manuscripts'][0]['authors'], key=lambda p: p[PERSON_ID])
+  author_summary = [(p[PERSON_ID], p.get('is_corresponding_author')) for p in authors]
+  assert author_summary == [(PERSON_ID1, True), (PERSON_ID2, False)]
 
 def test_matching_manuscript_should_not_recommend_its_authors():
   datasets = dict(DATASETS)
