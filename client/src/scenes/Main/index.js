@@ -16,6 +16,7 @@ import {
 import SearchHeader from './SearchHeader';
 import SearchResult from './SearchResult';
 import ChartResult from './ChartResult';
+import Help from './Help';
 
 const styles = {
   outerResultsContainer: {
@@ -285,6 +286,7 @@ class Main extends React.Component {
             </FlexRow>
           </LoadingIndicator>
         </FlexRow>
+        <Help/>
       </FlexColumn>
     );
   }
