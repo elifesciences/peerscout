@@ -3,7 +3,9 @@ var webpack = require('webpack');
 var HtmlWebpackPlugin = require('html-webpack-plugin');
 var CopyWebpackPlugin = require('copy-webpack-plugin');
 
-const API_URL = process.env.API_URL || 'http://localhost:8080/api';
+const API_URL = process.env.API_URL || (
+  process.env.NODE_ENV == 'development' && 'http://localhost:8080/api'
+) || '';
 
 module.exports = {
   entry: [
