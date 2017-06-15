@@ -475,7 +475,7 @@ const initialiseNodePosition = (node, index, width, height) => {
     return;
   }
   const t = (index / 10) * Math.PI * 2;
-  const scale = 100 * (index * 10);
+  const scale = 10 * index;
   node.x = (width / 2) + Math.cos(t) * scale;
   node.y = (height / 2) + Math.sin(t) * scale;
 };
