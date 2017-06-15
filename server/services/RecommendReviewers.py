@@ -400,6 +400,7 @@ class RecommendReviewers(object):
       'senior_editors': temp_senior_editors_map.get(manuscript[VERSION_ID], []),
       'reviewers': temp_reviewers_map.get(manuscript[VERSION_ID], []),
       'subject_areas': temp_subject_areas_map.get(manuscript[VERSION_ID], []),
+      'is_published': manuscript_model.is_manuscript_published(manuscript)
     } for manuscript in manuscripts_all_list]
     self.manuscripts_by_version_id_map = dict((
       m[VERSION_ID], m) for m in manuscripts_all_list)
@@ -408,11 +409,14 @@ class RecommendReviewers(object):
     self.manuscripts_by_author_map = {}
     self.manuscripts_by_reviewer_map = {}
     for m in manuscripts_all_list:
-      if manuscript_model.is_manuscript_relevant(m):
+      if manuscript_model.is_manuscript_valid(m):
         debugv("manuscript: %s", m)
-        for author in m['authors']:
-          self.manuscripts_by_author_map.setdefault(author[PERSON_ID], [])\
-          .append(m)
+        # only consider published manuscripts for authors
+        if m['is_published']:
+          for author in m['authors']:
+            self.manuscripts_by_author_map.setdefault(author[PERSON_ID], [])\
+            .append(m)
+        # also consider not published manuscripts (but valid ones) for reviewers
         for reviewer in m['reviewers']:
           self.manuscripts_by_reviewer_map.setdefault(reviewer[PERSON_ID], [])\
           .append(m)
@@ -612,13 +616,21 @@ class RecommendReviewers(object):
       for version_id in related_version_ids
     ]
     other_manuscripts_dicts = [m for m in other_manuscripts_dicts if m]
+    debugv('other_manuscripts_dicts:\n%s', other_manuscripts_dicts)
     potential_reviewers_ids = (
-      (set([
-        person[PERSON_ID] for person in
-        flatten([(m['authors'] + m['reviewers']) for m in other_manuscripts_dicts])
-      ]) | self._get_early_career_reviewer_ids_by_subject_areas(
-        subject_areas
-      ) | assigned_reviewers_by_person_id.keys()) - exclude_person_ids
+      (
+        set([
+          person[PERSON_ID] for person in
+          flatten([
+            m['authors'] + m['reviewers']
+            if m['is_published']
+            else m['reviewers']
+            for m in other_manuscripts_dicts
+          ])
+        ]) | self._get_early_career_reviewer_ids_by_subject_areas(
+          subject_areas
+        ) | assigned_reviewers_by_person_id.keys()
+      ) - exclude_person_ids
     )
 
     keyword_match_count_by_by_version_key_map = {

@@ -33,8 +33,14 @@ def parse_list(s, sep=','):
     return []
   return [item.strip() for item in s.split(sep)]
 
-valid_decisions = parse_list(config.get('model', 'valid_decisions', fallback=''))
-valid_manuscript_types = parse_list(config.get('model', 'valid_manuscript_types', fallback=''))
+valid_decisions = parse_list(config.get(
+  'model', 'valid_decisions', fallback=''))
+valid_manuscript_types = parse_list(config.get(
+  'model', 'valid_manuscript_types', fallback=''))
+published_decisions = parse_list(config.get(
+  'model', 'published_decisions', fallback=''))
+published_manuscript_types = parse_list(config.get(
+  'model', 'published_manuscript_types', fallback=''))
 
 client_config = dict(config['client']) if 'client' in config else {}
 
@@ -54,7 +60,9 @@ def load_recommender():
   manuscript_model = ManuscriptModel(
     db,
     valid_decisions=valid_decisions,
-    valid_manuscript_types=valid_manuscript_types
+    valid_manuscript_types=valid_manuscript_types,
+    published_decisions=published_decisions,
+    published_manuscript_types=published_manuscript_types
   )
   similarity_model = load_similarity_model_from_database(
     db, manuscript_model=manuscript_model

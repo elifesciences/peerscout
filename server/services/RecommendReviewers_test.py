@@ -218,8 +218,11 @@ DECISSION_REJECTED = 'Reject Full Submission'
 
 TYPE_RESEARCH_ARTICLE = 'Research Article'
 
-VALID_DECISIONS = {DECISSION_ACCEPTED}
-VALID_MANUSCRIPT_TYPES = {TYPE_RESEARCH_ARTICLE}
+PUBLISHED_DECISIONS = {DECISSION_ACCEPTED}
+PUBLISHED_MANUSCRIPT_TYPES = {TYPE_RESEARCH_ARTICLE}
+
+VALID_DECISIONS = PUBLISHED_DECISIONS | {DECISSION_REJECTED}
+VALID_MANUSCRIPT_TYPES = PUBLISHED_MANUSCRIPT_TYPES
 
 MANUSCRIPT_VERSION1_RESULT = {
   **MANUSCRIPT_ID_FIELDS1,
@@ -230,7 +233,8 @@ MANUSCRIPT_VERSION1_RESULT = {
   'title': MANUSCRIPT_TITLE1,
   'decision': DECISSION_ACCEPTED,
   'manuscript_type': TYPE_RESEARCH_ARTICLE,
-  'subject_areas': []
+  'subject_areas': [],
+  'is_published': True
 }
 
 MANUSCRIPT_VERSION1 = MANUSCRIPT_VERSION1_RESULT
@@ -383,7 +387,9 @@ def create_recommend_reviewers(datasets):
   manuscript_model = ManuscriptModel(
     db,
     valid_decisions=VALID_DECISIONS,
-    valid_manuscript_types=VALID_MANUSCRIPT_TYPES
+    valid_manuscript_types=VALID_MANUSCRIPT_TYPES,
+    published_decisions=PUBLISHED_DECISIONS,
+    published_manuscript_types=PUBLISHED_MANUSCRIPT_TYPES
   )
   similarity_model = DocumentSimilarityModel(
     db,
@@ -392,6 +398,9 @@ def create_recommend_reviewers(datasets):
   return RecommendReviewers(
     db, manuscript_model=manuscript_model, similarity_model=similarity_model
   )
+
+def _potential_reviewers_person_ids(potential_reviewers):
+  return [r['person'][PERSON_ID] for r in potential_reviewers]
 
 def test_no_match():
   recommend_reviewers = create_recommend_reviewers(DATASETS)
@@ -687,7 +696,7 @@ def test_matching_one_keyword_author_should_return_author():
   logger.debug("result: %s", PP.pformat(result))
   assert [r['person'][PERSON_ID] for r in result['potential_reviewers']] == [PERSON_ID1]
 
-def test_matching_one_keyword_author_should_not_return_author_of_rejected_manuscripts():
+def test_matching_one_keyword_author_should_not_suggest_authors_of_rejected_manuscripts():
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1
@@ -706,6 +715,34 @@ def test_matching_one_keyword_author_should_not_return_author_of_rejected_manusc
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   logger.debug("result: %s", PP.pformat(result))
   assert result['potential_reviewers'] == []
+
+def test_matching_one_keyword_author_should_suggest_reviewers_of_rejected_manuscripts():
+  datasets = dict(DATASETS)
+  datasets['person'] = pd.DataFrame([
+    PERSON1
+  ], columns=PERSON.columns)
+  datasets['manuscript_version'] = pd.DataFrame([{
+    **MANUSCRIPT_VERSION1,
+    'decision': DECISSION_REJECTED
+  }], columns=MANUSCRIPT_VERSION.columns)
+  datasets['manuscript_stage'] = pd.DataFrame(
+    _review_complete_stages(
+      {
+        **MANUSCRIPT_ID_FIELDS1,
+        PERSON_ID: PERSON_ID1
+      },
+      contacted=pd.Timestamp('2017-01-01'),
+      accepted=pd.Timestamp('2017-01-02'),
+      reviewed=pd.Timestamp('2017-01-03')
+    ), columns=MANUSCRIPT_STAGE.columns
+  )
+  datasets['manuscript_keyword'] = pd.DataFrame([
+    MANUSCRIPT_KEYWORD1
+  ], columns=MANUSCRIPT_KEYWORD.columns)
+  recommend_reviewers = create_recommend_reviewers(datasets)
+  result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
+  logger.debug("result: %s", PP.pformat(result))
+  assert _potential_reviewers_person_ids(result['potential_reviewers']) == [PERSON_ID1]
 
 def _review_complete_stages(id_fields, contacted, accepted, reviewed):
   return [{
