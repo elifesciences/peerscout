@@ -185,7 +185,7 @@ def manuscript_id_fields(manuscript):
 def sort_manuscripts_by_date(manuscripts):
   return sorted(manuscripts, key=lambda m: (
     m.get('published-date', None),
-    m.get('title', None),
+    m.get('title', ''),
     m.get(VERSION_ID, None)
   ), reverse=True)
 
