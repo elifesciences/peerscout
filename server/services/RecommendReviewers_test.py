@@ -744,6 +744,27 @@ def test_matching_one_keyword_author_should_suggest_reviewers_of_rejected_manusc
   logger.debug("result: %s", PP.pformat(result))
   assert _potential_reviewers_person_ids(result['potential_reviewers']) == [PERSON_ID1]
 
+def test_matching_one_keyword_author_should_suggest_authors_with_unknown_decision_and_type():
+  datasets = dict(DATASETS)
+  datasets['person'] = pd.DataFrame([
+    PERSON1
+  ], columns=PERSON.columns)
+  datasets['manuscript_version'] = pd.DataFrame([{
+    **MANUSCRIPT_VERSION1,
+    'decision': None,
+    'manuscript_type': None
+  }], columns=MANUSCRIPT_VERSION.columns)
+  datasets['manuscript_author'] = pd.DataFrame([
+    AUTHOR1
+  ], columns=MANUSCRIPT_AUTHOR.columns)
+  datasets['manuscript_keyword'] = pd.DataFrame([
+    MANUSCRIPT_KEYWORD1
+  ], columns=MANUSCRIPT_KEYWORD.columns)
+  recommend_reviewers = create_recommend_reviewers(datasets)
+  result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
+  logger.debug("result: %s", PP.pformat(result))
+  assert _potential_reviewers_person_ids(result['potential_reviewers']) == [PERSON_ID1]
+
 def _review_complete_stages(id_fields, contacted, accepted, reviewed):
   return [{
     **id_fields,

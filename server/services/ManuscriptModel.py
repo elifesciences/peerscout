@@ -22,12 +22,18 @@ class ManuscriptModel(object):
     manuscript_version_table = self.db['manuscript_version']
 
     conditions = [
-      manuscript_version_table.table.decision.in_(
-        decisions
+      sqlalchemy.or_(
+        manuscript_version_table.table.decision == None,
+        manuscript_version_table.table.decision.in_(
+          decisions
+        )
       ) if decisions else None,
-      manuscript_version_table.table.manuscript_type.in_(
-        manuscript_types
-      ) if manuscript_types else None
+      sqlalchemy.or_(
+        manuscript_version_table.table.manuscript_type == None,
+        manuscript_version_table.table.manuscript_type.in_(
+          manuscript_types
+        )
+       ) if manuscript_types else None
     ]
     conditions = [c for c in conditions if c is not None]
 
@@ -45,9 +51,11 @@ class ManuscriptModel(object):
     return (
       (
         len(decisions) == 0 or
-        manuscript.get('decision', None) in decisions
+        manuscript.get('decision') is None or
+        manuscript.get('decision') in decisions
       ) and (
         len(manuscript_types) == 0 or
+        manuscript.get('manuscript_type') is None or
         manuscript.get('manuscript_type') in manuscript_types
       )
     )

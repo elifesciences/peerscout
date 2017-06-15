@@ -68,7 +68,8 @@ def extract_manuscript(item):
     'abstract': unescape_and_strip_tags_if_not_none(item.get('abstract', None)),
     'doi': item.get('DOI', None),
     'subject_areas': item.get('subject', []),
-    'created_timestamp': parse_datetime_object(item.get('created', None))
+    'created_timestamp': parse_datetime_object(item.get('created', None)),
+    'manuscript_type': unescape_and_strip_tags_if_not_none(item.get('type'))
   }
 
 def contains_author_with_orcid(item, orcid):
@@ -200,7 +201,8 @@ def enrich_early_career_researchers(db):
     'manuscript_id': m.get('manuscript_id'),
     'title': m.get('title'),
     'abstract': m.get('abstract'),
-    'created_timestamp': pd.to_datetime(m.get('created_timestamp'))
+    'created_timestamp': pd.to_datetime(m.get('created_timestamp')),
+    'manuscript_type': m.get('manuscript_type')
   } for m in new_manuscript_info])
 
   new_manuscript_subject_areas = remove_duplicates(flatten([[{
