@@ -182,7 +182,7 @@ const escapeHtml = s => {
 
 const getManuscriptTooltipHtml = m => {
   let s = '<p class="title">' +
-    '<b>title:</b>' +
+    '<b>title:</b> ' +
     escapeHtml(m.title) +
   '</p>';
   if (m.score && m.score.combined) {
@@ -191,10 +191,12 @@ const getManuscriptTooltipHtml = m => {
     s += formatScoreWithDetails(m.score);
     s += '</p>';
   }
-  s += '<p class="abstract">' +
-    '<b>abstract:</b>' +
-    escapeHtml(m.abstract) +
-  '</p>';
+  if (m.abstract) {
+    s += '<p class="abstract">' +
+      '<b>abstract:</b> ' +
+      escapeHtml(m.abstract) +
+    '</p>';
+  }
   return s;
 }
 
@@ -475,7 +477,7 @@ const initialiseNodePosition = (node, index, width, height) => {
     return;
   }
   const t = (index / 10) * Math.PI * 2;
-  const scale = 100 * (index * 10);
+  const scale = 10 * index;
   node.x = (width / 2) + Math.cos(t) * scale;
   node.y = (height / 2) + Math.sin(t) * scale;
 };
