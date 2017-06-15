@@ -182,7 +182,7 @@ const escapeHtml = s => {
 
 const getManuscriptTooltipHtml = m => {
   let s = '<p class="title">' +
-    '<b>title:</b>' +
+    '<b>title:</b> ' +
     escapeHtml(m.title) +
   '</p>';
   if (m.score && m.score.combined) {
@@ -191,10 +191,12 @@ const getManuscriptTooltipHtml = m => {
     s += formatScoreWithDetails(m.score);
     s += '</p>';
   }
-  s += '<p class="abstract">' +
-    '<b>abstract:</b>' +
-    escapeHtml(m.abstract) +
-  '</p>';
+  if (m.abstract) {
+    s += '<p class="abstract">' +
+      '<b>abstract:</b> ' +
+      escapeHtml(m.abstract) +
+    '</p>';
+  }
   return s;
 }
 
