@@ -390,7 +390,7 @@ const createLegend = (parent, showSearch, options) => {
     .append('rect')
     .attr('x', -10)
     .attr('y', -10)
-    .attr('width', 200)
+    .attr('width', 205)
     .attr('fill', '#fff');
 
   const fullScore = {
@@ -420,6 +420,13 @@ const createLegend = (parent, showSearch, options) => {
       }
     },
     label: 'Potential reviewer\nwith review duration'
+  }, {
+    potentialReviewer: {
+      person: {
+      }
+    },
+    is_corresponding_author: true,
+    label: 'Corresponding author\nof selected manuscript'
   }, {
     potentialReviewer: {
       person: {
@@ -456,7 +463,8 @@ const createLegend = (parent, showSearch, options) => {
     .attr('height', currentY - 10);
 
   const node = createNode(legend, legendData)
-    .attr("transform", d => "translate(" + d.x + ", " + d.y + ")");
+    .attr("transform", d => "translate(" + d.x + ", " + d.y + ")")
+    .classed('node-corresponding-author', d => d.is_corresponding_author);
   for (let lineNo = 0; lineNo < 2; lineNo++) {
     node
       .append('text')
