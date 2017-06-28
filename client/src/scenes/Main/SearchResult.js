@@ -453,8 +453,8 @@ const PotentialReviewer = ({
 };
 
 
-const ManuscriptSummary = ({
-  manuscript: {
+const ManuscriptSummary = ({ manuscript }) => {
+  const {
     title,
     'manuscript_id': manuscriptNo,
     abstract,
@@ -463,75 +463,76 @@ const ManuscriptSummary = ({
     editors,
     'senior_editors': seniorEditors,
     'subject_areas': subjectAreas
-  }
-}) => (
-  <Card style={ styles.manuscriptSummary.container } initiallyExpanded={ true }>
-    <CardHeader
-      title={ quote(title) }
-      subtitle={ manuscriptNo }
-      actAsExpander={ true }
-      showExpandableButton={ true }
-    />
-    <CardText>
-      <View style={ styles.manuscriptSummary.subSection }>
-        <Text style={ styles.manuscriptSummary.label }>Authors: </Text>
+  } = manuscript;
+  return (
+    <Card style={ styles.manuscriptSummary.container } initiallyExpanded={ true }>
+      <CardHeader
+        title={ quote(title) }
+        subtitle={ <ManuscriptRefLink manuscript={ manuscript }/> }
+        actAsExpander={ true }
+        showExpandableButton={ true }
+      />
+      <CardText>
+        <View style={ styles.manuscriptSummary.subSection }>
+          <Text style={ styles.manuscriptSummary.label }>Authors: </Text>
+          {
+            authors && authors.map((author, index) => (
+              <PersonInlineSummary key={ index } person={ author }/>
+            ))
+          }
+        </View>
         {
-          authors && authors.map((author, index) => (
-            <PersonInlineSummary key={ index } person={ author }/>
-          ))
+          reviewers && reviewers.length > 0 && (
+            <View  style={ styles.manuscriptSummary.subSection }>
+              <Text style={ styles.manuscriptSummary.label }>Reviewers: </Text>
+              {
+                reviewers.map((reviewer, index) => (
+                  <PersonInlineSummary key={ index } person={ reviewer }/>
+                ))
+              }
+            </View>
+          )
         }
-      </View>
-      {
-        reviewers && reviewers.length > 0 && (
-          <View  style={ styles.manuscriptSummary.subSection }>
-            <Text style={ styles.manuscriptSummary.label }>Reviewers: </Text>
-            {
-              reviewers.map((reviewer, index) => (
-                <PersonInlineSummary key={ index } person={ reviewer }/>
-              ))
-            }
-          </View>
-        )
-      }
-      {
-        editors && editors.length > 0 && (
-          <View  style={ styles.manuscriptSummary.subSection }>
-            <Text style={ styles.manuscriptSummary.label }>Editors: </Text>
-            {
-              editors.map((editor, index) => (
-                <PersonInlineSummary key={ index } person={ editor }/>
-              ))
-            }
-          </View>
-        )
-      }
-      {
-        seniorEditors && seniorEditors.length > 0 && (
-          <View  style={ styles.manuscriptSummary.subSection }>
-            <Text style={ styles.manuscriptSummary.label }>Senior Editors: </Text>
-            {
-              seniorEditors.map((seniorEditor, index) => (
-                <PersonInlineSummary key={ index } person={ seniorEditor }/>
-              ))
-            }
-          </View>
-        )
-      }
-    </CardText>
-    <CardText expandable={ true }>
-      <View  style={ styles.manuscriptSummary.subSection }>
-        <Text style={ styles.manuscriptSummary.label }>Subject areas:</Text>
-        <Text>{ subjectAreas.join(', ') }</Text>
-      </View>
-      <View  style={ styles.manuscriptSummary.subSection }>
-        <FlexColumn>
-          <Text style={ styles.manuscriptSummary.label }>Abstract:</Text>
-          <Text>{ quote(abstract) }</Text>
-        </FlexColumn>
-      </View>
-    </CardText>
-  </Card>
-);
+        {
+          editors && editors.length > 0 && (
+            <View  style={ styles.manuscriptSummary.subSection }>
+              <Text style={ styles.manuscriptSummary.label }>Editors: </Text>
+              {
+                editors.map((editor, index) => (
+                  <PersonInlineSummary key={ index } person={ editor }/>
+                ))
+              }
+            </View>
+          )
+        }
+        {
+          seniorEditors && seniorEditors.length > 0 && (
+            <View  style={ styles.manuscriptSummary.subSection }>
+              <Text style={ styles.manuscriptSummary.label }>Senior Editors: </Text>
+              {
+                seniorEditors.map((seniorEditor, index) => (
+                  <PersonInlineSummary key={ index } person={ seniorEditor }/>
+                ))
+              }
+            </View>
+          )
+        }
+      </CardText>
+      <CardText expandable={ true }>
+        <View  style={ styles.manuscriptSummary.subSection }>
+          <Text style={ styles.manuscriptSummary.label }>Subject areas:</Text>
+          <Text>{ subjectAreas.join(', ') }</Text>
+        </View>
+        <View  style={ styles.manuscriptSummary.subSection }>
+          <FlexColumn>
+            <Text style={ styles.manuscriptSummary.label }>Abstract:</Text>
+            <Text>{ quote(abstract) }</Text>
+          </FlexColumn>
+        </View>
+      </CardText>
+    </Card>
+  );
+};
 
 
 const extractAllSubjectAreas = manuscripts => {
