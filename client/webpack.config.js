@@ -1,3 +1,4 @@
+const fs = require('fs');
 var path = require('path');
 var webpack = require('webpack');
 var HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -6,6 +7,21 @@ var CopyWebpackPlugin = require('copy-webpack-plugin');
 const API_URL = process.env.API_URL || (
   process.env.NODE_ENV == 'development' && 'http://localhost:8080/api'
 ) || '';
+
+inject_html = []
+
+inject_html_dir = path.resolve(__dirname, '.inject-html');
+if (fs.existsSync(inject_html_dir)) {
+  fs.readdirSync(inject_html_dir).forEach(fn => {
+    console.log('adding inject html:', fn);
+    inject_html.push(fs.readFileSync(path.resolve(inject_html_dir, fn)));
+  });
+  if (inject_html_dir.length === 0) {
+    console.log('no files to inject found in:', inject_html_dir);
+  }
+} else {
+  console.log('no files to inject found as the directory does not exist:', inject_html_dir);
+}
 
 module.exports = {
   entry: [
@@ -46,7 +62,8 @@ module.exports = {
       }
     }),
     new HtmlWebpackPlugin({
-      template: './index.web.ejs'
+      template: './index.web.ejs',
+      inject_html: inject_html.join('\n')
     }),
     new CopyWebpackPlugin([{
       to: 'images',
