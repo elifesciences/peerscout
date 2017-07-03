@@ -6,6 +6,7 @@ import io
 from contextlib import contextmanager
 import logging
 
+import pytest
 import sqlalchemy
 
 from shared_proxy import database
@@ -15,14 +16,18 @@ from importDataToDatabase import (
   convert_zip_file
 )
 
-logging.basicConfig(level=logging.DEBUG)
-
-logger = logging.getLogger('test')
-
 VERSION_ID1 = '00001-1'
+
+def setup_module():
+  logging.basicConfig(level=logging.DEBUG)
+
+@pytest.fixture(name='logger')
+def get_logger():
+  return logging.getLogger('test')
 
 @contextmanager
 def convert_files(filenames):
+  logger = get_logger()
   engine = sqlalchemy.create_engine('sqlite://', echo=False)
   logger.debug("engine driver: %s", engine.driver)
   db = database.Database(engine)
@@ -47,7 +52,7 @@ def convert_files(filenames):
   yield db
   db.close()
 
-def test_regular():
+def test_regular(logger):
   with convert_files(['regular-00001.xml']) as db:
     df = db.manuscript_version.read_frame().reset_index()
     logger.debug('df:\n%s', df)
@@ -56,7 +61,7 @@ def test_regular():
       set([VERSION_ID1])
     )
 
-def test_minimal():
+def test_minimal(logger):
   with convert_files(['minimal-00001.xml']) as db:
     df = db.manuscript_version.read_frame().reset_index()
     logger.debug('df:\n%s', df)
@@ -134,7 +139,7 @@ def test_with_unnormalised_subject_area():
       set(['Subject Area and Test 1'])
     )
 
-def test_with_missing_persons():
+def test_with_missing_persons(logger):
   with convert_files(['with-missing-persons-00001.xml']) as db:
     df = db.manuscript_version.read_frame().reset_index()
     logger.debug('df:\n%s', df)
@@ -143,7 +148,7 @@ def test_with_missing_persons():
       set([VERSION_ID1])
     )
 
-def test_with_manuscript_suffix():
+def test_with_manuscript_suffix(logger):
   with convert_files(['with-manuscript-suffix-00001-suffix.xml']) as db:
     df = db.manuscript_version.read_frame().reset_index()
     logger.debug('df:\n%s', df)
@@ -152,7 +157,7 @@ def test_with_manuscript_suffix():
       set([VERSION_ID1])
     )
 
-def test_with_invalid_manuscript_ref():
+def test_with_invalid_manuscript_ref(logger):
   with convert_files(['with-invalid-manuscript-ref.xml']) as db:
     df = db.manuscript_version.read_frame().reset_index()
     logger.debug('df:\n%s', df)
@@ -161,7 +166,7 @@ def test_with_invalid_manuscript_ref():
       set(['with-invalid-manuscript-ref-1'])
     )
 
-def test_with_empty_oricid_id():
+def test_with_empty_oricid_id(logger):
   with convert_files(['with-empty-orcid-id.xml']) as db:
     df = db.person.read_frame().reset_index()
     logger.debug('df:\n%s', df)
@@ -173,7 +178,7 @@ def test_with_empty_oricid_id():
     logger.debug('df:\n%s', df)
     assert len(df) == 0
 
-def test_with_corresponding_author():
+def test_with_corresponding_author(logger):
   with convert_files(['with-corresponding-author.xml']) as db:
     df = db.manuscript_author.read_frame().reset_index().sort_values('seq')
     logger.debug('df:\n%s', df)

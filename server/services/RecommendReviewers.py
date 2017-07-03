@@ -206,10 +206,16 @@ def clean_manuscripts(manuscripts):
   return [clean_manuscript(m) for m in manuscripts]
 
 class RecommendReviewers(object):
-  def __init__(self, db, manuscript_model, similarity_model=None):
+  def __init__(
+    self, db, manuscript_model, similarity_model=None,
+    filter_by_subject_area_enabled=False):
+
     logger = logging.getLogger(NAME)
     self.logger = logger
     self.similarity_model = similarity_model
+    self.filter_by_subject_area_enabled = filter_by_subject_area_enabled
+
+    logger.debug('filter_by_subject_area_enabled: %s', filter_by_subject_area_enabled)
 
     self.manuscript_versions_all_df = (
       db.manuscript_version.read_frame().reset_index()
@@ -440,6 +446,10 @@ class RecommendReviewers(object):
       db.person.table.is_early_career_researcher == True # pylint: disable=C0121
     )
 
+    self.all_early_career_researcher_person_ids = {
+      row[0] for row in early_career_researcher_person_id_query.distinct()
+    }
+
     self.early_career_researcher_ids_by_subject_area = groupby_to_dict(
       db.session.query(
         db.person_subject_area.table.subject_area,
@@ -504,10 +514,13 @@ class RecommendReviewers(object):
     ]
 
   def _get_early_career_reviewer_ids_by_subject_areas(self, subject_areas):
-    result = set(flatten([
-      self.early_career_researcher_ids_by_subject_area.get(subject_area.lower(), [])
-      for subject_area in subject_areas
-    ]))
+    if len(subject_areas) == 0:
+      result = self.all_early_career_researcher_person_ids
+    else:
+      result = set(flatten([
+        self.early_career_researcher_ids_by_subject_area.get(subject_area.lower(), [])
+        for subject_area in subject_areas
+      ]))
     self.logger.debug(
       "found %d early career researchers for subject areas: %s", len(result), subject_areas
     )
@@ -527,6 +540,7 @@ class RecommendReviewers(object):
     subject_areas = set()
     if subject_area is not None and len(subject_area) > 0:
       subject_areas.add(subject_area)
+    ecr_subject_areas = subject_areas
     matching_manuscripts_dicts = []
     manuscripts_not_found = None
     assigned_reviewers_by_person_id = {}
@@ -541,11 +555,16 @@ class RecommendReviewers(object):
         self.manuscripts_by_version_id_map
       )
       keyword_list += list(manuscript_keywords.values)
-      subject_areas = set(self.manuscript_subject_areas_all_df[
+      manuscript_subject_areas = set(self.manuscript_subject_areas_all_df[
         self.manuscript_subject_areas_all_df[VERSION_ID].isin(
           matching_manuscripts[VERSION_ID]
         )
       ]['subject_area'])
+      # we search by subject areas for ECRs as there may otherwise not much data
+      # available
+      ecr_subject_areas = manuscript_subject_areas
+      if self.filter_by_subject_area_enabled:
+        subject_areas = manuscript_subject_areas
       assigned_reviewers_by_person_id = groupby_to_dict(
         flatten([
           self.assigned_reviewers_by_manuscript_id_map.get(manuscript_id, [])
@@ -628,7 +647,7 @@ class RecommendReviewers(object):
             for m in other_manuscripts_dicts
           ])
         ]) | self._get_early_career_reviewer_ids_by_subject_areas(
-          subject_areas
+          ecr_subject_areas
         ) | assigned_reviewers_by_person_id.keys()
       ) - exclude_person_ids
     )
@@ -691,6 +710,9 @@ class RecommendReviewers(object):
           ]
         }
       }
+      if potential_reviewer.get('person') is None:
+        self.logger.warning('person id not found: %s', person_id)
+        debugv('valid persons: %s', self.persons_map.keys())
       return potential_reviewer
 
     potential_reviewers = [
