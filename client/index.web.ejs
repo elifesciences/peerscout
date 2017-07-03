@@ -9,3 +9,6 @@
   <body>
   </body>
 </html>
+<% if (htmlWebpackPlugin.options.inject_html) { %>
+<%= htmlWebpackPlugin.options.inject_html %>
+<% } %>
