@@ -41,6 +41,9 @@ published_decisions = parse_list(config.get(
   'model', 'published_decisions', fallback=''))
 published_manuscript_types = parse_list(config.get(
   'model', 'published_manuscript_types', fallback=''))
+filter_by_subject_area_enabled = config.getboolean(
+  'model', 'filter_by_subject_area_enabled', fallback=False
+)
 
 client_config = dict(config['client']) if 'client' in config else {}
 
@@ -68,7 +71,8 @@ def load_recommender():
     db, manuscript_model=manuscript_model
   )
   return RecommendReviewers(
-    db, manuscript_model=manuscript_model, similarity_model=similarity_model
+    db, manuscript_model=manuscript_model, similarity_model=similarity_model,
+    filter_by_subject_area_enabled=filter_by_subject_area_enabled
   )
 
 recommend_reviewers = load_recommender()
