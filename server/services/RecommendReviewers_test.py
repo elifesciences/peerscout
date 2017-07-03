@@ -4,6 +4,7 @@ Unit test
 import pprint
 import logging
 
+import pytest
 import pandas as pd
 import sqlalchemy
 
@@ -12,10 +13,6 @@ from shared_proxy import database
 from .ManuscriptModel import ManuscriptModel
 from .DocumentSimilarityModel import DocumentSimilarityModel
 from .RecommendReviewers import RecommendReviewers, set_debugv_enabled
-
-logging.basicConfig(level=logging.DEBUG)
-
-logger = logging.getLogger('test')
 
 set_debugv_enabled(True)
 
@@ -357,7 +354,15 @@ KEYWORD_SEARCH1 = {
 
 PP = pprint.PrettyPrinter(indent=2, width=40)
 
+def setup_module():
+  logging.basicConfig(level=logging.DEBUG)
+
+@pytest.fixture(name='logger')
+def get_logger():
+  return logging.getLogger('test')
+
 def create_recommend_reviewers(datasets):
+  logger = get_logger()
   engine = sqlalchemy.create_engine('sqlite://', echo=False)
   logger.debug("engine driver: %s", engine.driver)
   db = database.Database(engine)
@@ -488,7 +493,7 @@ def test_matching_manuscript_with_none_docvecs():
   recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_ID1)
 
 
-def test_matching_manuscript_should_recommend_early_career_reviewer_by_subject_area():
+def test_matching_manuscript_should_recommend_early_career_reviewer_by_subject_area(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([{
     **PERSON1,
@@ -509,7 +514,7 @@ def test_matching_manuscript_should_recommend_early_career_reviewer_by_subject_a
   ]
   assert recommended_person_ids == [(PERSON_ID1, True)]
 
-def test_matching_manuscript_should_return_draft_version_with_authors():
+def test_matching_manuscript_should_return_draft_version_with_authors(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1
@@ -530,7 +535,7 @@ def test_matching_manuscript_should_return_draft_version_with_authors():
   assert [m[MANUSCRIPT_ID] for m in result['matching_manuscripts']] == [MANUSCRIPT_ID1]
   assert [p[PERSON_ID] for p in result['matching_manuscripts'][0]['authors']] == [PERSON_ID1]
 
-def test_matching_manuscript_should_return_multiple_authors():
+def test_matching_manuscript_should_return_multiple_authors(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1,
@@ -557,7 +562,7 @@ def test_matching_manuscript_should_return_multiple_authors():
   author_person_ids = [p[PERSON_ID] for p in result['matching_manuscripts'][0]['authors']]
   assert set(author_person_ids) == set([PERSON_ID1, PERSON_ID2])
 
-def test_matching_manuscript_should_indicate_corresponding_authors():
+def test_matching_manuscript_should_indicate_corresponding_authors(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1,
@@ -591,7 +596,7 @@ def test_matching_manuscript_should_indicate_corresponding_authors():
   author_summary = [(p[PERSON_ID], p.get('is_corresponding_author')) for p in authors]
   assert author_summary == [(PERSON_ID1, True), (PERSON_ID2, False)]
 
-def test_matching_manuscript_should_not_recommend_its_authors():
+def test_matching_manuscript_should_not_recommend_its_authors(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1,
@@ -625,7 +630,7 @@ def test_matching_manuscript_should_not_recommend_its_authors():
   recommended_person_ids = [r['person'][PERSON_ID] for r in result['potential_reviewers']]
   assert recommended_person_ids == [PERSON_ID2]
 
-def test_matching_manuscript_should_only_recommend_authors_of_matching_subject_areas():
+def test_matching_manuscript_should_only_recommend_authors_of_matching_subject_areas(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1,
@@ -677,7 +682,7 @@ def test_matching_manuscript_should_only_recommend_authors_of_matching_subject_a
   assert recommended_person_ids == [PERSON_ID3]
 
 
-def test_matching_one_keyword_author_should_return_author():
+def test_matching_one_keyword_author_should_return_author(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1
@@ -696,7 +701,7 @@ def test_matching_one_keyword_author_should_return_author():
   logger.debug("result: %s", PP.pformat(result))
   assert [r['person'][PERSON_ID] for r in result['potential_reviewers']] == [PERSON_ID1]
 
-def test_matching_one_keyword_author_should_not_suggest_authors_of_rejected_manuscripts():
+def test_matching_one_keyword_author_should_not_suggest_authors_of_rejected_manuscripts(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1
@@ -716,7 +721,7 @@ def test_matching_one_keyword_author_should_not_suggest_authors_of_rejected_manu
   logger.debug("result: %s", PP.pformat(result))
   assert result['potential_reviewers'] == []
 
-def test_matching_one_keyword_author_should_suggest_reviewers_of_rejected_manuscripts():
+def test_matching_one_keyword_author_should_suggest_reviewers_of_rejected_manuscripts(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1
@@ -744,7 +749,7 @@ def test_matching_one_keyword_author_should_suggest_reviewers_of_rejected_manusc
   logger.debug("result: %s", PP.pformat(result))
   assert _potential_reviewers_person_ids(result['potential_reviewers']) == [PERSON_ID1]
 
-def test_matching_one_keyword_author_should_suggest_authors_with_unknown_decision_and_type():
+def test_matching_one_keyword_author_should_suggest_authors_with_unknown_decision_and_type(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1
@@ -809,7 +814,7 @@ def _awaiting_review_stages(id_fields, contacted, accepted):
     'stage_timestamp': accepted
   }]
 
-def test_matching_one_keyword_author_should_return_stats():
+def test_matching_one_keyword_author_should_return_stats(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1
@@ -895,7 +900,7 @@ def test_matching_one_keyword_author_should_return_stats():
     'last_12m': overall_stats
   }
 
-def test_matching_one_keyword_author_should_return_memberships():
+def test_matching_one_keyword_author_should_return_memberships(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1
@@ -918,7 +923,7 @@ def test_matching_one_keyword_author_should_return_memberships():
   logger.debug("result_person: %s", PP.pformat(result_person))
   assert result_person.get('memberships') == [MEMBERSHIP1_RESULT]
 
-def test_matching_one_keyword_author_should_return_other_accepted_papers():
+def test_matching_one_keyword_author_should_return_other_accepted_papers(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1
@@ -949,7 +954,7 @@ def test_matching_one_keyword_author_should_return_other_accepted_papers():
     MANUSCRIPT_VERSION2_RESULT[MANUSCRIPT_ID]
   ])
 
-def test_matching_one_keyword_author_should_not_return_other_draft_papers():
+def test_matching_one_keyword_author_should_not_return_other_draft_papers(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1
@@ -978,7 +983,7 @@ def test_matching_one_keyword_author_should_not_return_other_draft_papers():
   )
 
 
-def test_matching_one_keyword_should_return_previous_reviewer():
+def test_matching_one_keyword_should_return_previous_reviewer(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1
@@ -1007,7 +1012,7 @@ def test_matching_one_keyword_should_return_previous_reviewer():
   #   for p in result['potential_reviewers'][0]['reviewer_of_manuscripts'][0]['reviewers']
   # ] == [PERSON_ID1])
 
-def test_matching_one_keyword_previous_reviewer_should_return_reviewer_only_once():
+def test_matching_one_keyword_previous_reviewer_should_return_reviewer_only_once(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1
