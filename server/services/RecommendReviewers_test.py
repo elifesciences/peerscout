@@ -413,9 +413,20 @@ def _potential_reviewers_person_ids(potential_reviewers):
   return [r['person'][PERSON_ID] for r in potential_reviewers]
 
 def test_no_match():
-  recommend_reviewers = create_recommend_reviewers(DATASETS)
-  result = recommend_reviewers.recommend(keywords='', manuscript_no='')
+  datasets = dict(DATASETS)
+  datasets['person'] = pd.DataFrame([
+    PERSON1
+  ], columns=PERSON.columns)
+  datasets['manuscript_version'] = pd.DataFrame([
+    MANUSCRIPT_VERSION1
+  ], columns=MANUSCRIPT_VERSION.columns)
+  datasets['manuscript_keyword'] = pd.DataFrame([
+    MANUSCRIPT_KEYWORD1
+  ], columns=MANUSCRIPT_KEYWORD.columns)
+  recommend_reviewers = create_recommend_reviewers(datasets)
+  result = recommend_reviewers.recommend(keywords='', manuscript_no='unknown')
   assert result['matching_manuscripts'] == []
+  assert result['potential_reviewers'] == []
 
 def test_matching_manuscript():
   datasets = dict(DATASETS)
