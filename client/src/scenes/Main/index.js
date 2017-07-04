@@ -13,6 +13,10 @@ import {
   View
 } from '../../components';
 
+import {
+  reportError
+} from '../../monitoring';
+
 import SearchHeader from './SearchHeader';
 import SearchResult from './SearchResult';
 import ChartResult from './ChartResult';
@@ -105,7 +109,7 @@ class Main extends React.Component {
           loading: false
         });
       }).catch(err => {
-        console.log("error:", err);
+        reportError("failed to fetch results", err);
         this.actuallyLoading = false;
         this.setState({
           results: {
@@ -204,13 +208,19 @@ class Main extends React.Component {
     });
     this.props.reviewerRecommendationApi.getConfig().then(config => this.setState({
       config: this.translateConfig(config)
-    }));
+    })).catch(err => {
+      reportError('failed to fetch config', err);
+    });
     this.props.reviewerRecommendationApi.getAllSubjectAreas().then(allSubjectAreas => this.setState({
       allSubjectAreas
-    }));
+    })).catch(err => {
+      reportError('failed to fetch subject areas', err);
+    });
     this.props.reviewerRecommendationApi.getAllKeywords().then(allKeywords => this.setState({
       allKeywords
-    }));
+    })).catch(err => {
+      reportError('failed to fetch keywords', err);
+    });
   }
 
   componentDidUpdate(prevProps, prevState) {
