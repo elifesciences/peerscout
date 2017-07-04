@@ -548,207 +548,212 @@ class RecommendReviewers(object):
       matching_manuscripts = self.__find_manuscripts_by_key(manuscript_no)
       if len(matching_manuscripts) == 0:
         manuscripts_not_found = [manuscript_no]
-      manuscript_keywords = self.__find_keywords_by_version_keys(
-        matching_manuscripts[VERSION_ID])
-      matching_manuscripts_dicts = map_to_dict(
-        matching_manuscripts[VERSION_ID],
-        self.manuscripts_by_version_id_map
-      )
-      keyword_list += list(manuscript_keywords.values)
-      manuscript_subject_areas = set(self.manuscript_subject_areas_all_df[
-        self.manuscript_subject_areas_all_df[VERSION_ID].isin(
-          matching_manuscripts[VERSION_ID]
+      else:
+        manuscript_keywords = self.__find_keywords_by_version_keys(
+          matching_manuscripts[VERSION_ID])
+        matching_manuscripts_dicts = map_to_dict(
+          matching_manuscripts[VERSION_ID],
+          self.manuscripts_by_version_id_map
         )
-      ]['subject_area'])
-      # we search by subject areas for ECRs as there may otherwise not much data
-      # available
-      ecr_subject_areas = manuscript_subject_areas
-      if self.filter_by_subject_area_enabled:
-        subject_areas = manuscript_subject_areas
-      assigned_reviewers_by_person_id = groupby_to_dict(
-        flatten([
-          self.assigned_reviewers_by_manuscript_id_map.get(manuscript_id, [])
-          for manuscript_id in matching_manuscripts[VERSION_ID].values
-        ]),
-        lambda item: item[PERSON_ID],
-        lambda item: filter_dict_keys(item, lambda key: key != PERSON_ID)
-      )
-      self.logger.debug("assigned_reviewers_by_person_id: %s", assigned_reviewers_by_person_id)
-      self.logger.debug("subject_areas: %s", subject_areas)
-      authors = flatten([m['authors'] for m in matching_manuscripts_dicts])
-      author_ids = [a[PERSON_ID] for a in authors]
-      editors = flatten([m['editors'] for m in matching_manuscripts_dicts])
-      editor_ids = [a[PERSON_ID] for a in editors]
-      senior_editors = flatten([m['senior_editors'] for m in matching_manuscripts_dicts])
-      senior_editor_ids = [a[PERSON_ID] for a in senior_editors]
-      exclude_person_ids |= (set(author_ids) | set(editor_ids) | set(senior_editor_ids))
+        keyword_list += list(manuscript_keywords.values)
+        manuscript_subject_areas = set(self.manuscript_subject_areas_all_df[
+          self.manuscript_subject_areas_all_df[VERSION_ID].isin(
+            matching_manuscripts[VERSION_ID]
+          )
+        ]['subject_area'])
+        # we search by subject areas for ECRs as there may otherwise not much data
+        # available
+        ecr_subject_areas = manuscript_subject_areas
+        if self.filter_by_subject_area_enabled:
+          subject_areas = manuscript_subject_areas
+        assigned_reviewers_by_person_id = groupby_to_dict(
+          flatten([
+            self.assigned_reviewers_by_manuscript_id_map.get(manuscript_id, [])
+            for manuscript_id in matching_manuscripts[VERSION_ID].values
+          ]),
+          lambda item: item[PERSON_ID],
+          lambda item: filter_dict_keys(item, lambda key: key != PERSON_ID)
+        )
+        self.logger.debug("assigned_reviewers_by_person_id: %s", assigned_reviewers_by_person_id)
+        self.logger.debug("subject_areas: %s", subject_areas)
+        authors = flatten([m['authors'] for m in matching_manuscripts_dicts])
+        author_ids = [a[PERSON_ID] for a in authors]
+        editors = flatten([m['editors'] for m in matching_manuscripts_dicts])
+        editor_ids = [a[PERSON_ID] for a in editors]
+        senior_editors = flatten([m['senior_editors'] for m in matching_manuscripts_dicts])
+        senior_editor_ids = [a[PERSON_ID] for a in senior_editors]
+        exclude_person_ids |= (set(author_ids) | set(editor_ids) | set(senior_editor_ids))
     else:
       matching_manuscripts = self.__find_manuscripts_by_key(None)
-    self.logger.debug("keyword_list: %s", keyword_list)
-    other_manuscripts = self.__find_manuscripts_by_keywords(
-      keyword_list
-    )
-    self.logger.debug("subject_areas: %s", subject_areas)
-    if len(subject_areas) > 0:
-      other_manuscripts = self._filter_manuscripts_by_subject_areas(
-        other_manuscripts, subject_areas
-      )
-    if abstract is not None and len(abstract.strip()) > 0:
-      all_similar_manuscripts = self.similarity_model.find_similar_manuscripts_to_abstract(
-        abstract
-      )
+
+    if manuscripts_not_found is not None:
+      potential_reviewers = []
     else:
-      all_similar_manuscripts = self.similarity_model.find_similar_manuscripts(
-        matching_manuscripts[VERSION_ID]
+      self.logger.debug("keyword_list: %s", keyword_list)
+      other_manuscripts = self.__find_manuscripts_by_keywords(
+        keyword_list
       )
-    self.logger.debug(
-      "all_similar_manuscripts: %d, %s",
-      len(all_similar_manuscripts),
-      all_similar_manuscripts[
-        all_similar_manuscripts[VERSION_ID].isin(["10.1155/2013/435093"])
-      ]
-    )
-    similar_manuscripts = all_similar_manuscripts
-    if len(subject_areas) > 0:
-      similar_manuscripts = self._filter_manuscripts_by_subject_areas(
-        similar_manuscripts, subject_areas
+      self.logger.debug("subject_areas: %s", subject_areas)
+      if len(subject_areas) > 0:
+        other_manuscripts = self._filter_manuscripts_by_subject_areas(
+          other_manuscripts, subject_areas
+        )
+      if abstract is not None and len(abstract.strip()) > 0:
+        all_similar_manuscripts = self.similarity_model.find_similar_manuscripts_to_abstract(
+          abstract
+        )
+      else:
+        all_similar_manuscripts = self.similarity_model.find_similar_manuscripts(
+          matching_manuscripts[VERSION_ID]
+        )
+      self.logger.debug(
+        "all_similar_manuscripts: %d, %s",
+        len(all_similar_manuscripts),
+        all_similar_manuscripts[
+          all_similar_manuscripts[VERSION_ID].isin(["10.1155/2013/435093"])
+        ]
       )
-    similarity_threshold = 0.5
-    max_similarity_count = 50
-    most_similar_manuscripts = similar_manuscripts[
-      similar_manuscripts[SIMILARITY_COLUMN] >= similarity_threshold
-    ]
-    self.logger.debug(
-      "found %d/%d similar manuscripts beyond threshold %f",
-      len(most_similar_manuscripts),
-      len(similar_manuscripts),
-      similarity_threshold
-    )
-    if len(most_similar_manuscripts) > max_similarity_count:
-      most_similar_manuscripts = most_similar_manuscripts\
-      .sort_values(SIMILARITY_COLUMN, ascending=False)[:max_similarity_count]
-    related_version_ids =\
-      set(other_manuscripts[VERSION_ID].values) |\
-      set(most_similar_manuscripts[VERSION_ID].values)
-    other_manuscripts_dicts = [
-      self.manuscripts_by_version_id_map.get(version_id)
-      for version_id in related_version_ids
-    ]
-    other_manuscripts_dicts = [m for m in other_manuscripts_dicts if m]
-    debugv('other_manuscripts_dicts:\n%s', other_manuscripts_dicts)
-    potential_reviewers_ids = (
-      (
-        set([
-          person[PERSON_ID] for person in
-          flatten([
-            m['authors'] + m['reviewers']
-            if m['is_published']
-            else m['reviewers']
-            for m in other_manuscripts_dicts
-          ])
-        ]) | self._get_early_career_reviewer_ids_by_subject_areas(
-          ecr_subject_areas
-        ) | assigned_reviewers_by_person_id.keys()
-      ) - exclude_person_ids
-    )
-
-    keyword_match_count_by_by_version_key_map = {
-      k: v['count']
-      for k, v in other_manuscripts[[VERSION_ID, 'count']]\
-      .set_index(VERSION_ID).to_dict(orient='index').items()
-    }
-
-    def populate_potential_reviewer(person_id):
-      author_of_manuscripts = self.manuscripts_by_author_map.get(person_id, [])
-      reviewer_of_manuscripts = self.manuscripts_by_reviewer_map.get(person_id, [])
-      involved_manuscripts = author_of_manuscripts + reviewer_of_manuscripts
-
-      similarity_by_manuscript_version_id = all_similar_manuscripts[
-        all_similar_manuscripts[VERSION_ID].isin(
-          [m[VERSION_ID] for m in involved_manuscripts]
+      similar_manuscripts = all_similar_manuscripts
+      if len(subject_areas) > 0:
+        similar_manuscripts = self._filter_manuscripts_by_subject_areas(
+          similar_manuscripts, subject_areas
         )
-      ].set_index(VERSION_ID)[SIMILARITY_COLUMN].to_dict()
-
-      def score_by_manuscript(manuscript, keyword, similarity):
-        return {
-          **manuscript_id_fields(manuscript),
-          'keyword': keyword,
-          'similarity': similarity,
-          'combined': min(1.0, keyword + (similarity or 0) * 0.5)
-        }
-
-      scores_by_manuscript = [
-        score_by_manuscript(
-          manuscript,
-          keyword=keyword_match_count_by_by_version_key_map.get(
-            manuscript[VERSION_ID], 0) / max(1, len(keyword_list)),
-          similarity=similarity_by_manuscript_version_id.get(
-            manuscript[VERSION_ID], None)
-        )
-        for manuscript in involved_manuscripts
+      similarity_threshold = 0.5
+      max_similarity_count = 50
+      most_similar_manuscripts = similar_manuscripts[
+        similar_manuscripts[SIMILARITY_COLUMN] >= similarity_threshold
       ]
-      scores_by_manuscript = list(reversed(sorted(scores_by_manuscript, key=lambda score: (
-        score['combined'],
-        score['keyword'],
-        score['similarity']
-      ))))
-      best_score = get_first(scores_by_manuscript, {})
+      self.logger.debug(
+        "found %d/%d similar manuscripts beyond threshold %f",
+        len(most_similar_manuscripts),
+        len(similar_manuscripts),
+        similarity_threshold
+      )
+      if len(most_similar_manuscripts) > max_similarity_count:
+        most_similar_manuscripts = most_similar_manuscripts\
+        .sort_values(SIMILARITY_COLUMN, ascending=False)[:max_similarity_count]
+      related_version_ids =\
+        set(other_manuscripts[VERSION_ID].values) |\
+        set(most_similar_manuscripts[VERSION_ID].values)
+      other_manuscripts_dicts = [
+        self.manuscripts_by_version_id_map.get(version_id)
+        for version_id in related_version_ids
+      ]
+      other_manuscripts_dicts = [m for m in other_manuscripts_dicts if m]
+      debugv('other_manuscripts_dicts:\n%s', other_manuscripts_dicts)
+      potential_reviewers_ids = (
+        (
+          set([
+            person[PERSON_ID] for person in
+            flatten([
+              m['authors'] + m['reviewers']
+              if m['is_published']
+              else m['reviewers']
+              for m in other_manuscripts_dicts
+            ])
+          ]) | self._get_early_career_reviewer_ids_by_subject_areas(
+            ecr_subject_areas
+          ) | assigned_reviewers_by_person_id.keys()
+        ) - exclude_person_ids
+      )
 
-      author_of_manuscript_ids = set([m[VERSION_ID] for m in author_of_manuscripts])
-
-      potential_reviewer = {
-        'person': self.persons_map.get(person_id, None),
-        'author_of_manuscripts': clean_manuscripts(author_of_manuscripts),
-        'scores': {
-          'keyword': best_score.get('keyword'),
-          'similarity': best_score.get('similarity'),
-          'combined': best_score.get('combined'),
-          'by_manuscript': [
-            m
-            for m in scores_by_manuscript
-            if m[VERSION_ID] in author_of_manuscript_ids
-          ]
-        }
+      keyword_match_count_by_by_version_key_map = {
+        k: v['count']
+        for k, v in other_manuscripts[[VERSION_ID, 'count']]\
+        .set_index(VERSION_ID).to_dict(orient='index').items()
       }
-      if potential_reviewer.get('person') is None:
-        self.logger.warning('person id not found: %s', person_id)
-        debugv('valid persons: %s', self.persons_map.keys())
-      return potential_reviewer
 
-    potential_reviewers = [
-      populate_potential_reviewer(person_id)
-      for person_id in potential_reviewers_ids]
+      def populate_potential_reviewer(person_id):
+        author_of_manuscripts = self.manuscripts_by_author_map.get(person_id, [])
+        reviewer_of_manuscripts = self.manuscripts_by_reviewer_map.get(person_id, [])
+        involved_manuscripts = author_of_manuscripts + reviewer_of_manuscripts
 
-    review_duration_mean_keys = ['person', 'stats', 'overall', 'review-duration', 'mean']
-    available_potential_reviewer_mean_durations = filter_none(deep_get_list(
-      potential_reviewers, review_duration_mean_keys
-    ))
-    potential_reviewer_mean_duration = (
-      float(pd.np.mean(available_potential_reviewer_mean_durations))
-      if len(available_potential_reviewer_mean_durations) > 0
-      else None
-    )
+        similarity_by_manuscript_version_id = all_similar_manuscripts[
+          all_similar_manuscripts[VERSION_ID].isin(
+            [m[VERSION_ID] for m in involved_manuscripts]
+          )
+        ].set_index(VERSION_ID)[SIMILARITY_COLUMN].to_dict()
 
-    potential_reviewers = sorted(
-      potential_reviewers,
-      key=lambda potential_reviewer: (
-        -(potential_reviewer['scores'].get('combined') or 0),
-        -(potential_reviewer['scores'].get('keyword') or 0),
-        -(potential_reviewer['scores'].get('similarity') or 0),
-        deep_get(potential_reviewer, review_duration_mean_keys, potential_reviewer_mean_duration),
-        potential_reviewer['person']['first_name'],
-        potential_reviewer['person']['last_name']
+        def score_by_manuscript(manuscript, keyword, similarity):
+          return {
+            **manuscript_id_fields(manuscript),
+            'keyword': keyword,
+            'similarity': similarity,
+            'combined': min(1.0, keyword + (similarity or 0) * 0.5)
+          }
+
+        scores_by_manuscript = [
+          score_by_manuscript(
+            manuscript,
+            keyword=keyword_match_count_by_by_version_key_map.get(
+              manuscript[VERSION_ID], 0) / max(1, len(keyword_list)),
+            similarity=similarity_by_manuscript_version_id.get(
+              manuscript[VERSION_ID], None)
+          )
+          for manuscript in involved_manuscripts
+        ]
+        scores_by_manuscript = list(reversed(sorted(scores_by_manuscript, key=lambda score: (
+          score['combined'],
+          score['keyword'],
+          score['similarity']
+        ))))
+        best_score = get_first(scores_by_manuscript, {})
+
+        author_of_manuscript_ids = set([m[VERSION_ID] for m in author_of_manuscripts])
+
+        potential_reviewer = {
+          'person': self.persons_map.get(person_id, None),
+          'author_of_manuscripts': clean_manuscripts(author_of_manuscripts),
+          'scores': {
+            'keyword': best_score.get('keyword'),
+            'similarity': best_score.get('similarity'),
+            'combined': best_score.get('combined'),
+            'by_manuscript': [
+              m
+              for m in scores_by_manuscript
+              if m[VERSION_ID] in author_of_manuscript_ids
+            ]
+          }
+        }
+        if potential_reviewer.get('person') is None:
+          self.logger.warning('person id not found: %s', person_id)
+          debugv('valid persons: %s', self.persons_map.keys())
+        return potential_reviewer
+
+      potential_reviewers = [
+        populate_potential_reviewer(person_id)
+        for person_id in potential_reviewers_ids]
+
+      review_duration_mean_keys = ['person', 'stats', 'overall', 'review-duration', 'mean']
+      available_potential_reviewer_mean_durations = filter_none(deep_get_list(
+        potential_reviewers, review_duration_mean_keys
+      ))
+      potential_reviewer_mean_duration = (
+        float(pd.np.mean(available_potential_reviewer_mean_durations))
+        if len(available_potential_reviewer_mean_durations) > 0
+        else None
       )
-    )
 
-    # create a list with interleaving normal reviewer, ecr, ...
-    potential_reviewers = [x for x in itertools.chain.from_iterable(itertools.zip_longest(
-      [pr for pr in potential_reviewers if not pr['person'].get('is_early_career_researcher')],
-      [pr for pr in potential_reviewers if pr['person'].get('is_early_career_researcher')]
-    )) if x]
+      potential_reviewers = sorted(
+        potential_reviewers,
+        key=lambda potential_reviewer: (
+          -(potential_reviewer['scores'].get('combined') or 0),
+          -(potential_reviewer['scores'].get('keyword') or 0),
+          -(potential_reviewer['scores'].get('similarity') or 0),
+          deep_get(potential_reviewer, review_duration_mean_keys, potential_reviewer_mean_duration),
+          potential_reviewer['person']['first_name'],
+          potential_reviewer['person']['last_name']
+        )
+      )
 
-    if limit is not None and limit > 0:
-      potential_reviewers = potential_reviewers[:limit]
+      # create a list with interleaving normal reviewer, ecr, ...
+      potential_reviewers = [x for x in itertools.chain.from_iterable(itertools.zip_longest(
+        [pr for pr in potential_reviewers if not pr['person'].get('is_early_career_researcher')],
+        [pr for pr in potential_reviewers if pr['person'].get('is_early_career_researcher')]
+      )) if x]
+
+      if limit is not None and limit > 0:
+        potential_reviewers = potential_reviewers[:limit]
 
     result = {
       'potential_reviewers': potential_reviewers,
