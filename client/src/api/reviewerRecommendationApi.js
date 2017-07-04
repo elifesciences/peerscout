@@ -1,3 +1,5 @@
+import TraceError from 'trace-error';
+
 const urlWithParams = (url, params) => {
   const keys = Object.keys(params);
   return url + (keys.length === 0 ? '' :
@@ -26,6 +28,9 @@ const fetchJson = url => fetch(url, {
 .then(text => text.replace(/NaN/g, null)) // TODO hack
 .then(text => { logResponseTextEnabled && console.log('text:', text); return text; })
 .then(text => JSON.parse(text, datetimeReviver))
+.catch(err => {
+  throw new TraceError('failed to fetch ' + url, err);
+});
 
 const api = baseUrl => {
   const getConfigUrl = baseUrl + '/config';
