@@ -77,8 +77,6 @@ export const recommendedReviewersToGraph = (recommendedReviewers, options={}) =>
     }
   }
 
-  const maxNodes = 50;
-
   const addManuscript = (m, r) => {
     const id = manuscriptToId(m);
     if (nodeMap[id]) {
@@ -112,9 +110,6 @@ export const recommendedReviewersToGraph = (recommendedReviewers, options={}) =>
 
   const addReviewer = r => {
     const id = personToId(r['person']);
-    if (nodes.length >= maxNodes) {
-      return;
-    }
     if (nodeMap[id]) {
       return;
     }
