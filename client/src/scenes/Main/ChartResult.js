@@ -34,7 +34,7 @@ const sortManuscriptsByScoreDescending = (manuscripts, scores) => {
   return sortedManuscriptsWithScores.map(x => x.manuscript);
 };
 
-const recommendedReviewersToGraph = (recommendedReviewers, options={}) => {
+export const recommendedReviewersToGraph = (recommendedReviewers, options={}) => {
   const nodes = [];
   let links = [];
   const nodeMap = {};
@@ -339,12 +339,12 @@ const linkStrength = link => {
   return strength;
 }
 
-const nodeReviewDurationEndAngle = d => {
+export const nodeReviewDurationEndAngle = d => {
   if (d.potentialReviewer) {
     const p = d.potentialReviewer['person'];
     const stats = p.stats;
-    const last12m = stats && stats['last_12m'];
-    const reviewDuration = last12m && last12m['review_duration'];
+    const overall = stats && stats['overall'];
+    const reviewDuration = overall && overall['review_duration'];
     const meanReviewDuration = reviewDuration && reviewDuration['mean'];
     if (meanReviewDuration > 0) {
       return Math.min(2 * Math.PI, 2 * Math.PI * meanReviewDuration / 50);
@@ -763,7 +763,3 @@ class ChartResult extends React.Component {
 }
 
 export default ChartResult;
-
-export {
-  recommendedReviewersToGraph
-};
