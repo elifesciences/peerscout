@@ -87,7 +87,7 @@ class Main extends React.Component {
           subject_area: searchOptions.subjectArea || '',
           keywords: searchOptions.keywords || '',
           abstract: searchOptions.abstract || '',
-          limit: searchOptions.limit || '100'
+          limit: searchOptions.limit || '50'
         });
       }
     );
