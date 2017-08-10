@@ -21,6 +21,12 @@ const styles = {
   field: {
     marginLeft: 20
   },
+  info: {
+    marginLeft: 20,
+    marginTop: 15,
+    color: '#888',
+    fontSize: 12
+  },
   inlineContainer: {
     display: 'inline-block'
   },
@@ -226,6 +232,11 @@ class SearchHeader extends React.Component {
                     onFocus={ this.onAbstractFocus }
                     onBlur={ this.onAbstractBlur }
                   />
+                </View>
+                <View style={ styles.info }>
+                  <Text style={ styles.note }>
+                    Note: search results may improve when searching by manuscript number or keyword and abstract.
+                  </Text>
                 </View>
               </FlexRow>
             </View>
