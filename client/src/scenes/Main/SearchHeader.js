@@ -21,6 +21,15 @@ const styles = {
   field: {
     marginLeft: 20
   },
+  info: {
+    marginLeft: 20,
+    marginTop: 20,
+    color: '#888',
+    fontSize: 12
+  },
+  keywordsRequired: {
+    color: '#f00'
+  },
   inlineContainer: {
     display: 'inline-block'
   },
@@ -145,6 +154,9 @@ class SearchHeader extends React.Component {
     } = state;
     const { manuscriptNumber } = (state[BY_MANUSCRIPT] || {});
     const { subjectArea, abstract } = (state[BY_SEARCH] || {});
+    const keywordsRequired = (keywords.length == 0) && (
+      subjectArea || abstract
+    );
 
     return (
       <Paper style={ styles.container } zDepth={ 2 }>
@@ -226,6 +238,22 @@ class SearchHeader extends React.Component {
                     onFocus={ this.onAbstractFocus }
                     onBlur={ this.onAbstractBlur }
                   />
+                </View>
+                <View style={ styles.info }>
+                  <View style={ styles.note }>
+                    <Text>
+                      Note: search results may improve when searching by manuscript number or keyword and abstract.
+                    </Text>
+                  </View>
+                  {
+                    keywordsRequired && (
+                      <View style={ styles.keywordsRequired }>
+                        <Text>
+                          Keywords required.
+                        </Text>
+                      </View>
+                    )
+                  }
                 </View>
               </FlexRow>
             </View>
