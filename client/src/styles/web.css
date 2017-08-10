@@ -99,8 +99,17 @@ a {
   fill: #8f8;
 }
 
+.person-score .score {
+  background-color: #8f8;
+  border-color: #8f8;
+}
+
 .node-early-career-researcher circle {
   fill: #f88;
+}
+.early-career-researcher-score .score {
+  background-color: #f88;
+  border-color: #f88;
 }
 
 .node-corresponding-author circle {
