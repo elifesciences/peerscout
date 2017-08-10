@@ -8,7 +8,7 @@ const styles = {
 }
 
 const InlineContainer = props => (
-  <View style={ styles.inlineContainer }>
+  <View style={ styles.inlineContainer } { ...props }>
     { props.children }
   </View>
 );
