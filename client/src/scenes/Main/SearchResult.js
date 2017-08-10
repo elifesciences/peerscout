@@ -99,9 +99,8 @@ const styles = {
   inlineContainer: {
     display: 'inline-block'
   },
-  personChip: {
-    display: 'inline-block',
-    marginRight: 5
+  inlineNonBlock: {
+    display: 'inline'
   },
   unrecognisedMembership: {
     display: 'inline-block',
@@ -207,20 +206,21 @@ const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectArea
 };
 
 const PersonInlineSummary = ({ person }) => (
-  <Chip
-    style={ styles.personChip }
-    backgroundColor={ person.is_corresponding_author ? '#888' : '' }
-    labelColor={ person.is_corresponding_author ? '#fff' : '' }
-  >
-    <Text>{ combinedPersonName(person) }</Text>
-  </Chip>  
+  <Text>{ combinedPersonName(person) }</Text>
 );
 
 const PersonListInlineSummary = ({ persons }) => (
-  <View style={{ display: 'inline' }}>
+  <View style={ styles.inlineNonBlock }>
     {
       persons && persons.map((person, index) => (
-        <PersonInlineSummary key={ index } person={ person }/>
+        <View key={ index } style={ styles.inlineNonBlock }>
+          {
+            index > 0 && (
+              <Text>{ ', ' }</Text>
+            )
+          }
+          <PersonInlineSummary person={ person }/>
+        </View>
       ))
     }
   </View>
