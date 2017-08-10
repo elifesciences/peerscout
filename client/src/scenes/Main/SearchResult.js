@@ -181,6 +181,18 @@ const Score = ({ score = {} }) => (
   >{ formatCombinedScore(score.combined) }</Text>
 );
 
+const PersonScore = ({ score, person }) => (
+  <InlineContainer
+    className={
+      person.is_early_career_researcher ?
+      'person-score early-career-researcher-score' :
+      'person-score'
+    }
+  >
+    <Score score={ score }/>
+  </InlineContainer>
+);
+
 const ManuscriptRefLink = ({ manuscript }) => (
   <Link
     style={ styles.manuscriptLink }
@@ -489,10 +501,10 @@ const PotentialReviewer = ({
               <Text style={ styles.potentialReviewer.label }>Scores: </Text>
               <View style={ styles.potentialReviewer.value }>
                 <FlexColumn>
-                      <InlineContainer>
-                        <Score score={ scores }/>
-                        <Text>{ ' (max across manuscripts)' }</Text>
-                      </InlineContainer>
+                  <InlineContainer>
+                    <PersonScore score={ scores } person={ person }/>
+                    <Text>{ ' (max across manuscripts)' }</Text>
+                  </InlineContainer>
                 </FlexColumn>
               </View>
             </View>

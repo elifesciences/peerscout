@@ -99,8 +99,33 @@ a {
   fill: #8f8;
 }
 
+.person-score .score {
+  background-color: #8f8;
+  border-color: #8f8;
+  position: relative;
+}
+
+.person-score .score:after {
+  content : "";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity : 0.4;
+  background-image: url('/images/person.svg');
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: contain;
+}
+
 .node-early-career-researcher circle {
   fill: #f88;
+}
+.early-career-researcher-score .score {
+  background-color: #f88;
+  border-color: #f88;
 }
 
 .node-corresponding-author circle {
