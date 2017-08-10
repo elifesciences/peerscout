@@ -88,9 +88,19 @@ const styles = {
       fontWeight: 'bold'
     },
     subSection: {
-      marginBottom: 5
+      marginBottom: 5,
+      marginLeft: 100
     },
     label: {
+      display: 'inline-block',
+      minWidth: 100,
+      fontWeight: 'bold',
+      marginLeft: -100
+    },
+    abstractSubSection: {
+      marginBottom: 5
+    },
+    abstractLabel: {
       display: 'inline-block',
       minWidth: 100,
       fontWeight: 'bold'
@@ -548,9 +558,9 @@ const ManuscriptSummary = ({ manuscript }) => {
           <Text style={ styles.manuscriptSummary.label }>Subject areas:</Text>
           <Text>{ subjectAreas.join(', ') }</Text>
         </View>
-        <View  style={ styles.manuscriptSummary.subSection }>
+        <View  style={ styles.manuscriptSummary.abstractSubSection }>
           <FlexColumn>
-            <Text style={ styles.manuscriptSummary.label }>Abstract:</Text>
+            <Text style={ styles.manuscriptSummary.abstractLabel }>Abstract:</Text>
             <Text>{ quote(abstract) }</Text>
           </FlexColumn>
         </View>
