@@ -216,6 +216,16 @@ const PersonInlineSummary = ({ person }) => (
   </Chip>  
 );
 
+const PersonListInlineSummary = ({ persons }) => (
+  <View style={{ display: 'inline' }}>
+    {
+      persons && persons.map((person, index) => (
+        <PersonInlineSummary key={ index } person={ person }/>
+      ))
+    }
+  </View>
+);
+
 const Membership = ({ membership }) => {
   if (membership['member_type'] != 'ORCID') {
     return (
@@ -475,21 +485,13 @@ const ManuscriptSummary = ({ manuscript }) => {
       <CardText>
         <View style={ styles.manuscriptSummary.subSection }>
           <Text style={ styles.manuscriptSummary.label }>Authors: </Text>
-          {
-            authors && authors.map((author, index) => (
-              <PersonInlineSummary key={ index } person={ author }/>
-            ))
-          }
+          <PersonListInlineSummary persons={ authors }/>
         </View>
         {
           reviewers && reviewers.length > 0 && (
             <View  style={ styles.manuscriptSummary.subSection }>
               <Text style={ styles.manuscriptSummary.label }>Reviewers: </Text>
-              {
-                reviewers.map((reviewer, index) => (
-                  <PersonInlineSummary key={ index } person={ reviewer }/>
-                ))
-              }
+              <PersonListInlineSummary persons={ reviewers }/>
             </View>
           )
         }
@@ -497,11 +499,7 @@ const ManuscriptSummary = ({ manuscript }) => {
           editors && editors.length > 0 && (
             <View  style={ styles.manuscriptSummary.subSection }>
               <Text style={ styles.manuscriptSummary.label }>Editors: </Text>
-              {
-                editors.map((editor, index) => (
-                  <PersonInlineSummary key={ index } person={ editor }/>
-                ))
-              }
+              <PersonListInlineSummary persons={ editors }/>
             </View>
           )
         }
@@ -509,11 +507,7 @@ const ManuscriptSummary = ({ manuscript }) => {
           seniorEditors && seniorEditors.length > 0 && (
             <View  style={ styles.manuscriptSummary.subSection }>
               <Text style={ styles.manuscriptSummary.label }>Senior Editors: </Text>
-              {
-                seniorEditors.map((seniorEditor, index) => (
-                  <PersonInlineSummary key={ index } person={ seniorEditor }/>
-                ))
-              }
+              <PersonListInlineSummary persons={ seniorEditors }/>
             </View>
           )
         }
