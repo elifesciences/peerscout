@@ -86,6 +86,8 @@ const recommendedReviewersToGraph = (recommendedReviewers, options={}) => {
     return node;
   }
 
+  const limit = (a, max) => a && max && a.length > max ? a.slice(0, max) : a;
+
   const addReviewer = r => {
     const id = personToId(r['person']);
     if (nodes.length >= maxNodes) {
@@ -125,12 +127,13 @@ const recommendedReviewersToGraph = (recommendedReviewers, options={}) => {
     addReviewerManuscriptWithMinimumConnections(m, r, 2);
 
   const processReviewerLinks = linkProcessor => r => {
-    if (r['author_of_manuscripts']) {
-      r['author_of_manuscripts'].forEach(m => linkProcessor(m, r));
-    }
-    if (r['reviewer_of_manuscripts']) {
-      r['reviewer_of_manuscripts'].forEach(m => linkProcessor(m, r));
-    }
+    const relatedManuscripts = limit(
+      (r['author_of_manuscripts'] || []).concat(
+        r['reviewer_of_manuscripts'] || []
+      ),
+      options.maxRelatedManuscripts
+    );
+    relatedManuscripts.forEach(m => linkProcessor(m, r));
   }
 
   const {

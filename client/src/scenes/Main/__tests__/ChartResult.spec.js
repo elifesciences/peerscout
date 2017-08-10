@@ -9,11 +9,21 @@ const PERSON_NODE_PREFIX = 'p';
 const SEARCH_NODE_ID = 'search';
 
 const MANUSCRIPT_ID_1 = '1001';
+const MANUSCRIPT_ID_2 = '1002';
+const MANUSCRIPT_ID_3 = '1003';
 
 const PERSON_ID_1 = '2001';
 
 const MANUSCRIPT_1 = {
   manuscript_id: MANUSCRIPT_ID_1,
+};
+
+const MANUSCRIPT_2 = {
+  manuscript_id: MANUSCRIPT_ID_2,
+};
+
+const MANUSCRIPT_3 = {
+  manuscript_id: MANUSCRIPT_ID_3,
 };
 
 const PERSON_1 = {
@@ -79,6 +89,85 @@ test('ChartResult', g => {
         [
           [SEARCH_NODE_ID, PERSON_NODE_PREFIX + PERSON_ID_1],
           [MANUSCRIPT_NODE_PREFIX + MANUSCRIPT_ID_1, PERSON_NODE_PREFIX + PERSON_ID_1]
+        ]
+      );
+      t.end();
+    });
+
+    g2.test('should add multiple related manuscripts', t => {
+      const graph = recommendedReviewersToGraph({
+        potentialReviewers: [{
+          person: PERSON_1,
+          author_of_manuscripts: [{
+            ...MANUSCRIPT_1,
+            authors: [PERSON_1]
+          }, {
+            ...MANUSCRIPT_2,
+            authors: [PERSON_1]
+          }, {
+            ...MANUSCRIPT_3,
+            authors: [PERSON_1]
+          }]
+        }]
+      }, {
+        showAllRelatedManuscripts: true
+      });
+      t.deepEqual(
+        graph.nodes.map(n => n.id),
+        [
+          SEARCH_NODE_ID,
+          PERSON_NODE_PREFIX + PERSON_ID_1,
+          MANUSCRIPT_NODE_PREFIX + MANUSCRIPT_ID_1,
+          MANUSCRIPT_NODE_PREFIX + MANUSCRIPT_ID_2,
+          MANUSCRIPT_NODE_PREFIX + MANUSCRIPT_ID_3
+        ]
+      );
+      t.deepEqual(
+        graph.links.map(l => [l.source, l.target]),
+        [
+          [SEARCH_NODE_ID, PERSON_NODE_PREFIX + PERSON_ID_1],
+          [MANUSCRIPT_NODE_PREFIX + MANUSCRIPT_ID_1, PERSON_NODE_PREFIX + PERSON_ID_1],
+          [MANUSCRIPT_NODE_PREFIX + MANUSCRIPT_ID_2, PERSON_NODE_PREFIX + PERSON_ID_1],
+          [MANUSCRIPT_NODE_PREFIX + MANUSCRIPT_ID_3, PERSON_NODE_PREFIX + PERSON_ID_1]
+        ]
+      );
+      t.end();
+    });
+
+    g2.test('should not add more than configured maximum related manuscripts', t => {
+      const graph = recommendedReviewersToGraph({
+        potentialReviewers: [{
+          person: PERSON_1,
+          author_of_manuscripts: [{
+            ...MANUSCRIPT_1,
+            authors: [PERSON_1]
+          }, {
+            ...MANUSCRIPT_2,
+            authors: [PERSON_1]
+          }, {
+            ...MANUSCRIPT_3,
+            authors: [PERSON_1]
+          }]
+        }]
+      }, {
+        showAllRelatedManuscripts: true,
+        maxRelatedManuscripts: 2
+      });
+      t.deepEqual(
+        graph.nodes.map(n => n.id),
+        [
+          SEARCH_NODE_ID,
+          PERSON_NODE_PREFIX + PERSON_ID_1,
+          MANUSCRIPT_NODE_PREFIX + MANUSCRIPT_ID_1,
+          MANUSCRIPT_NODE_PREFIX + MANUSCRIPT_ID_2
+        ]
+      );
+      t.deepEqual(
+        graph.links.map(l => [l.source, l.target]),
+        [
+          [SEARCH_NODE_ID, PERSON_NODE_PREFIX + PERSON_ID_1],
+          [MANUSCRIPT_NODE_PREFIX + MANUSCRIPT_ID_1, PERSON_NODE_PREFIX + PERSON_ID_1],
+          [MANUSCRIPT_NODE_PREFIX + MANUSCRIPT_ID_2, PERSON_NODE_PREFIX + PERSON_ID_1]
         ]
       );
       t.end();
