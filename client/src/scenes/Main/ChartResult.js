@@ -735,3 +735,7 @@ class ChartResult extends React.Component {
 }
 
 export default ChartResult;
+
+export {
+  recommendedReviewersToGraph
+};
