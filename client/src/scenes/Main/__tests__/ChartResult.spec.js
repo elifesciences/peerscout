@@ -39,15 +39,15 @@ const PERSON_1 = {
 };
 
 test('ChartResult', g => {
-  g.test('recommendedReviewersToGraph', g2 => {
-    g2.test('should only include search node if no reviewers have been recommended', t => {
+  g.test('.recommendedReviewersToGraph', g2 => {
+    g2.test('..should only include search node if no reviewers have been recommended', t => {
       const graph = recommendedReviewersToGraph({});
       t.deepEqual(graph.nodes.map(n => n.id), [SEARCH_NODE_ID]);
       t.deepEqual(graph.links, []);
       t.end();
     });
 
-    g2.test('should only include main manuscript node without recommended reviewers', t => {
+    g2.test('..should only include main manuscript node without recommended reviewers', t => {
       const graph = recommendedReviewersToGraph({
         matchingManuscripts: [MANUSCRIPT_1]
       });
@@ -56,7 +56,7 @@ test('ChartResult', g => {
       t.end();
     });
 
-    g2.test('should include one reviewer node with no manuscripts', t => {
+    g2.test('..should include one reviewer node with no manuscripts', t => {
       const graph = recommendedReviewersToGraph({
         potentialReviewers: [{
           person: PERSON_1
@@ -72,7 +72,7 @@ test('ChartResult', g => {
       t.end();
     });
 
-    g2.test('should include one reviewer node with one related manuscript', t => {
+    g2.test('..should include one reviewer node with one related manuscript', t => {
       const graph = recommendedReviewersToGraph({
         potentialReviewers: [{
           person: PERSON_1,
@@ -102,7 +102,7 @@ test('ChartResult', g => {
       t.end();
     });
 
-    g2.test('should add multiple related manuscripts', t => {
+    g2.test('..should add multiple related manuscripts', t => {
       const graph = recommendedReviewersToGraph({
         potentialReviewers: [{
           person: PERSON_1,
@@ -142,7 +142,7 @@ test('ChartResult', g => {
       t.end();
     });
 
-    g2.test('should not add more than configured maximum related manuscripts', t => {
+    g2.test('..should not add more than configured maximum related manuscripts', t => {
       const graph = recommendedReviewersToGraph({
         potentialReviewers: [{
           person: PERSON_1,
@@ -181,7 +181,7 @@ test('ChartResult', g => {
       t.end();
     });
 
-    g2.test('should sort related manuscripts and not add more than configured maximum', t => {
+    g2.test('..should sort related manuscripts and not add more than configured maximum', t => {
       const graph = recommendedReviewersToGraph({
         potentialReviewers: [{
           person: PERSON_1,
@@ -233,13 +233,13 @@ test('ChartResult', g => {
     });
   });
 
-  g.test('nodeReviewDurationEndAngle', g2 => {
-    g2.test('should return 0 if not potential reviewer', t => {
+  g.test('.nodeReviewDurationEndAngle', g2 => {
+    g2.test('..should return 0 if not potential reviewer', t => {
       t.equal(nodeReviewDurationEndAngle({}), 0);
       t.end();
     });
 
-    g2.test('should return 0 if potential reviewer has no stats', t => {
+    g2.test('..should return 0 if potential reviewer has no stats', t => {
       t.equal(nodeReviewDurationEndAngle({
         potentialReviewer: {
           person: {
@@ -251,7 +251,7 @@ test('ChartResult', g => {
       t.end();
     });
 
-    g2.test('should return greater than 0 if potential reviewer has overall stats', t => {
+    g2.test('..should return greater than 0 if potential reviewer has overall stats', t => {
       const value = nodeReviewDurationEndAngle({
         potentialReviewer: {
           person: {
