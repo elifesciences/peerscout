@@ -88,9 +88,19 @@ const styles = {
       fontWeight: 'bold'
     },
     subSection: {
-      marginBottom: 5
+      marginBottom: 5,
+      marginLeft: 100
     },
     label: {
+      display: 'inline-block',
+      minWidth: 100,
+      fontWeight: 'bold',
+      marginLeft: -100
+    },
+    abstractSubSection: {
+      marginBottom: 5
+    },
+    abstractLabel: {
       display: 'inline-block',
       minWidth: 100,
       fontWeight: 'bold'
@@ -99,9 +109,8 @@ const styles = {
   inlineContainer: {
     display: 'inline-block'
   },
-  personChip: {
-    display: 'inline-block',
-    marginRight: 5
+  inlineNonBlock: {
+    display: 'inline'
   },
   unrecognisedMembership: {
     display: 'inline-block',
@@ -111,6 +120,11 @@ const styles = {
     ...commonStyles.link,
     display: 'inline-block',
     marginLeft: 10
+  },
+  correspondingAuthorIndicator: {
+    ...commonStyles.link,
+    display: 'inline-block',
+    marginLeft: 5
   },
   membershipLink: {
     ...commonStyles.link,
@@ -206,14 +220,61 @@ const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectArea
   );
 };
 
-const PersonInlineSummary = ({ person }) => (
-  <Chip
-    style={ styles.personChip }
-    backgroundColor={ person.is_corresponding_author ? '#888' : '' }
-    labelColor={ person.is_corresponding_author ? '#fff' : '' }
+const PersonEmailLink = ({ person: { email } }) => (
+  <Link
+    style={ styles.emailLink }
+    target="_blank"
+    href={ `mailto:${email}` }
   >
-    <Text>{ combinedPersonName(person) }</Text>
-  </Chip>  
+    <Text>{ email }</Text>
+  </Link>
+);
+
+const CorrespondingAuthorIndicator = ({ person: { email } }) => {
+  if (email) {
+    return (
+      <Link
+        style={ styles.correspondingAuthorIndicator }
+        target="_blank"
+        href={ `mailto:${email}` }
+        title={ email }
+      >
+        <FontAwesomeIcon name="envelope"/>
+      </Link>
+    );
+  } else {
+    return (
+      <View style={ styles.correspondingAuthorIndicator }>
+        <FontAwesomeIcon name="envelope"/>
+      </View>
+    );
+  }
+};
+
+const PersonInlineSummary = ({ person }) => (
+  <Text>{ combinedPersonName(person) }</Text>
+);
+
+const PersonListInlineSummary = ({ persons }) => (
+  <View style={ styles.inlineNonBlock }>
+    {
+      persons && persons.map((person, index) => (
+        <View key={ index } style={ styles.inlineNonBlock }>
+          {
+            index > 0 && (
+              <Text>{ ', ' }</Text>
+            )
+          }
+          <PersonInlineSummary person={ person }/>
+          {
+            person.is_corresponding_author && (
+              <CorrespondingAuthorIndicator person={ person }/>
+            )
+          }
+        </View>
+      ))
+    }
+  </View>
 );
 
 const Membership = ({ membership }) => {
@@ -257,16 +318,6 @@ const PersonWebSearchLink = ({ person }) => (
     href={ `http://search.crossref.org/?q=${encodeURIComponent(personFullName(person))}` }
   >
     <Text><FontAwesomeIcon name="search"/></Text>
-  </Link>
-);
-
-const PersonEmailLink = ({ person: { email } }) => (
-  <Link
-    style={ styles.emailLink }
-    target="_blank"
-    href={ `mailto:${email}` }
-  >
-    <Text>{ email }</Text>
   </Link>
 );
 
@@ -475,21 +526,13 @@ const ManuscriptSummary = ({ manuscript }) => {
       <CardText>
         <View style={ styles.manuscriptSummary.subSection }>
           <Text style={ styles.manuscriptSummary.label }>Authors: </Text>
-          {
-            authors && authors.map((author, index) => (
-              <PersonInlineSummary key={ index } person={ author }/>
-            ))
-          }
+          <PersonListInlineSummary persons={ authors }/>
         </View>
         {
           reviewers && reviewers.length > 0 && (
             <View  style={ styles.manuscriptSummary.subSection }>
               <Text style={ styles.manuscriptSummary.label }>Reviewers: </Text>
-              {
-                reviewers.map((reviewer, index) => (
-                  <PersonInlineSummary key={ index } person={ reviewer }/>
-                ))
-              }
+              <PersonListInlineSummary persons={ reviewers }/>
             </View>
           )
         }
@@ -497,11 +540,7 @@ const ManuscriptSummary = ({ manuscript }) => {
           editors && editors.length > 0 && (
             <View  style={ styles.manuscriptSummary.subSection }>
               <Text style={ styles.manuscriptSummary.label }>Editors: </Text>
-              {
-                editors.map((editor, index) => (
-                  <PersonInlineSummary key={ index } person={ editor }/>
-                ))
-              }
+              <PersonListInlineSummary persons={ editors }/>
             </View>
           )
         }
@@ -509,11 +548,7 @@ const ManuscriptSummary = ({ manuscript }) => {
           seniorEditors && seniorEditors.length > 0 && (
             <View  style={ styles.manuscriptSummary.subSection }>
               <Text style={ styles.manuscriptSummary.label }>Senior Editors: </Text>
-              {
-                seniorEditors.map((seniorEditor, index) => (
-                  <PersonInlineSummary key={ index } person={ seniorEditor }/>
-                ))
-              }
+              <PersonListInlineSummary persons={ seniorEditors }/>
             </View>
           )
         }
@@ -523,9 +558,9 @@ const ManuscriptSummary = ({ manuscript }) => {
           <Text style={ styles.manuscriptSummary.label }>Subject areas:</Text>
           <Text>{ subjectAreas.join(', ') }</Text>
         </View>
-        <View  style={ styles.manuscriptSummary.subSection }>
+        <View  style={ styles.manuscriptSummary.abstractSubSection }>
           <FlexColumn>
-            <Text style={ styles.manuscriptSummary.label }>Abstract:</Text>
+            <Text style={ styles.manuscriptSummary.abstractLabel }>Abstract:</Text>
             <Text>{ quote(abstract) }</Text>
           </FlexColumn>
         </View>
