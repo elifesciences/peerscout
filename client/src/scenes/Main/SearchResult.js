@@ -111,6 +111,11 @@ const styles = {
     display: 'inline-block',
     marginLeft: 10
   },
+  correspondingAuthorIndicator: {
+    ...commonStyles.link,
+    display: 'inline-block',
+    marginLeft: 5
+  },
   membershipLink: {
     ...commonStyles.link,
     display: 'inline-block',
@@ -205,6 +210,37 @@ const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectArea
   );
 };
 
+const PersonEmailLink = ({ person: { email } }) => (
+  <Link
+    style={ styles.emailLink }
+    target="_blank"
+    href={ `mailto:${email}` }
+  >
+    <Text>{ email }</Text>
+  </Link>
+);
+
+const CorrespondingAuthorIndicator = ({ person: { email } }) => {
+  if (email) {
+    return (
+      <Link
+        style={ styles.correspondingAuthorIndicator }
+        target="_blank"
+        href={ `mailto:${email}` }
+        title={ email }
+      >
+        <FontAwesomeIcon name="envelope"/>
+      </Link>
+    );
+  } else {
+    return (
+      <View style={ styles.correspondingAuthorIndicator }>
+        <FontAwesomeIcon name="envelope"/>
+      </View>
+    );
+  }
+};
+
 const PersonInlineSummary = ({ person }) => (
   <Text>{ combinedPersonName(person) }</Text>
 );
@@ -220,6 +256,11 @@ const PersonListInlineSummary = ({ persons }) => (
             )
           }
           <PersonInlineSummary person={ person }/>
+          {
+            person.is_corresponding_author && (
+              <CorrespondingAuthorIndicator person={ person }/>
+            )
+          }
         </View>
       ))
     }
@@ -267,16 +308,6 @@ const PersonWebSearchLink = ({ person }) => (
     href={ `http://search.crossref.org/?q=${encodeURIComponent(personFullName(person))}` }
   >
     <Text><FontAwesomeIcon name="search"/></Text>
-  </Link>
-);
-
-const PersonEmailLink = ({ person: { email } }) => (
-  <Link
-    style={ styles.emailLink }
-    target="_blank"
-    href={ `mailto:${email}` }
-  >
-    <Text>{ email }</Text>
   </Link>
 );
 
