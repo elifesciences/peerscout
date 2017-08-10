@@ -4,11 +4,35 @@ import ResizeObserver from 'resize-observer-polyfill';
 import * as d3 from 'd3';
 import d3Tip from 'd3-tip';
 import Set from 'es6-set';
+import sortOn from 'sort-on';
 
 import {
   formatCombinedScore,
   formatScoreWithDetails
 } from './formatUtils';
+
+
+const limit = (a, max) => a && max && a.length > max ? a.slice(0, max) : a;
+
+const sortManuscriptsByScoreDescending = (manuscripts, scores) => {
+  if (!manuscripts || (manuscripts.length < 2) || !scores || !scores.by_manuscript) {
+    return manuscripts;
+  }
+  const scoreByVersionId = {};
+  scores.by_manuscript.forEach(manuscript_scores => {
+    scoreByVersionId[manuscript_scores.version_id] = manuscript_scores.combined;
+  });
+  const manuscriptsWithScores = manuscripts.map((manuscript, index) => ({
+    score: scoreByVersionId[manuscript.version_id],
+    manuscript,
+    index
+  }));
+  const sortedManuscriptsWithScores = sortOn(
+    manuscriptsWithScores,
+    ['-score', 'index']
+  );
+  return sortedManuscriptsWithScores.map(x => x.manuscript);
+};
 
 const recommendedReviewersToGraph = (recommendedReviewers, options={}) => {
   const nodes = [];
@@ -125,12 +149,13 @@ const recommendedReviewersToGraph = (recommendedReviewers, options={}) => {
     addReviewerManuscriptWithMinimumConnections(m, r, 2);
 
   const processReviewerLinks = linkProcessor => r => {
-    if (r['author_of_manuscripts']) {
-      r['author_of_manuscripts'].forEach(m => linkProcessor(m, r));
-    }
-    if (r['reviewer_of_manuscripts']) {
-      r['reviewer_of_manuscripts'].forEach(m => linkProcessor(m, r));
-    }
+    const relatedManuscripts = limit(sortManuscriptsByScoreDescending(
+      (r.author_of_manuscripts || []).concat(
+        r.reviewer_of_manuscripts || []
+      ),
+      r.scores
+    ), options.maxRelatedManuscripts);
+    relatedManuscripts.forEach(m => linkProcessor(m, r));
   }
 
   const {
@@ -706,15 +731,17 @@ class ChartResult extends React.Component {
   updateChart(props) {
     const { searchResult, onNodeClicked } = props;
     if (searchResult) {
-      const graph = recommendedReviewersToGraph(searchResult, {
-        showAllRelatedManuscripts: props.showAllRelatedManuscripts
-      });
+      const options = {
+        showAllRelatedManuscripts: props.showAllRelatedManuscripts,
+        maxRelatedManuscripts: props.maxRelatedManuscripts
+      };
+      const graph = recommendedReviewersToGraph(searchResult, options);
       if (this.chart) {
         this.chart.destroy();
       }
       this.chart = createChart(this.node, graph, {
-        onNodeClicked,
-        showAllRelatedManuscripts: props.showAllRelatedManuscripts
+        ...options,
+        onNodeClicked
       });
       this.chart.selectNode(props.selectNode);
     }
@@ -722,7 +749,8 @@ class ChartResult extends React.Component {
 
   componentWillReceiveProps(nextProps) {
     if (((nextProps.searchResult != this.props.searchResult) && (nextProps.searchResult)) ||
-        (nextProps.showAllRelatedManuscripts != this.props.showAllRelatedManuscripts)) {
+        (nextProps.showAllRelatedManuscripts != this.props.showAllRelatedManuscripts) ||
+        (nextProps.maxRelatedManuscripts != this.props.maxRelatedManuscripts)) {
       this.updateChart(nextProps);
     } else if (this.chart && (nextProps.selectedNode != this.props.selectedNode)) {
       this.chart.selectNode(nextProps.selectedNode);
@@ -735,3 +763,7 @@ class ChartResult extends React.Component {
 }
 
 export default ChartResult;
+
+export {
+  recommendedReviewersToGraph
+};

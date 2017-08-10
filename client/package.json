@@ -7,7 +7,8 @@
     "start": "NODE_ENV=development webpack-dev-server --config webpack.config.js --progress --colors --hot --inline --host 0.0.0.0 --port 8081",
     "start:prod": "http-server docs",
     "bundle": "webpack --config webpack.config.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "cross-env NODE_ENV=test tape-watch -1 -r babel-register src/**/*.spec.js | faucet",
+    "~test": "cross-env NODE_ENV=test tape-watch -w -r babel-register src/**/*.spec.js | faucet"
   },
   "author": "Daniel Ecer",
   "license": "MIT",
@@ -32,6 +33,7 @@
     "react-split-pane": "^0.1.63",
     "react-tap-event-plugin": "^2.0.1",
     "reselect": "^2.5.4",
+    "sort-on": "^2.0.0",
     "trace-error": "0.0.7",
     "whatwg-fetch": "^2.0.3"
   },
@@ -49,8 +51,10 @@
     "babel-preset-react-native": "1.9.1",
     "babel-runtime": "^6.20.0",
     "copy-webpack-plugin": "^4.0.1",
+    "cross-env": "^5.0.5",
     "css-loader": "^0.26.1",
     "es6-promise": "^4.0.5",
+    "faucet": "0.0.1",
     "file-loader": "^0.9.0",
     "html-webpack-plugin": "^2.26.0",
     "http-server": "^0.9.0",
@@ -58,6 +62,8 @@
     "react-test-renderer": "15.4.1",
     "resize-observer-polyfill": "^1.4.1",
     "style-loader": "^0.13.1",
+    "tape": "^4.8.0",
+    "tape-watch": "^2.3.0",
     "url-loader": "^0.5.7",
     "webpack": "^1.14.0",
     "webpack-dev-server": "^1.16.2",

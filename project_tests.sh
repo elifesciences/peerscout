@@ -8,3 +8,6 @@ pytest
 
 cd ../preprocessing
 pytest
+
+cd ../client
+npm test

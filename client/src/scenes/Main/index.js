@@ -66,7 +66,8 @@ class Main extends React.Component {
       keywords: ''
     };
     this.defaultConfig = {
-      showAllRelatedManuscripts: true
+      showAllRelatedManuscripts: true,
+      maxRelatedManuscripts: 15
     };
     this.state = {
       searchOptions: this.defaultSearchOptions,
@@ -197,7 +198,11 @@ class Main extends React.Component {
       showAllRelatedManuscripts:
         configResult.chart_show_all_manuscripts != undefined ?
         configResult.chart_show_all_manuscripts == 'true' :
-        this.defaultConfig.showAllRelatedManuscripts
+        this.defaultConfig.showAllRelatedManuscripts,
+      maxRelatedManuscripts:
+        configResult.max_related_manuscripts != undefined ?
+        configResult.max_related_manuscripts :
+        this.defaultConfig.maxRelatedManuscripts,
     }
   }
 
@@ -257,7 +262,8 @@ class Main extends React.Component {
   render() {
     const {
       config: {
-        showAllRelatedManuscripts
+        showAllRelatedManuscripts,
+        maxRelatedManuscripts
       },
       loading,
       searchOptions,
@@ -300,6 +306,7 @@ class Main extends React.Component {
                       onNodeClicked={ this.onNodeClicked }
                       selectedNode={ selectedNode }
                       showAllRelatedManuscripts={ showAllRelatedManuscripts }
+                      maxRelatedManuscripts={ maxRelatedManuscripts }
                     />
                     <SearchResult
                       searchResult={ results }
