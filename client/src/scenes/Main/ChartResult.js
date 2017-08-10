@@ -731,15 +731,17 @@ class ChartResult extends React.Component {
   updateChart(props) {
     const { searchResult, onNodeClicked } = props;
     if (searchResult) {
-      const graph = recommendedReviewersToGraph(searchResult, {
-        showAllRelatedManuscripts: props.showAllRelatedManuscripts
-      });
+      const options = {
+        showAllRelatedManuscripts: props.showAllRelatedManuscripts,
+        maxRelatedManuscripts: props.maxRelatedManuscripts
+      };
+      const graph = recommendedReviewersToGraph(searchResult, options);
       if (this.chart) {
         this.chart.destroy();
       }
       this.chart = createChart(this.node, graph, {
-        onNodeClicked,
-        showAllRelatedManuscripts: props.showAllRelatedManuscripts
+        ...options,
+        onNodeClicked
       });
       this.chart.selectNode(props.selectNode);
     }
@@ -747,7 +749,8 @@ class ChartResult extends React.Component {
 
   componentWillReceiveProps(nextProps) {
     if (((nextProps.searchResult != this.props.searchResult) && (nextProps.searchResult)) ||
-        (nextProps.showAllRelatedManuscripts != this.props.showAllRelatedManuscripts)) {
+        (nextProps.showAllRelatedManuscripts != this.props.showAllRelatedManuscripts) ||
+        (nextProps.maxRelatedManuscripts != this.props.maxRelatedManuscripts)) {
       this.updateChart(nextProps);
     } else if (this.chart && (nextProps.selectedNode != this.props.selectedNode)) {
       this.chart.selectNode(nextProps.selectedNode);
