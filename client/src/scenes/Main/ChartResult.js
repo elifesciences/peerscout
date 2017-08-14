@@ -7,9 +7,16 @@ import Set from 'es6-set';
 import sortOn from 'sort-on';
 
 import {
-  formatCombinedScore,
   formatScoreWithDetails
 } from './formatUtils';
+
+import {
+  createLegend
+} from './chart/legend';
+
+import {
+  createNode
+} from './chart/node';
 
 
 const limit = (a, max) => a && max && a.length > max ? a.slice(0, max) : a;
@@ -258,55 +265,7 @@ const createTooltip = () => {
   return tip;
 }
 
-const nodeScore = d => (
-  (d && d.score) ||
-  (d && d.manuscript && d.manuscript.score) ||
-  (d && d.potentialReviewer && d.potentialReviewer.scores)
-);
-
 const asSingleScore = score => (score && score.combined) || 0;
-
-const nodeSingleScore = d => {
-  if (d && d.isMain) {
-    return 1;
-  } else {
-    return asSingleScore(nodeScore(d));
-  }
-}
-
-const nodeOpacity = d => {
-  const singleScore = nodeSingleScore(d);
-  const minOpacity = 1;
-  return Math.min(1,
-    minOpacity + (1 - minOpacity) * singleScore
-  );
-}
-
-const nodeStyleClass = d => {
-  if (d.search) {
-    return 'node-search';
-  } else if (d.isMain) {
-    return 'node-main-manuscript';
-  } else if (d.manuscript) {
-    return 'node-manuscript';
-  } else if (d.potentialReviewer) {
-    let s = 'node-potential-reviewer';
-    if (d.potentialReviewer.person['is_early_career_researcher']) {
-      s += ' node-early-career-researcher';
-    }
-    return s;
-  } else {
-    return 'node-unknown';
-  }
-};
-
-const nodeImage = d => {
-  if (d.potentialReviewer) {
-    return '/images/person.svg';
-  } else if (d.manuscript) {
-    return '/images/manuscript.svg';
-  }
-}
 
 const linkOpacity = d => {
   const singleScore = asSingleScore(d.score);
@@ -333,169 +292,6 @@ const linkStrength = link => {
   console.log("singleScore:", singleScore, ", strength:", strength);
   return strength;
 }
-
-export const nodeReviewDurationEndAngle = d => {
-  if (d.potentialReviewer) {
-    const p = d.potentialReviewer['person'];
-    const stats = p.stats;
-    const overall = stats && stats['overall'];
-    const reviewDuration = overall && overall['review_duration'];
-    const meanReviewDuration = reviewDuration && reviewDuration['mean'];
-    if (meanReviewDuration > 0) {
-      return Math.min(2 * Math.PI, 2 * Math.PI * meanReviewDuration / 50);
-    }
-  }
-  return 0;
-}
-
-const nodeScoreEndAngle = d => {
-  const singleScore = nodeSingleScore(d);
-  if (singleScore > 0 && !d.isMain) {
-    return Math.min(2 * Math.PI, 2 * Math.PI * singleScore);
-  }
-  return 0;
-}
-
-const createNode = (parent, nodes) => {
-  const nodeParent = parent.append("g")
-    .attr("class", "nodes")
-    .selectAll("circle")
-    .data(nodes)
-    .enter()
-    .append('g')
-    .attr("class", nodeStyleClass)
-    .style('opacity', nodeOpacity);
-
-  const node = nodeParent.append('g');
-    
-  node.append("circle")
-    .attr("r", 15);
-
-  node.append("svg:image")
-   .attr('x',-11)
-   .attr('y',-12)
-   .attr('width', 20)
-   .attr('height', 24)
-   .attr("xlink:href", nodeImage)
-   .style('opacity', 0.4);
-
-  node.append("path")
-    .attr("class", "reviewer-duration-indicator")
-    .attr("d", d3.arc()
-      .innerRadius(10)
-      .outerRadius(15)
-      .startAngle(0)
-      .endAngle(nodeReviewDurationEndAngle)
-    );
-
-  node.append("text")
-    .text(d => {
-      const singleScore = nodeSingleScore(d);
-      return (singleScore && !d.isMain && formatCombinedScore(singleScore)) || '';
-    })
-    .style("text-anchor", "middle")
-    .attr("class", "node-text")
-    .attr("transform", d => "translate(0, 6)");
-
-  return nodeParent;
-}
-
-const createLegend = (parent, showSearch, options) => {
-  const legend = parent.append("g")
-    .style('opacity', 0.7)
-    .attr('class', 'legend')
-    .attr("transform", d => "translate(20, 20)");
-
-  const background = legend
-    .append('rect')
-    .attr('x', -10)
-    .attr('y', -10)
-    .attr('width', 205)
-    .attr('fill', '#fff');
-
-  const fullScore = {
-    combined: 1
-  };
-  const legendData = [{
-    isMain: true,
-    label: showSearch ? 'Search' : 'Main manuscript',
-    manuscript: {
-    }
-  }, {
-    potentialReviewer: {
-      person: {
-      }
-    },
-    label: 'Potential reviewer'
-  }, {
-    potentialReviewer: {
-      person: {
-        stats: {
-          overall: {
-            'review_duration': {
-              mean: 10
-            }
-          }
-        },
-      }
-    },
-    label: 'Potential reviewer\nwith review duration'
-  }, {
-    potentialReviewer: {
-      person: {
-      }
-    },
-    is_corresponding_author: true,
-    label: 'Corresponding author\nof selected manuscript'
-  }, {
-    potentialReviewer: {
-      person: {
-        'is_early_career_researcher': true
-      }
-    },
-    label: 'Early career reviewer'
-  }];
-  const includeOtherManuscripts = true;
-  if (includeOtherManuscripts) {
-    legendData.push({
-      manuscript: {
-      },
-      label: (
-        options.showAllRelatedManuscripts ?
-        'Related manuscript' :
-        'Common manuscript'
-      )
-    });
-  }
-  legendData.push({
-    score: fullScore,
-    label: 'Combined score\n(keyword & similarity)'
-  });
-  let currentY = 10;
-  legendData.forEach((d, index) => {
-    d.x = 10;
-    d.y = currentY;
-    d.labels = d.label.split('\n');
-    currentY += 20 + d.labels.length * 20;
-  });
-
-  background
-    .attr('height', currentY - 10);
-
-  const node = createNode(legend, legendData)
-    .attr("transform", d => "translate(" + d.x + ", " + d.y + ")")
-    .classed('node-corresponding-author', d => d.is_corresponding_author);
-  for (let lineNo = 0; lineNo < 2; lineNo++) {
-    node
-      .append('text')
-      .text(d => d.labels[lineNo])
-      .attr('text-anchor', 'right')
-      .attr("class", "legend-label")
-      .attr("transform", d => "translate(20, " + (4 + 20 * lineNo) + ")");
-  }
-  return legend;
-}
-
 
 const initialiseNodePosition = (node, index, width, height) => {
   if (node.isMain || node.search) {

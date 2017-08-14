@@ -74,6 +74,14 @@ a {
   height: 100%;
 }
 
+.legend-close-button {
+  opacity: 0.5;
+}
+
+.legend-close-button:hover {
+  opacity: 1;
+}
+
 .node-text {
   fill: #000;
 }
