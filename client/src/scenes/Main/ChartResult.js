@@ -6,10 +6,6 @@ import Set from 'es6-set';
 import sortOn from 'sort-on';
 
 import {
-  formatScoreWithDetails
-} from './formatUtils';
-
-import {
   addNodeDragBehavior,
   createLegend,
   createLinksContainer,
