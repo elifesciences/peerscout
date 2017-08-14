@@ -113,3 +113,6 @@ export const createNode = (parent, nodes) => {
 
   return nodeParent;
 }
+
+export const updateNodePosition = node => node
+  .attr("transform", d => "translate(" + d.x + "," + d.y + ")");
