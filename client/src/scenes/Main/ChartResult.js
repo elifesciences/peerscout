@@ -2,499 +2,21 @@ import React from 'react';
 import ResizeObserver from 'resize-observer-polyfill';
 
 import * as d3 from 'd3';
-import d3Tip from 'd3-tip';
 import Set from 'es6-set';
-import sortOn from 'sort-on';
 
 import {
-  formatCombinedScore,
-  formatScoreWithDetails
-} from './formatUtils';
-
-
-const limit = (a, max) => a && max && a.length > max ? a.slice(0, max) : a;
-
-const sortManuscriptsByScoreDescending = (manuscripts, scores) => {
-  if (!manuscripts || (manuscripts.length < 2) || !scores || !scores.by_manuscript) {
-    return manuscripts;
-  }
-  const scoreByVersionId = {};
-  scores.by_manuscript.forEach(manuscript_scores => {
-    scoreByVersionId[manuscript_scores.version_id] = manuscript_scores.combined;
-  });
-  const manuscriptsWithScores = manuscripts.map((manuscript, index) => ({
-    score: scoreByVersionId[manuscript.version_id],
-    manuscript,
-    index
-  }));
-  const sortedManuscriptsWithScores = sortOn(
-    manuscriptsWithScores,
-    ['-score', 'index']
-  );
-  return sortedManuscriptsWithScores.map(x => x.manuscript);
-};
-
-export const recommendedReviewersToGraph = (recommendedReviewers, options={}) => {
-  const nodes = [];
-  let links = [];
-  const nodeMap = {};
-  const linkMap = {};
-  let mainManuscripts = [];
-  let mainNodes = [];
-
-  const manuscriptToId = m => 'm' + m['manuscript_id'];
-  const personToId = m => 'p' + m['person_id'];
-
-  const addReviewerLink = (sourceNode, reviewerNode) => {
-    const sourceId = sourceNode.id;
-    const targetId = reviewerNode.id;
-    if (!linkMap[sourceId]) {
-      linkMap[sourceId] = {};
-    }
-    const reviewerLinksMap = linkMap[sourceId];
-    if (reviewerLinksMap[targetId]) {
-      return;
-    }
-    const link = {
-      source: sourceId,
-      target: targetId,
-      value: 4
-    };
-    links.push(link);
-    reviewerLinksMap[targetId] = link;
-
-    const manuscript = sourceNode.manuscript;
-    const manuscriptNo = manuscript && manuscript['manuscript_id'];
-    const r = reviewerNode.potentialReviewer;
-    if (manuscriptNo && r['scores'] && r['scores']['by_manuscript']) {
-      const score = r['scores']['by_manuscript'].filter(
-        s => s['manuscript_id'] === manuscriptNo
-      )[0];
-      link.score = score;
-      if (score) {
-        manuscript.score = score;
-      }
-    }
-  }
-
-  const addManuscript = (m, r) => {
-    const id = manuscriptToId(m);
-    if (nodeMap[id]) {
-      return;
-    }
-    const node = {
-      id,
-      group: r ? 2 : 1,
-      manuscript: m
-    };
-    nodeMap[id] = node;
-    nodes.push(node);
-    if (r) {
-      addReviewerLink(node, nodeMap[personToId(r['person'])]);
-    } else {
-      node.isMain = true;
-    }
-    return node;
-  }
-
-  const addSearch = search => {
-    const id = 'search';
-    const node = {
-      id,
-      search: search
-    };
-    nodeMap[id] = node;
-    nodes.push(node);
-    return node;
-  }
-
-  const addReviewer = r => {
-    const id = personToId(r['person']);
-    if (nodeMap[id]) {
-      return;
-    }
-    const node = {
-      id,
-      group: 3,
-      potentialReviewer: r
-    };
-    nodeMap[id] = node;
-    nodes.push(node);
-    mainNodes.forEach(mainNode => addReviewerLink(mainNode, node));
-  }
-
-  const addReviewerManuscriptWithMinimumConnections = (m, r, minConnections) => {
-    const mid = manuscriptToId(m);
-    if (nodeMap[mid]) {
-      return;
-    }
-    const relatedPersons = (m['authors'] || []).concat(m['reviewers'] || []);
-    const relatedPersonIds = relatedPersons.map(p => personToId(p));
-    const reviewerPersonIds = relatedPersonIds.filter(personId => !!nodeMap[personId]);
-    if (reviewerPersonIds.length >= minConnections) {
-      const manuscriptNode = addManuscript(m, r);
-      reviewerPersonIds.forEach(personId => addReviewerLink(manuscriptNode, nodeMap[personId]));
-    }
-  }
-
-  const addAllReviewerManuscript = (m, r) =>
-    addReviewerManuscriptWithMinimumConnections(m, r, 1);
-
-  const addCommonReviewerManuscript = (m, r) =>
-    addReviewerManuscriptWithMinimumConnections(m, r, 2);
-
-  const processReviewerLinks = linkProcessor => r => {
-    const relatedManuscripts = limit(sortManuscriptsByScoreDescending(
-      (r.author_of_manuscripts || []).concat(
-        r.reviewer_of_manuscripts || []
-      ),
-      r.scores
-    ), options.maxRelatedManuscripts);
-    relatedManuscripts.forEach(m => linkProcessor(m, r));
-  }
-
-  const {
-    matchingManuscripts,
-    potentialReviewers,
-    search
-  } = recommendedReviewers;
-
-  console.log("search:", search);
-
-  if (matchingManuscripts && matchingManuscripts.length > 0) {
-    mainNodes = matchingManuscripts.map(addManuscript);
-  } else {
-    mainNodes = [addSearch(search)];
-  }
-  if (potentialReviewers) {
-    potentialReviewers.forEach(addReviewer);
-    potentialReviewers.forEach(processReviewerLinks(
-      options.showAllRelatedManuscripts ?
-      addAllReviewerManuscript :
-      addCommonReviewerManuscript
-    ));
-  }
-
-  // console.log("node keys:", Object.keys(nodeMap));
-  // console.log("links before:", links);
-  const linksBefore = links;
-  links = links.filter(link =>
-    nodeMap[link.source] && nodeMap[link.target]
-  );
-  // console.log("links:", links);
-  console.log("links size:", linksBefore.length, links.length);
-
-  console.log("nodes:", nodes);
-
-  console.log("recommendedReviewers:", recommendedReviewers);
-
-  return {
-    nodes,
-    links
-  }
-}
-
-const escapeHtml = s => {
-  const div = document.createElement('div');
-  div.appendChild(document.createTextNode(s));
-  return div.innerHTML;
-}
-
-const getManuscriptTooltipHtml = m => {
-  let s = '<p class="title">' +
-    '<b>title:</b> ' +
-    escapeHtml(m.title) +
-  '</p>';
-  if (m.score && m.score.combined) {
-    s += '<p class="score">' +
-      '<b>score:</b> ';
-    s += formatScoreWithDetails(m.score);
-    s += '</p>';
-  }
-  if (m.abstract) {
-    s += '<p class="abstract">' +
-      '<b>abstract:</b> ' +
-      escapeHtml(m.abstract) +
-    '</p>';
-  }
-  return s;
-}
-
-const getReviewerTooltipHtml = r => {
-  const p = r['person'];
-  let s = '<p class="person-name">' +
-    escapeHtml(p['first_name'] + ' ' + p['last_name']) +
-  '</p>';
-  if (p['institution']) {
-    s += '<p class="person-institution">' +
-      escapeHtml(p['institution']) +
-    '</p>';
-  }
-  if (r.scores && r.scores.combined) {
-    s += '<p class="score">' +
-      '<b>score:</b> ';
-    s += formatScoreWithDetails(r.scores);
-    s += '</p>';
-  }
-  return s;
-}
-
-const getTooltipHtml = d => {
-  let s = '<div class="tooltip">';
-  if (d.manuscript) {
-    s += getManuscriptTooltipHtml(d.manuscript);
-  } else if (d.potentialReviewer) {
-    s += getReviewerTooltipHtml(d.potentialReviewer);
-  }
-  s += '</div>';
-  return s;
-}
-
-const createTooltip = () => {
-  const tip = d3Tip()
-    .attr('class', 'd3-tip')
-    .offset([-10, 0])
-    .html(getTooltipHtml);
-  return tip;
-}
-
-const nodeScore = d => (
-  (d && d.score) ||
-  (d && d.manuscript && d.manuscript.score) ||
-  (d && d.potentialReviewer && d.potentialReviewer.scores)
-);
-
-const asSingleScore = score => (score && score.combined) || 0;
-
-const nodeSingleScore = d => {
-  if (d && d.isMain) {
-    return 1;
-  } else {
-    return asSingleScore(nodeScore(d));
-  }
-}
-
-const nodeOpacity = d => {
-  const singleScore = nodeSingleScore(d);
-  const minOpacity = 1;
-  return Math.min(1,
-    minOpacity + (1 - minOpacity) * singleScore
-  );
-}
-
-const nodeStyleClass = d => {
-  if (d.search) {
-    return 'node-search';
-  } else if (d.isMain) {
-    return 'node-main-manuscript';
-  } else if (d.manuscript) {
-    return 'node-manuscript';
-  } else if (d.potentialReviewer) {
-    let s = 'node-potential-reviewer';
-    if (d.potentialReviewer.person['is_early_career_researcher']) {
-      s += ' node-early-career-researcher';
-    }
-    return s;
-  } else {
-    return 'node-unknown';
-  }
-};
-
-const nodeImage = d => {
-  if (d.potentialReviewer) {
-    return '/images/person.svg';
-  } else if (d.manuscript) {
-    return '/images/manuscript.svg';
-  }
-}
-
-const linkOpacity = d => {
-  const singleScore = asSingleScore(d.score);
-  const minOpacity = 0.5;
-  return Math.min(1,
-    minOpacity + (1 - minOpacity) * singleScore
-  );
-}
-
-const linkDistance = link => {
-  const minDistance = 10;
-  const maxDistance = 100;
-  const singleScore = asSingleScore(link.score);
-  const distance = minDistance + (1 - singleScore) * (maxDistance - minDistance);
-  console.log("singleScore:", singleScore, ", distance:", distance);
-  return distance;
-}
-
-const linkStrength = link => {
-  const minStrength = 0.1;
-  const maxStrength = 0.7;
-  const singleScore = asSingleScore(link.score);
-  const strength = minStrength + (1 - singleScore) * (maxStrength - minStrength);
-  console.log("singleScore:", singleScore, ", strength:", strength);
-  return strength;
-}
-
-export const nodeReviewDurationEndAngle = d => {
-  if (d.potentialReviewer) {
-    const p = d.potentialReviewer['person'];
-    const stats = p.stats;
-    const overall = stats && stats['overall'];
-    const reviewDuration = overall && overall['review_duration'];
-    const meanReviewDuration = reviewDuration && reviewDuration['mean'];
-    if (meanReviewDuration > 0) {
-      return Math.min(2 * Math.PI, 2 * Math.PI * meanReviewDuration / 50);
-    }
-  }
-  return 0;
-}
-
-const nodeScoreEndAngle = d => {
-  const singleScore = nodeSingleScore(d);
-  if (singleScore > 0 && !d.isMain) {
-    return Math.min(2 * Math.PI, 2 * Math.PI * singleScore);
-  }
-  return 0;
-}
-
-const createNode = (parent, nodes) => {
-  const nodeParent = parent.append("g")
-    .attr("class", "nodes")
-    .selectAll("circle")
-    .data(nodes)
-    .enter()
-    .append('g')
-    .attr("class", nodeStyleClass)
-    .style('opacity', nodeOpacity);
-
-  const node = nodeParent.append('g');
-    
-  node.append("circle")
-    .attr("r", 15);
-
-  node.append("svg:image")
-   .attr('x',-11)
-   .attr('y',-12)
-   .attr('width', 20)
-   .attr('height', 24)
-   .attr("xlink:href", nodeImage)
-   .style('opacity', 0.4);
-
-  node.append("path")
-    .attr("class", "reviewer-duration-indicator")
-    .attr("d", d3.arc()
-      .innerRadius(10)
-      .outerRadius(15)
-      .startAngle(0)
-      .endAngle(nodeReviewDurationEndAngle)
-    );
-
-  node.append("text")
-    .text(d => {
-      const singleScore = nodeSingleScore(d);
-      return (singleScore && !d.isMain && formatCombinedScore(singleScore)) || '';
-    })
-    .style("text-anchor", "middle")
-    .attr("class", "node-text")
-    .attr("transform", d => "translate(0, 6)");
-
-  return nodeParent;
-}
-
-const createLegend = (parent, showSearch, options) => {
-  const legend = parent.append("g")
-    .style('opacity', 0.7)
-    .attr('class', 'legend')
-    .attr("transform", d => "translate(20, 20)");
-
-  const backround = legend
-    .append('rect')
-    .attr('x', -10)
-    .attr('y', -10)
-    .attr('width', 205)
-    .attr('fill', '#fff');
-
-  const fullScore = {
-    combined: 1
-  };
-  const legendData = [{
-    isMain: true,
-    label: showSearch ? 'Search' : 'Main manuscript',
-    manuscript: {
-    }
-  }, {
-    potentialReviewer: {
-      person: {
-      }
-    },
-    label: 'Potential reviewer'
-  }, {
-    potentialReviewer: {
-      person: {
-        stats: {
-          overall: {
-            'review_duration': {
-              mean: 10
-            }
-          }
-        },
-      }
-    },
-    label: 'Potential reviewer\nwith review duration'
-  }, {
-    potentialReviewer: {
-      person: {
-      }
-    },
-    is_corresponding_author: true,
-    label: 'Corresponding author\nof selected manuscript'
-  }, {
-    potentialReviewer: {
-      person: {
-        'is_early_career_researcher': true
-      }
-    },
-    label: 'Early career reviewer'
-  }];
-  const includeOtherManuscripts = true;
-  if (includeOtherManuscripts) {
-    legendData.push({
-      manuscript: {
-      },
-      label: (
-        options.showAllRelatedManuscripts ?
-        'Related manuscript' :
-        'Common manuscript'
-      )
-    });
-  }
-  legendData.push({
-    score: fullScore,
-    label: 'Combined score\n(keyword & similarity)'
-  });
-  let currentY = 10;
-  legendData.forEach((d, index) => {
-    d.x = 10;
-    d.y = currentY;
-    d.labels = d.label.split('\n');
-    currentY += 20 + d.labels.length * 20;
-  });
-
-  backround
-    .attr('height', currentY - 10);
-
-  const node = createNode(legend, legendData)
-    .attr("transform", d => "translate(" + d.x + ", " + d.y + ")")
-    .classed('node-corresponding-author', d => d.is_corresponding_author);
-  for (let lineNo = 0; lineNo < 2; lineNo++) {
-    node
-      .append('text')
-      .text(d => d.labels[lineNo])
-      .attr('text-anchor', 'right')
-      .attr("class", "legend-label")
-      .attr("transform", d => "translate(20, " + (4 + 20 * lineNo) + ")");
-  }
-  return legend;
-}
+  addNodeDragBehavior,
+  recommendedReviewersToGraph,
+  createLegend,
+  createLinksContainer,
+  createLinkLine,
+  linkDistance,
+  updateLinkLinePosition,
+  createNode,
+  updateNodePosition,
+  createTooltip,
+  addNodeTooltipBehavior
+} from './chart';
 
 
 const initialiseNodePosition = (node, index, width, height) => {
@@ -518,52 +40,6 @@ const updateParentSizeListener = (parent, svg) => () => {
     .attr("height", height);
 }
 
-const createLinksContainer = (parent, links) => parent.append("g")
-  .attr("class", "links")
-  .selectAll("line")
-  .data(links)
-  .enter();
-
-const createLinkLine = parent => parent.append("line")
-  .attr("stroke-width", d => d.width)
-  .style('opacity', linkOpacity);
-
-const addNodeDragBehavior = (node, simulation) => {
-  const dragstarted = d => {
-    if (!d3.event.active) {
-      simulation.alphaTarget(0.3).restart();
-    }
-    d.fx = d.x;
-    d.fy = d.y;
-  }
-
-  const dragged = d => {
-    d.fx = d3.event.x;
-    d.fy = d3.event.y;
-  }
-
-  const dragended = d => {
-    if (!d3.event.active) {
-      simulation.alphaTarget(0);
-    }
-    if (!d.fixed) {
-      d.fx = null;
-      d.fy = null;
-    }
-  }
-
-  node.call(d3.drag()
-    .on("start", dragstarted)
-    .on("drag", dragged)
-    .on("end", dragended));
-  return node;
-}
-
-const addNodeTooltipBehavior = (node, tip) => node
-  .on('mouseover', tip.show)
-  .on('mouseout', tip.hide);
-
-
 const addZoomContainer = parent => {
   const view = parent.append("g");
 
@@ -575,15 +51,6 @@ const addZoomContainer = parent => {
 
   return view;
 }
-
-const updateLinkLinePosition = line => line
-  .attr("x1", d => d.source.x )
-  .attr("y1", d => d.source.y )
-  .attr("x2", d => d.target.x )
-  .attr("y2", d => d.target.y );
-
-const updateNodePosition = node => node
-  .attr("transform", d => "translate(" + d.x + "," + d.y + ")");
 
 const createChart = (parent, graph, options) => {
   const wrappedParent = d3.select(parent);
@@ -630,7 +97,8 @@ const createChart = (parent, graph, options) => {
   addNodeTooltipBehavior(node, tip);
 
   const showSearch = !!graph.nodes[0].search;
-  createLegend(svg, showSearch, options);
+  const legend = createLegend(svg, showSearch, options);
+  const { setLegendOpen } = legend;
 
   const selectCorrespondingAuthorsOfNode = selectedNode => {
     const manuscript = selectedNode && selectedNode.manuscript;
@@ -704,7 +172,8 @@ const createChart = (parent, graph, options) => {
   window.addEventListener('resize', windowResizeListener);
   return {
     destroy,
-    selectNode
+    selectNode,
+    setLegendOpen
   };
 };
 
@@ -728,7 +197,10 @@ class ChartResult extends React.Component {
     if (searchResult) {
       const options = {
         showAllRelatedManuscripts: props.showAllRelatedManuscripts,
-        maxRelatedManuscripts: props.maxRelatedManuscripts
+        maxRelatedManuscripts: props.maxRelatedManuscripts,
+        legendOpen: props.legendOpen,
+        onOpenLegend: props.onOpenLegend,
+        onCloseLegend: props.onCloseLegend
       };
       const graph = recommendedReviewersToGraph(searchResult, options);
       if (this.chart) {
@@ -749,6 +221,8 @@ class ChartResult extends React.Component {
       this.updateChart(nextProps);
     } else if (this.chart && (nextProps.selectedNode != this.props.selectedNode)) {
       this.chart.selectNode(nextProps.selectedNode);
+    } else if (this.chart && (nextProps.legendOpen != this.props.legendOpen)) {
+      this.chart.setLegendOpen(nextProps.legendOpen);
     }
   }
 
