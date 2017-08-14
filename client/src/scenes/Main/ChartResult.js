@@ -431,7 +431,7 @@ const createLegend = (parent, showSearch, options) => {
     potentialReviewer: {
       person: {
         stats: {
-          'last_12m': {
+          overall: {
             'review_duration': {
               mean: 10
             }
