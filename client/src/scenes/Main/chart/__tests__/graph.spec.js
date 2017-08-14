@@ -2,7 +2,7 @@ import test from 'tape';
 
 import {
   recommendedReviewersToGraph
-} from '../ChartResult';
+} from '../graph';
 
 const MANUSCRIPT_NODE_PREFIX = 'm';
 const PERSON_NODE_PREFIX = 'p';
