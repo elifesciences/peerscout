@@ -10,7 +10,7 @@ const PERSON_1 = {
   person_id: PERSON_ID_1,
 };
 
-test('ChartResult', g => {
+test('node', g => {
   g.test('.nodeReviewDurationEndAngle', g2 => {
     g2.test('..should return 0 if not potential reviewer', t => {
       t.equal(nodeReviewDurationEndAngle({}), 0);

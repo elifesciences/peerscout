@@ -37,7 +37,7 @@ const PERSON_1 = {
   person_id: PERSON_ID_1,
 };
 
-test('ChartResult', g => {
+test('graph', g => {
   g.test('.recommendedReviewersToGraph', g2 => {
     g2.test('..should only include search node if no reviewers have been recommended', t => {
       const graph = recommendedReviewersToGraph({});
