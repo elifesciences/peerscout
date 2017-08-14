@@ -11,7 +11,7 @@ const doCreateOrUpdateLegend = (parent, options) => {
   let currentY = 10;
 
   const legendData = options.legendData;
-  if (options.expanded) {
+  if (options.legendOpen) {
     legendData.forEach((d, index) => {
       d.x = 10;
       d.y = currentY;
@@ -22,7 +22,7 @@ const doCreateOrUpdateLegend = (parent, options) => {
     currentY += 30;
   }
 
-  const content_width = options.expanded ? 175 : 20;
+  const content_width = options.legendOpen ? 175 : 20;
   const background_margin = 10;
 
   parent.selectAll('g').remove();
@@ -46,10 +46,10 @@ const doCreateOrUpdateLegend = (parent, options) => {
     .attr('font-family', 'FontAwesome')
     .attr('x', content_width - 15)
     .attr('y', 10)
-    .text(d => options.expanded ? FA_WINDOW_CLOSE_O_UNICODE : FA_QUESTION_UNICODE)
+    .text(d => options.legendOpen ? FA_WINDOW_CLOSE_O_UNICODE : FA_QUESTION_UNICODE)
     .on('click', () => options.onToggleExpand(options));
 
-  if (options.expanded) {
+  if (options.legendOpen) {
     const node = createNode(legend, legendData)
       .attr("transform", d => "translate(" + d.x + ", " + d.y + ")")
       .classed('node-corresponding-author', d => d.is_corresponding_author);
@@ -137,20 +137,32 @@ export const createLegend = (parent, showSearch, options) => {
     .style('opacity', 0.7)
     .attr('class', 'legend')
     .attr("transform", d => "translate(20, 20)");
-
-  doCreateOrUpdateLegend(
+  
+  const setState = state => doCreateOrUpdateLegend(
     legend, {
       ...options,
       legendData,
-      expanded: true,
-      onToggleExpand: state => doCreateOrUpdateLegend(
-        legend, {
-          ...state,
-          expanded: !state.expanded
+      onToggleExpand: () => {
+        if (state.legendOpen) {
+          options.onCloseLegend();
+        } else {
+          options.onOpenLegend();
         }
-      )
+      },
+      ...state
     }
   );
 
-  return legend;
+  const setLegendOpen = legendOpen => setState({
+    legendOpen
+  });
+
+  setState({
+    legendOpen: options.legendOpen
+  });
+
+  return {
+    legend,
+    setLegendOpen
+  };
 }

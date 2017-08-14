@@ -97,7 +97,8 @@ const createChart = (parent, graph, options) => {
   addNodeTooltipBehavior(node, tip);
 
   const showSearch = !!graph.nodes[0].search;
-  createLegend(svg, showSearch, options);
+  const legend = createLegend(svg, showSearch, options);
+  const { setLegendOpen } = legend;
 
   const selectCorrespondingAuthorsOfNode = selectedNode => {
     const manuscript = selectedNode && selectedNode.manuscript;
@@ -171,7 +172,8 @@ const createChart = (parent, graph, options) => {
   window.addEventListener('resize', windowResizeListener);
   return {
     destroy,
-    selectNode
+    selectNode,
+    setLegendOpen
   };
 };
 
@@ -195,7 +197,10 @@ class ChartResult extends React.Component {
     if (searchResult) {
       const options = {
         showAllRelatedManuscripts: props.showAllRelatedManuscripts,
-        maxRelatedManuscripts: props.maxRelatedManuscripts
+        maxRelatedManuscripts: props.maxRelatedManuscripts,
+        legendOpen: props.legendOpen,
+        onOpenLegend: props.onOpenLegend,
+        onCloseLegend: props.onCloseLegend
       };
       const graph = recommendedReviewersToGraph(searchResult, options);
       if (this.chart) {
@@ -216,6 +221,8 @@ class ChartResult extends React.Component {
       this.updateChart(nextProps);
     } else if (this.chart && (nextProps.selectedNode != this.props.selectedNode)) {
       this.chart.selectNode(nextProps.selectedNode);
+    } else if (this.chart && (nextProps.legendOpen != this.props.legendOpen)) {
+      this.chart.setLegendOpen(nextProps.legendOpen);
     }
   }
 

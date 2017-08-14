@@ -56,6 +56,7 @@ const parseSearch = search => {
 };
 
 const HELP_OPEN_KEY = 'helpOpen';
+const LEGEND_OPEN_KEY = 'legendOpen';
 
 class Main extends React.Component {
   constructor(props) {
@@ -73,7 +74,8 @@ class Main extends React.Component {
       searchOptions: this.defaultSearchOptions,
       reqId: 0,
       config: this.defaultConfig,
-      helpOpen: localStorage.getItem(HELP_OPEN_KEY) !== 'false'
+      helpOpen: localStorage.getItem(HELP_OPEN_KEY) !== 'false',
+      legendOpen: localStorage.getItem(LEGEND_OPEN_KEY) !== 'false'
     };
 
     this.getResults = createSelector(
@@ -259,6 +261,19 @@ class Main extends React.Component {
     this.setHelpOpen(true);
   }
 
+  setLegendOpen(legendOpen) {
+    this.setState({legendOpen});
+    localStorage.setItem(LEGEND_OPEN_KEY, '' + legendOpen);
+  }
+
+  onCloseLegend = () => {
+    this.setLegendOpen(false);
+  }
+
+  onOpenLegend = () => {
+    this.setLegendOpen(true);
+  }
+
   render() {
     const {
       config: {
@@ -273,7 +288,8 @@ class Main extends React.Component {
       selectedNode,
       selectedReviewer,
       selectedManuscript,
-      helpOpen
+      helpOpen,
+      legendOpen
     } = this.state;
     const hasPotentialReviewers =
       results && (results.potentialReviewers) && (results.potentialReviewers.length > 0);
@@ -307,6 +323,9 @@ class Main extends React.Component {
                       selectedNode={ selectedNode }
                       showAllRelatedManuscripts={ showAllRelatedManuscripts }
                       maxRelatedManuscripts={ maxRelatedManuscripts }
+                      legendOpen={ legendOpen }
+                      onOpenLegend={ this.onOpenLegend }
+                      onCloseLegend={ this.onCloseLegend }
                     />
                     <SearchResult
                       searchResult={ results }
