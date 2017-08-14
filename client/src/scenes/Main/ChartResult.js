@@ -2,7 +2,6 @@ import React from 'react';
 import ResizeObserver from 'resize-observer-polyfill';
 
 import * as d3 from 'd3';
-import d3Tip from 'd3-tip';
 import Set from 'es6-set';
 import sortOn from 'sort-on';
 
@@ -17,7 +16,9 @@ import {
   linkDistance,
   updateLinkLinePosition,
   createNode,
-  updateNodePosition
+  updateNodePosition,
+  createTooltip,
+  addNodeTooltipBehavior
 } from './chart';
 
 
@@ -203,70 +204,6 @@ export const recommendedReviewersToGraph = (recommendedReviewers, options={}) =>
   }
 }
 
-const escapeHtml = s => {
-  const div = document.createElement('div');
-  div.appendChild(document.createTextNode(s));
-  return div.innerHTML;
-}
-
-const getManuscriptTooltipHtml = m => {
-  let s = '<p class="title">' +
-    '<b>title:</b> ' +
-    escapeHtml(m.title) +
-  '</p>';
-  if (m.score && m.score.combined) {
-    s += '<p class="score">' +
-      '<b>score:</b> ';
-    s += formatScoreWithDetails(m.score);
-    s += '</p>';
-  }
-  if (m.abstract) {
-    s += '<p class="abstract">' +
-      '<b>abstract:</b> ' +
-      escapeHtml(m.abstract) +
-    '</p>';
-  }
-  return s;
-}
-
-const getReviewerTooltipHtml = r => {
-  const p = r['person'];
-  let s = '<p class="person-name">' +
-    escapeHtml(p['first_name'] + ' ' + p['last_name']) +
-  '</p>';
-  if (p['institution']) {
-    s += '<p class="person-institution">' +
-      escapeHtml(p['institution']) +
-    '</p>';
-  }
-  if (r.scores && r.scores.combined) {
-    s += '<p class="score">' +
-      '<b>score:</b> ';
-    s += formatScoreWithDetails(r.scores);
-    s += '</p>';
-  }
-  return s;
-}
-
-const getTooltipHtml = d => {
-  let s = '<div class="tooltip">';
-  if (d.manuscript) {
-    s += getManuscriptTooltipHtml(d.manuscript);
-  } else if (d.potentialReviewer) {
-    s += getReviewerTooltipHtml(d.potentialReviewer);
-  }
-  s += '</div>';
-  return s;
-}
-
-const createTooltip = () => {
-  const tip = d3Tip()
-    .attr('class', 'd3-tip')
-    .offset([-10, 0])
-    .html(getTooltipHtml);
-  return tip;
-}
-
 const initialiseNodePosition = (node, index, width, height) => {
   if (node.isMain || node.search) {
     node.fixed = true;
@@ -318,10 +255,6 @@ const addNodeDragBehavior = (node, simulation) => {
     .on("end", dragended));
   return node;
 }
-
-const addNodeTooltipBehavior = (node, tip) => node
-  .on('mouseover', tip.show)
-  .on('mouseout', tip.hide);
 
 
 const addZoomContainer = parent => {
