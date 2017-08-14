@@ -58,6 +58,16 @@ const parseSearch = search => {
 const HELP_OPEN_KEY = 'helpOpen';
 const LEGEND_OPEN_KEY = 'legendOpen';
 
+const getBooleanLocalStorageItem = (key, defaultValue) => {
+  const value = localStorage.getItem(key);
+  return value === 'true' ? true :
+    (value === 'false' ? false : defaultValue);
+};
+
+const saveLocalStorageItem = (key, value) => {
+  window.setTimeout(() => localStorage.setItem(key, '' + value), 1);
+};
+
 class Main extends React.Component {
   constructor(props) {
     super(props);
@@ -74,8 +84,8 @@ class Main extends React.Component {
       searchOptions: this.defaultSearchOptions,
       reqId: 0,
       config: this.defaultConfig,
-      helpOpen: localStorage.getItem(HELP_OPEN_KEY) !== 'false',
-      legendOpen: localStorage.getItem(LEGEND_OPEN_KEY) !== 'false'
+      helpOpen: getBooleanLocalStorageItem(HELP_OPEN_KEY, true),
+      legendOpen: getBooleanLocalStorageItem(LEGEND_OPEN_KEY, true)
     };
 
     this.getResults = createSelector(
@@ -250,7 +260,7 @@ class Main extends React.Component {
 
   setHelpOpen(helpOpen) {
     this.setState({helpOpen});
-    localStorage.setItem(HELP_OPEN_KEY, '' + helpOpen);
+    saveLocalStorageItem(HELP_OPEN_KEY, helpOpen);
   }
 
   onCloseHelp = () => {
@@ -263,7 +273,7 @@ class Main extends React.Component {
 
   setLegendOpen(legendOpen) {
     this.setState({legendOpen});
-    localStorage.setItem(LEGEND_OPEN_KEY, '' + legendOpen);
+    saveLocalStorageItem(LEGEND_OPEN_KEY, legendOpen);
   }
 
   onCloseLegend = () => {
