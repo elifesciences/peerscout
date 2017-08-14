@@ -406,7 +406,7 @@ const createLegend = (parent, showSearch, options) => {
     .attr('class', 'legend')
     .attr("transform", d => "translate(20, 20)");
 
-  const backround = legend
+  const background = legend
     .append('rect')
     .attr('x', -10)
     .attr('y', -10)
@@ -479,7 +479,7 @@ const createLegend = (parent, showSearch, options) => {
     currentY += 20 + d.labels.length * 20;
   });
 
-  backround
+  background
     .attr('height', currentY - 10);
 
   const node = createNode(legend, legendData)
