@@ -83,6 +83,9 @@ const OpenButton = ({ onClick }) => (
 const HelpContents = props => (
   <View>
     <View style={ styles.paragraph }>
+      <Text>Please search by Manuscript (5 digits) or by Criteria (these are mutually exclusive).</Text>
+    </View>
+    <View style={ styles.paragraph }>
       <Text>The numbers on the network chart represent a combined suitability score, based on keywords and abstracts similarity scores, where 100 indicates maximum suitability. You can hover the mouse over the chart to expand it. When clicking on the circles, information on the suggested reviewer will pop up. Such information is also displayed on the right side. The 'Related manuscripts' in the network indicates additional manuscripts that potential reviewers were involved in (as an author). You can also click on those circles to get more details.</Text>
     </View>
     <View style={ styles.paragraph }>
