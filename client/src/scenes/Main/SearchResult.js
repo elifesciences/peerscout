@@ -33,7 +33,9 @@ const commonStyles = {
     textDecoration: 'none',
     cursor: 'hand'
   }
-}
+};
+
+const LABEL_WIDTH = 105;
 
 const styles = {
   card: {
@@ -44,7 +46,7 @@ const styles = {
     },
     label: {
       display: 'inline-block',
-      minWidth: 100,
+      minWidth: LABEL_WIDTH,
       fontWeight: 'bold'
     },
     value: {
@@ -72,7 +74,7 @@ const styles = {
     },
     label: {
       display: 'inline-block',
-      minWidth: 100,
+      minWidth: LABEL_WIDTH,
       fontWeight: 'bold'
     },
     value: {
@@ -89,13 +91,13 @@ const styles = {
     },
     subSection: {
       marginBottom: 5,
-      marginLeft: 100
+      marginLeft: LABEL_WIDTH
     },
     label: {
       display: 'inline-block',
-      minWidth: 100,
+      minWidth: LABEL_WIDTH,
       fontWeight: 'bold',
-      marginLeft: -100
+      marginLeft: -LABEL_WIDTH
     },
     abstractSubSection: {
       marginBottom: 5
@@ -148,7 +150,7 @@ const styles = {
   buttons: {
     padding: 10
   }
-}
+};
 
 const formatPersonStatus = status =>
   status && status.length > 0 ? status : 'Unknown status';
