@@ -145,6 +145,62 @@ class SearchHeader extends React.Component {
     this.updateSearchOption('manuscriptNumber', manuscriptNumber);
   }
 
+  updateSubjectAreaInput = newValue => {
+    this.setState({
+      currentSubjectArea: newValue,
+      errorSubjectArea: null
+    });
+  }
+
+  updateSubjectAreaSearchOption = newValue => {
+    this.updateSearchOption('subjectArea', newValue);
+  }
+
+  validateSubjectAreaInput = () => {
+    const { allSubjectAreas } = this.props;
+    const { currentSubjectArea } = this.state;
+    if (!currentSubjectArea) {
+      return
+    } else if (allSubjectAreas.indexOf(currentSubjectArea) >= 0) {
+      this.setState({
+        errorSubjectArea: null
+      });
+      this.updateSearchOption('subjectArea', currentSubjectArea || '');
+    } else {
+      this.setState({
+        errorSubjectArea: 'Subject area is invalid'
+      });
+    }
+  }
+
+  updateKeywordInput = newValue => {
+    this.setState({
+      currentKeyword: newValue,
+      errorKeyword: null
+    });
+  }
+
+  updateKeywordSearchOption = newValue => {
+    this.addKeyword(newValue);
+  }
+
+  validateKeywordInput = () => {
+    const { allKeywords } = this.props;
+    const { currentKeyword } = this.state;
+    if (!currentKeyword) {
+      return;
+    } else if (allKeywords.indexOf(currentKeyword) >= 0) {
+      this.setState({
+        errorKeyword: null
+      });
+      this.addKeyword(currentKeyword);
+    } else {
+      this.setState({
+        errorKeyword: 'Keyword is invalid'
+      });
+    }
+  }
+
   forceUpdateSearchOptions = () => {
     const { onSearchOptionsChanged } = this.props;
     const { currentTab } = this.state;
@@ -163,7 +219,8 @@ class SearchHeader extends React.Component {
     const { allSubjectAreas=[], allKeywords=[] } = props;
     const {
       currentTab, abstractFocused,
-      currentSubjectArea='', currentKeyword='', keywords=[]
+      currentSubjectArea='', currentKeyword='', keywords=[],
+      errorSubjectArea, errorKeyword
     } = state;
     const { manuscriptNumber } = (state[BY_MANUSCRIPT] || {});
     const { subjectArea, abstract } = (state[BY_SEARCH] || {});
@@ -204,10 +261,11 @@ class SearchHeader extends React.Component {
                 <View style={ styles.field }>
                   <AutoComplete
                     floatingLabelText="Subject area"
+                    errorText={ errorSubjectArea }
                     searchText={ currentSubjectArea || subjectArea || '' }
-                    onUpdateInput={ newValue => this.setState({currentSubjectArea: newValue}) }
-                    onNewRequest={ newValue => updateSearchOption('subjectArea', newValue) }
-                    onClose={ () => updateSearchOption('subjectArea', currentSubjectArea || '') }
+                    onUpdateInput={ this.updateSubjectAreaInput }
+                    onNewRequest={ this.updateSubjectAreaSearchOption }
+                    onClose={ this.validateSubjectAreaInput }
                     onKeyPress={ this.onKeyPress }
                     dataSource={ allSubjectAreas }
                     filter={ AutoComplete.fuzzyFilter }
@@ -218,9 +276,11 @@ class SearchHeader extends React.Component {
                   <FlexColumn>
                     <AutoComplete
                       floatingLabelText="Keywords"
+                      errorText={ errorKeyword }
                       searchText={ currentKeyword }
-                      onUpdateInput={ newValue => this.setState({currentKeyword: newValue}) }
-                      onNewRequest={ newValue => this.addKeyword(newValue) }
+                      onUpdateInput={ this.updateKeywordInput }
+                      onNewRequest={ this.updateKeywordSearchOption }
+                      onClose={ this.validateKeywordInput }
                       onKeyPress={ this.onKeyPress }
                       dataSource={ allKeywords }
                       filter={ AutoComplete.defaultFilter }
