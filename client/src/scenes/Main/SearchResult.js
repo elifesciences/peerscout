@@ -386,15 +386,22 @@ const renderStats = stats => {
 const formatAssignmentStatus = assignmentStatus => assignmentStatus && assignmentStatus.toLowerCase();
 
 const PotentialReviewer = ({
-  potentialReviewer: {
-    person = {},
-    'author_of_manuscripts': authorOfManuscripts = [],
-    'reviewer_of_manuscripts': reviewerOfManuscripts = [],
-    'assignment_status': assignmentStatus,
-    scores
-  },
-  requestedSubjectAreas
+  potentialReviewer,
+  requestedSubjectAreas,
+  onSelectPotentialReviewer  
 }) => {
+  const {
+    person = {},
+    author_of_manuscripts: authorOfManuscripts = [],
+    reviewer_of_manuscripts: reviewerOfManuscripts = [],
+    assignment_status: assignmentStatus,
+    scores
+  } = potentialReviewer;
+  const onSelectThisPotentialReviewer = () => {
+    if (onSelectPotentialReviewer) {
+      onSelectPotentialReviewer(potentialReviewer);
+    }
+  };
   const manuscriptScoresByManuscriptNo = groupBy(scores['by_manuscript'] || [], s => s['manuscript_id']);
   const memberships = person.memberships || [];
   const membershipComponents = memberships.map((membership, index) => (
@@ -405,7 +412,7 @@ const PotentialReviewer = ({
   }
   const titleComponent = (
     <View style={ styles.inlineContainer }>
-      <Text>{ combinedPersonName(person) }</Text>
+      <Text onClick={ onSelectThisPotentialReviewer }>{ combinedPersonName(person) }</Text>
       {
         assignmentStatus && (
           <Text style={ styles.assignmentStatus }>
@@ -503,7 +510,7 @@ const PotentialReviewer = ({
               <Text style={ styles.potentialReviewer.label }>Scores: </Text>
               <View style={ styles.potentialReviewer.value }>
                 <FlexColumn>
-                  <InlineContainer>
+                  <InlineContainer onClick={ onSelectThisPotentialReviewer }>
                     <PersonScore score={ scores } person={ person }/>
                     <Text>{ ' (max across manuscripts)' }</Text>
                   </InlineContainer>
@@ -607,7 +614,8 @@ const SearchResult = ({
   searchResult,
   selectedReviewer,
   selectedManuscript,
-  onClearSelection
+  onClearSelection,
+  onSelectPotentialReviewer
 }) => {
   const {
     potentialReviewers = [],
@@ -663,6 +671,7 @@ const SearchResult = ({
             key={ index }
             potentialReviewer={ potentialReviewer }
             requestedSubjectAreas={ requestedSubjectAreas }
+            onSelectPotentialReviewer={ onSelectPotentialReviewer }
           />
         ))
       }
