@@ -306,7 +306,7 @@ class SearchHeader extends React.Component {
                       onClose={ this.validateKeywordInput }
                       onKeyPress={ this.onKeyPress }
                       dataSource={ allKeywords }
-                      filter={ AutoComplete.defaultFilter }
+                      filter={ AutoComplete.caseInsensitiveFilter }
                       maxSearchResults={ 10 }
                       style={ styles.textField }
                     />
