@@ -53,7 +53,11 @@ class Doc2VecTransformer(object):
 
     for _ in range(self.n_epochs):
       logger.info("epoch: %d, alpha: %f", current_epoch, model.alpha)
-      model.train(sentences)
+      model.train(
+        sentences,
+        total_examples=len(sentences),
+        epochs=1
+      )
       model.alpha = model.alpha * 0.95 # decrease the learning rate
       model.min_alpha = model.alpha # fix the learning rate, no deca
       current_epoch += 1
