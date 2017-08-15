@@ -144,6 +144,19 @@ class SearchHeader extends React.Component {
     const manuscriptNumber = m ? m[1] : value;
     this.updateSearchOption('manuscriptNumber', manuscriptNumber);
   }
+
+  forceUpdateSearchOptions = () => {
+    const { onSearchOptionsChanged } = this.props;
+    const { currentTab } = this.state;
+    const searchOptions = this.state[currentTab];
+    onSearchOptionsChanged(searchOptions);
+  }
+
+  onKeyPress = event => {
+    if (event.charCode === 13) {
+      this.forceUpdateSearchOptions();
+    }
+  }
   
   render() {
     const { state, updateSearchOption, props } = this;
@@ -175,6 +188,7 @@ class SearchHeader extends React.Component {
                     floatingLabelText="Manuscript number (last 5 digits)"
                     value={ manuscriptNumber || '' }
                     onChange={ (event, newValue) => this.updateManuscriptNumber(newValue) }
+                    onKeyPress={ this.onKeyPress }
                     style={ styles.textField }
                   />
                 </View>
@@ -194,6 +208,7 @@ class SearchHeader extends React.Component {
                     onUpdateInput={ newValue => this.setState({currentSubjectArea: newValue}) }
                     onNewRequest={ newValue => updateSearchOption('subjectArea', newValue) }
                     onClose={ () => updateSearchOption('subjectArea', currentSubjectArea || '') }
+                    onKeyPress={ this.onKeyPress }
                     dataSource={ allSubjectAreas }
                     filter={ AutoComplete.fuzzyFilter }
                     style={ styles.textField }
@@ -206,6 +221,7 @@ class SearchHeader extends React.Component {
                       searchText={ currentKeyword }
                       onUpdateInput={ newValue => this.setState({currentKeyword: newValue}) }
                       onNewRequest={ newValue => this.addKeyword(newValue) }
+                      onKeyPress={ this.onKeyPress }
                       dataSource={ allKeywords }
                       filter={ AutoComplete.defaultFilter }
                       maxSearchResults={ 10 }
