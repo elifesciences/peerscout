@@ -6,6 +6,7 @@ import Set from 'es6-set';
 
 import {
   addNodeDragBehavior,
+  personToId,
   recommendedReviewersToGraph,
   createLegend,
   createLinksContainer,
@@ -121,8 +122,7 @@ const createChart = (parent, graph, options) => {
     .filter(author => author.person_id == personId && author.is_corresponding_author)
     .length > 0;
 
-  const selectManuscriptsOfCorrespondingAuthorsNode = selectedNode => {
-    const potentialReviewer = selectedNode && selectedNode.potentialReviewer;
+  const selectManuscriptsOfCorrespondingAuthorsReviewer = potentialReviewer => {
     const person = potentialReviewer && potentialReviewer.person;
     const personId = person && person.person_id;
     const authorOf = (potentialReviewer && potentialReviewer.author_of_manuscripts) || [];
@@ -140,14 +140,34 @@ const createChart = (parent, graph, options) => {
     node.classed('node-manuscript-of-corresponding-author', isManuscriptOfCorrespondingAuthor);
   };
 
-  const selectNode = selectedNode => {
-    console.log("select node:", selectedNode);
-    const selectedId = selectedNode && selectedNode.id;
+  const selectManuscriptsOfCorrespondingAuthorsNode = selectedNode => {
+    const potentialReviewer = selectedNode && selectedNode.potentialReviewer;
+    selectManuscriptsOfCorrespondingAuthorsReviewer(potentialReviewer);
+  };
+    
+  const selectNodeId = selectedId => {
+    console.log("select node id:", selectedId);
     const isSelected = d => d.id === selectedId;
     node.classed('selected', isSelected);
+  };
+  
+  const selectNode = selectedNode => {
+    selectNodeId(selectedNode && selectedNode.id);
     selectCorrespondingAuthorsOfNode(selectedNode);
     selectManuscriptsOfCorrespondingAuthorsNode(selectedNode);
-  }
+  };
+    
+  const selectedReviewer = selectedReviewer => {
+    console.log("selected reviewer:", selectedReviewer);
+    const selectedPerson = selectedReviewer && selectedReviewer.person;
+    if (selectedPerson) {
+      selectNodeId(personToId(selectedPerson));
+    } else {
+      selectNodeId(null);
+    }
+    selectCorrespondingAuthorsOfNode(null);
+    selectManuscriptsOfCorrespondingAuthorsReviewer(selectedReviewer);    
+  };
 
   if (options.onNodeClicked) {
     node.on('click', options.onNodeClicked);
@@ -173,6 +193,7 @@ const createChart = (parent, graph, options) => {
   return {
     destroy,
     selectNode,
+    selectedReviewer,
     setLegendOpen
   };
 };
@@ -221,6 +242,8 @@ class ChartResult extends React.Component {
       this.updateChart(nextProps);
     } else if (this.chart && (nextProps.selectedNode != this.props.selectedNode)) {
       this.chart.selectNode(nextProps.selectedNode);
+    } else if (this.chart && (nextProps.selectedReviewer != this.props.selectedReviewer)) {
+      this.chart.selectedReviewer(nextProps.selectedReviewer);
     } else if (this.chart && (nextProps.legendOpen != this.props.legendOpen)) {
       this.chart.setLegendOpen(nextProps.legendOpen);
     }

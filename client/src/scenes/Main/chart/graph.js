@@ -1,5 +1,8 @@
 import sortOn from 'sort-on';
 
+export const manuscriptToId = m => 'm' + m['manuscript_id'];
+export const personToId = p => 'p' + p['person_id'];
+
 const limit = (a, max) => a && max && a.length > max ? a.slice(0, max) : a;
 
 const sortManuscriptsByScoreDescending = (manuscripts, scores) => {
@@ -29,9 +32,6 @@ export const recommendedReviewersToGraph = (recommendedReviewers, options={}) =>
   const linkMap = {};
   let mainManuscripts = [];
   let mainNodes = [];
-
-  const manuscriptToId = m => 'm' + m['manuscript_id'];
-  const personToId = m => 'p' + m['person_id'];
 
   const addReviewerLink = (sourceNode, reviewerNode) => {
     const sourceId = sourceNode.id;

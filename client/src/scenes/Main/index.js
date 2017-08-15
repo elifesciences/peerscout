@@ -287,6 +287,14 @@ class Main extends React.Component {
     this.setLegendOpen(true);
   }
 
+  onSelectPotentialReviewer = potentialReviewer => {
+    this.setState({
+      selectedNode: null,
+      selectedReviewer: potentialReviewer,
+      selectedManuscript: null
+    });
+  }
+
   render() {
     const {
       config: {
@@ -334,6 +342,7 @@ class Main extends React.Component {
                       searchResult={ results }
                       onNodeClicked={ this.onNodeClicked }
                       selectedNode={ selectedNode }
+                      selectedReviewer={ selectedReviewer }
                       showAllRelatedManuscripts={ showAllRelatedManuscripts }
                       maxRelatedManuscripts={ maxRelatedManuscripts }
                       legendOpen={ legendOpen }
@@ -345,6 +354,7 @@ class Main extends React.Component {
                       selectedReviewer={ selectedReviewer }
                       selectedManuscript={ selectedManuscript }
                       onClearSelection={ this.onClearSelection }
+                      onSelectPotentialReviewer={ this.onSelectPotentialReviewer }
                     />
                   </SplitPane>
                 )
