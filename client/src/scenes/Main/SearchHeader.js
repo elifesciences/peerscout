@@ -242,7 +242,7 @@ class SearchHeader extends React.Component {
                 <View style={ styles.info }>
                   <View style={ styles.note }>
                     <Text>
-                      Note: search results may improve when searching by manuscript number or keyword and abstract.
+                    Note: search results by subject area or keyword may be improved when also searching by abstract (i.e. copying and pasting an abstract)
                     </Text>
                   </View>
                   {
