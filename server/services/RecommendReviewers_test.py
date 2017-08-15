@@ -508,7 +508,6 @@ def test_matching_manuscript_with_none_docvecs():
   recommend_reviewers = create_recommend_reviewers(datasets)
   recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_ID1)
 
-
 def test_search_should_filter_early_career_reviewer_by_subject_area(
   logger):
 
@@ -793,6 +792,45 @@ def test_matching_manuscript_should_not_filter_by_subject_areas_if_disabled(logg
   _do_test_matching_manuscript_should_filter_by_subject_areas_if_enabled(
     logger, filter_by_subject_area_enabled=False
   )
+
+def test_matching_manuscript_should_filter_by_search_subject_area_only(logger):
+  datasets = dict(DATASETS)
+  datasets['person'] = pd.DataFrame([
+    PERSON2,
+    PERSON3
+  ], columns=PERSON.columns)
+  datasets['manuscript_version'] = pd.DataFrame([
+    MANUSCRIPT_VERSION2,
+    MANUSCRIPT_VERSION3
+  ], columns=MANUSCRIPT_VERSION.columns)
+  datasets[SUBJECT_AREAS_DATASET] = pd.DataFrame([
+    MANUSCRIPT_SUBJECT_AREA1,
+    {
+      **MANUSCRIPT_SUBJECT_AREA2,
+      **MANUSCRIPT_ID_FIELDS2
+    },
+    {
+      **MANUSCRIPT_SUBJECT_AREA1,
+      **MANUSCRIPT_ID_FIELDS3
+    }
+  ], columns=MANUSCRIPT_SUBJECT_AREAS.columns)
+  datasets['manuscript_author'] = pd.DataFrame([
+    {
+      **AUTHOR2,
+      **MANUSCRIPT_ID_FIELDS2
+    },
+    {
+      **AUTHOR3,
+      **MANUSCRIPT_ID_FIELDS3
+    }
+  ], columns=MANUSCRIPT_AUTHOR.columns)
+  recommend_reviewers = create_recommend_reviewers(
+    datasets, filter_by_subject_area_enabled=False
+  )
+  result = recommend_reviewers.recommend(keywords='', subject_area=SUBJECT_AREA1)
+  logger.debug("result: %s", PP.pformat(result))
+  recommended_person_ids = [r['person'][PERSON_ID] for r in result['potential_reviewers']]
+  assert recommended_person_ids == [PERSON_ID3]
 
 def test_matching_one_keyword_author_should_return_author(logger):
   datasets = dict(DATASETS)

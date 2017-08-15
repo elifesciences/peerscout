@@ -27,7 +27,7 @@ const styles = {
     color: '#888',
     fontSize: 12
   },
-  keywordsRequired: {
+  subjectAreaOrKeywordsRequired: {
     color: '#f00'
   },
   inlineContainer: {
@@ -154,8 +154,8 @@ class SearchHeader extends React.Component {
     } = state;
     const { manuscriptNumber } = (state[BY_MANUSCRIPT] || {});
     const { subjectArea, abstract } = (state[BY_SEARCH] || {});
-    const keywordsRequired = (keywords.length == 0) && (
-      subjectArea || abstract
+    const subjectAreaOrKeywordsRequired = (!subjectArea) && (keywords.length == 0) && (
+      abstract
     );
 
     return (
@@ -246,10 +246,10 @@ class SearchHeader extends React.Component {
                     </Text>
                   </View>
                   {
-                    keywordsRequired && (
-                      <View style={ styles.keywordsRequired }>
+                    subjectAreaOrKeywordsRequired && (
+                      <View style={ styles.subjectAreaOrKeywordsRequired }>
                         <Text>
-                          Keywords required.
+                          Subject area or keywords required.
                         </Text>
                       </View>
                     )

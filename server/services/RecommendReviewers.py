@@ -492,6 +492,9 @@ class RecommendReviewers(object):
       self.manuscript_versions_all_df[MANUSCRIPT_ID] == manuscript_no
     ].sort_values(VERSION_ID).groupby(MANUSCRIPT_ID).last()
 
+  def _empty_manuscripts(self):
+    return self.__find_manuscripts_by_key(None)
+
   def __parse_keywords(self, keywords):
     keywords = (keywords or '').strip()
     if keywords == '':
@@ -512,6 +515,26 @@ class RecommendReviewers(object):
         df[VERSION_ID]
       )
     ]
+
+  def _find_manuscripts_by_subject_areas(self, subject_areas):
+    return self._filter_manuscripts_by_subject_areas(
+      self.manuscript_versions_df,
+      subject_areas
+    )
+
+  def _find_manuscripts_by_subject_areas_and_keywords(self, subject_areas, keywords):
+    if len(keywords) > 0:
+      df = self.__find_manuscripts_by_keywords(keywords)
+      if len(subject_areas) > 0:
+        df = self._filter_manuscripts_by_subject_areas(df, subject_areas)
+    else:
+      if len(subject_areas) > 0:
+        df = self._find_manuscripts_by_subject_areas(subject_areas)
+      else:
+        df = self._empty_manuscripts()
+      # add matching keyword count column
+      df['count'] = 0
+    return df
 
   def _get_early_career_reviewer_ids_by_subject_areas(self, subject_areas):
     if len(subject_areas) == 0:
@@ -584,20 +607,16 @@ class RecommendReviewers(object):
         senior_editor_ids = [a[PERSON_ID] for a in senior_editors]
         exclude_person_ids |= (set(author_ids) | set(editor_ids) | set(senior_editor_ids))
     else:
-      matching_manuscripts = self.__find_manuscripts_by_key(None)
+      matching_manuscripts = self._empty_manuscripts()
 
     if manuscripts_not_found is not None:
       potential_reviewers = []
     else:
       self.logger.debug("keyword_list: %s", keyword_list)
-      other_manuscripts = self.__find_manuscripts_by_keywords(
-        keyword_list
-      )
       self.logger.debug("subject_areas: %s", subject_areas)
-      if len(subject_areas) > 0:
-        other_manuscripts = self._filter_manuscripts_by_subject_areas(
-          other_manuscripts, subject_areas
-        )
+      other_manuscripts = self._find_manuscripts_by_subject_areas_and_keywords(
+        subject_areas, keyword_list
+      )
       if abstract is not None and len(abstract.strip()) > 0:
         all_similar_manuscripts = self.similarity_model.find_similar_manuscripts_to_abstract(
           abstract
