@@ -133,9 +133,26 @@ class SearchHeader extends React.Component {
     };
   }
 
+  buildAliasMap(list) {
+    const m = {};
+    list.forEach(s => {
+      const lower = s.toLowerCase();
+      if (lower !== s) {
+        m[lower] = s;
+      }
+    });
+    return m;
+  }
+
   componentWillReceiveProps(nextProps) {
     if (nextProps.searchOptions !== this.props.searchOptions) {
       this.setState(this.getInitialiseState(nextProps.searchOptions));
+    }
+    if (nextProps.allSubjectAreas !== this.props.allSubjectAreas) {
+      this.allSubjectAreasAliasMap = this.buildAliasMap(nextProps.allSubjectAreas);
+    }
+    if (nextProps.allKeywords !== this.props.allKeywords) {
+      this.allKeywordsAliasMap = this.buildAliasMap(nextProps.allKeywords);
     }
   }
 
@@ -143,6 +160,68 @@ class SearchHeader extends React.Component {
     const m = /^.*\D(\d{5}$)/.exec(value);
     const manuscriptNumber = m ? m[1] : value;
     this.updateSearchOption('manuscriptNumber', manuscriptNumber);
+  }
+
+  updateSubjectAreaInput = newValue => {
+    this.setState({
+      currentSubjectArea: newValue,
+      errorSubjectArea: null
+    });
+  }
+
+  updateSubjectAreaSearchOption = newValue => {
+    this.updateSearchOption('subjectArea', newValue);
+  }
+
+  validateSubjectAreaInput = () => {
+    const { allSubjectAreas } = this.props;
+    const { currentSubjectArea } = this.state;
+    let subjectArea = currentSubjectArea.trim().toLowerCase();
+    subjectArea = this.allSubjectAreasAliasMap[subjectArea] || subjectArea;
+    if (!subjectArea) {
+      return
+    } else if (allSubjectAreas.indexOf(subjectArea) >= 0) {
+      this.setState({
+        currentSubjectArea: subjectArea,
+        errorSubjectArea: null
+      });
+      this.updateSearchOption('subjectArea', subjectArea || '');
+    } else {
+      this.setState({
+        errorSubjectArea: 'Subject area is invalid'
+      });
+    }
+  }
+
+  updateKeywordInput = newValue => {
+    this.setState({
+      currentKeyword: newValue,
+      errorKeyword: null
+    });
+  }
+
+  updateKeywordSearchOption = newValue => {
+    this.addKeyword(newValue);
+  }
+
+  validateKeywordInput = () => {
+    const { allKeywords } = this.props;
+    const { currentKeyword } = this.state;
+    let keyword = currentKeyword.trim().toLowerCase();
+    keyword = this.allKeywordsAliasMap[keyword] || keyword;
+    if (!currentKeyword) {
+      return;
+    } else if (allKeywords.indexOf(keyword) >= 0) {
+      this.setState({
+        currentKeyword: keyword,
+        errorKeyword: null
+      });
+      this.addKeyword(keyword);
+    } else {
+      this.setState({
+        errorKeyword: 'Keyword is invalid'
+      });
+    }
   }
 
   forceUpdateSearchOptions = () => {
@@ -163,7 +242,8 @@ class SearchHeader extends React.Component {
     const { allSubjectAreas=[], allKeywords=[] } = props;
     const {
       currentTab, abstractFocused,
-      currentSubjectArea='', currentKeyword='', keywords=[]
+      currentSubjectArea='', currentKeyword='', keywords=[],
+      errorSubjectArea, errorKeyword
     } = state;
     const { manuscriptNumber } = (state[BY_MANUSCRIPT] || {});
     const { subjectArea, abstract } = (state[BY_SEARCH] || {});
@@ -204,10 +284,11 @@ class SearchHeader extends React.Component {
                 <View style={ styles.field }>
                   <AutoComplete
                     floatingLabelText="Subject area"
+                    errorText={ errorSubjectArea }
                     searchText={ currentSubjectArea || subjectArea || '' }
-                    onUpdateInput={ newValue => this.setState({currentSubjectArea: newValue}) }
-                    onNewRequest={ newValue => updateSearchOption('subjectArea', newValue) }
-                    onClose={ () => updateSearchOption('subjectArea', currentSubjectArea || '') }
+                    onUpdateInput={ this.updateSubjectAreaInput }
+                    onNewRequest={ this.updateSubjectAreaSearchOption }
+                    onClose={ this.validateSubjectAreaInput }
                     onKeyPress={ this.onKeyPress }
                     dataSource={ allSubjectAreas }
                     filter={ AutoComplete.fuzzyFilter }
@@ -218,12 +299,14 @@ class SearchHeader extends React.Component {
                   <FlexColumn>
                     <AutoComplete
                       floatingLabelText="Keywords"
+                      errorText={ errorKeyword }
                       searchText={ currentKeyword }
-                      onUpdateInput={ newValue => this.setState({currentKeyword: newValue}) }
-                      onNewRequest={ newValue => this.addKeyword(newValue) }
+                      onUpdateInput={ this.updateKeywordInput }
+                      onNewRequest={ this.updateKeywordSearchOption }
+                      onClose={ this.validateKeywordInput }
                       onKeyPress={ this.onKeyPress }
                       dataSource={ allKeywords }
-                      filter={ AutoComplete.defaultFilter }
+                      filter={ AutoComplete.caseInsensitiveFilter }
                       maxSearchResults={ 10 }
                       style={ styles.textField }
                     />
