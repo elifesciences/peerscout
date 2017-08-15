@@ -91,7 +91,10 @@ class Main extends React.Component {
     this.getResults = createSelector(
       () => this.state.searchOptions,
       (searchOptions) => {
-        if (!searchOptions.keywords && !searchOptions.manuscriptNumber) {
+        if (
+          !searchOptions.manuscriptNumber &&
+          !(searchOptions.subjectArea || searchOptions.keywords)
+        ) {
           return Promise.resolve();
         }
         return this.props.reviewerRecommendationApi.recommendReviewers({
