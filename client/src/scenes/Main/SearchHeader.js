@@ -133,9 +133,26 @@ class SearchHeader extends React.Component {
     };
   }
 
+  buildAliasMap(list) {
+    const m = {};
+    list.forEach(s => {
+      const lower = s.toLowerCase();
+      if (lower !== s) {
+        m[lower] = s;
+      }
+    });
+    return m;
+  }
+
   componentWillReceiveProps(nextProps) {
     if (nextProps.searchOptions !== this.props.searchOptions) {
       this.setState(this.getInitialiseState(nextProps.searchOptions));
+    }
+    if (nextProps.allSubjectAreas !== this.props.allSubjectAreas) {
+      this.allSubjectAreasAliasMap = this.buildAliasMap(nextProps.allSubjectAreas);
+    }
+    if (nextProps.allKeywords !== this.props.allKeywords) {
+      this.allKeywordsAliasMap = this.buildAliasMap(nextProps.allKeywords);
     }
   }
 
@@ -159,13 +176,16 @@ class SearchHeader extends React.Component {
   validateSubjectAreaInput = () => {
     const { allSubjectAreas } = this.props;
     const { currentSubjectArea } = this.state;
-    if (!currentSubjectArea) {
+    let subjectArea = currentSubjectArea.trim().toLowerCase();
+    subjectArea = this.allSubjectAreasAliasMap[subjectArea] || subjectArea;
+    if (!subjectArea) {
       return
-    } else if (allSubjectAreas.indexOf(currentSubjectArea) >= 0) {
+    } else if (allSubjectAreas.indexOf(subjectArea) >= 0) {
       this.setState({
+        currentSubjectArea: subjectArea,
         errorSubjectArea: null
       });
-      this.updateSearchOption('subjectArea', currentSubjectArea || '');
+      this.updateSearchOption('subjectArea', subjectArea || '');
     } else {
       this.setState({
         errorSubjectArea: 'Subject area is invalid'
@@ -187,13 +207,16 @@ class SearchHeader extends React.Component {
   validateKeywordInput = () => {
     const { allKeywords } = this.props;
     const { currentKeyword } = this.state;
+    let keyword = currentKeyword.trim().toLowerCase();
+    keyword = this.allKeywordsAliasMap[keyword] || keyword;
     if (!currentKeyword) {
       return;
-    } else if (allKeywords.indexOf(currentKeyword) >= 0) {
+    } else if (allKeywords.indexOf(keyword) >= 0) {
       this.setState({
+        currentKeyword: keyword,
         errorKeyword: null
       });
-      this.addKeyword(currentKeyword);
+      this.addKeyword(keyword);
     } else {
       this.setState({
         errorKeyword: 'Keyword is invalid'
