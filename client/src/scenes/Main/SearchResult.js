@@ -176,11 +176,13 @@ const hasMatchingSubjectAreas = (manuscript, requestedSubjectAreas) =>
     subjectArea => requestedSubjectAreas.has(subjectArea)
   )[0];
 
+const NBSP = '\xa0';
+
 const Score = ({ score = {} }) => (
   <Text
     className="score"
-    title={ formatScoreWithDetails(score) }
-  >{ formatCombinedScore(score.combined) }</Text>
+    title={ (score.combined && formatScoreWithDetails(score)) || '' }
+  >{ (score.combined && formatCombinedScore(score.combined)) || NBSP }</Text>
 );
 
 const PersonScore = ({ score, person }) => (
@@ -442,6 +444,9 @@ const PotentialReviewer = ({
     />
   ));
   const renderedStats = renderStats(person['stats']);
+  const scoresNote = scores && scores.combined ?
+    ' (max across manuscripts)' :
+    ' Not enough data to calculate a score';
   return (
     <Card style={ styles.potentialReviewer.card }>
       <Comment text={ `Person id: ${person['person_id']}` }/>
@@ -504,21 +509,17 @@ const PotentialReviewer = ({
             </View>
           )
         }
-        {
-          (scores && scores['combined'] && (
-            <View  style={ styles.potentialReviewer.subSection }>
-              <Text style={ styles.potentialReviewer.label }>Scores: </Text>
-              <View style={ styles.potentialReviewer.value }>
-                <FlexColumn>
-                  <InlineContainer onClick={ onSelectThisPotentialReviewer }>
-                    <PersonScore score={ scores } person={ person }/>
-                    <Text>{ ' (max across manuscripts)' }</Text>
-                  </InlineContainer>
-                </FlexColumn>
-              </View>
-            </View>
-          )) || null
-        }
+        <View  style={ styles.potentialReviewer.subSection }>
+          <Text style={ styles.potentialReviewer.label }>Scores: </Text>
+          <View style={ styles.potentialReviewer.value }>
+            <FlexColumn>
+              <InlineContainer onClick={ onSelectThisPotentialReviewer }>
+                <PersonScore score={ scores } person={ person }/>
+                <Text>{ scoresNote }</Text>
+              </InlineContainer>
+            </FlexColumn>
+          </View>
+        </View>
       </CardText>
     </Card>
   );
