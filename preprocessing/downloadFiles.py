@@ -65,6 +65,12 @@ def main():
     get_downloads_csv_path(),
     downloaded_files)
 
+  download_objects(
+    client,
+    s3_object_list(s3, storage_config.get('editors_bucket'), storage_config.get('editors_prefix')),
+    get_downloads_csv_path(),
+    downloaded_files)
+
   logger = logging.getLogger(NAME)
   logger.info('%d files downloaded', len(downloaded_files))
   logger.info('done')

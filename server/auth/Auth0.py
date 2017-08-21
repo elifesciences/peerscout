@@ -9,6 +9,7 @@ def get_logger():
 class Auth0(object):
   def __init__(self, domain):
     self.domain = domain
+    self.is_valid_email = lambda email: len(email) > 0
 
   def get_user_info(self, access_code):
     response = requests.get('https://{}/userinfo/?access_token={}'.format(self.domain, access_code))
@@ -27,8 +28,9 @@ class Auth0(object):
       if not access_token:
         get_logger().info('no access token provided')
       email = self.verify_access_token_and_get_email(access_token) if access_token else None
-      if email:
+      if email and self.is_valid_email(email):
         return request_handler()
       else:
+        get_logger().info('invalid email: %s', email)
         return not_authorized_handler()
     return wrapped_request_handler

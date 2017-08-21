@@ -51,6 +51,8 @@ client_config = dict(config['client']) if 'client' in config else {}
 
 auth0_domain = client_config.get('auth0_domain', '')
 
+valid_emails_filename = config.get('auth', 'valid_emails')
+
 configure_logging()
 
 logging.getLogger('summa.preprocessing.cleaner').setLevel(logging.WARNING)
@@ -104,7 +106,18 @@ if auth0_domain:
   )
 else:
   logging.info('not enabling authentication, no Auth0 domain configured')
+  auth0 = None
   wrap_with_auth = lambda f: f
+
+def update_auth():
+  if auth0:
+    if valid_emails_filename:
+      with open(valid_emails_filename, 'r') as valid_emails_f:
+        valid_emails = set([s.strip().lower() for s in valid_emails_f.readlines()]) - {''}
+      logger.info('valid emails: %d', len(valid_emails))
+      auth0.is_valid_email = lambda email: email.lower() in valid_emails
+
+update_auth()
 
 @app.route("/api/")
 def api_root():
@@ -174,6 +187,7 @@ def control_reload():
   logger.info("reloading...")
   recommend_reviewers = load_recommender()
   recommend_reviewers_as_json.clear()
+  update_auth()
   return jsonify({'status': 'OK'})
 
 @app.route('/')
