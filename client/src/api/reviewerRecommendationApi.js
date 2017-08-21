@@ -14,7 +14,8 @@ const datetimeReviver = (key, value) =>
 
 const logResponseTextEnabled = false;
 
-const fetchJson = url => fetch(url, {
+const fetchJson = (url, options) => fetch(url, {
+  ...options,
   credentials: "same-origin"
 })
 .then(response => {
@@ -41,7 +42,7 @@ const api = baseUrl => {
     getConfig: () => fetchJson(urlWithParams(getConfigUrl, {})),
     getAllSubjectAreas: () => fetchJson(urlWithParams(getAllSubjectAreasUrl, {})),
     getAllKeywords: () => fetchJson(urlWithParams(getAllKeywordsUrl, {})),
-    recommendReviewers: params => fetchJson(urlWithParams(recommendReviewersUrl, params))
+    recommendReviewers: (params, options) => fetchJson(urlWithParams(recommendReviewersUrl, params), options)
   };
 };
 
