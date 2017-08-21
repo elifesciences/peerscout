@@ -13,6 +13,8 @@ from services import (
   RecommendReviewers
 )
 
+from auth.Auth0 import Auth0
+
 from shared_proxy import database, app_config, configure_logging
 
 NAME = 'server'
@@ -46,6 +48,8 @@ filter_by_subject_area_enabled = config.getboolean(
 )
 
 client_config = dict(config['client']) if 'client' in config else {}
+
+auth0_domain = client_config.get('auth0_domain', '')
 
 configure_logging()
 
@@ -90,6 +94,18 @@ app = Flask(__name__, static_folder=CLIENT_FOLDER)
 app.json_encoder = CustomJSONEncoder
 CORS(app)
 
+if auth0_domain:
+  logging.info('using Auth0 domain %s', auth0_domain)
+  auth0 = Auth0(auth0_domain)
+  wrap_with_auth = lambda f: auth0.wrap_request_handler(
+    f,
+    get_access_token=lambda: request.headers.get('access_token'),
+    not_authorized_handler=lambda: ('Not Authorized', 401)
+  )
+else:
+  logging.info('not enabling authentication, no Auth0 domain configured')
+  wrap_with_auth = lambda f: f
+
 @app.route("/api/")
 def api_root():
   return jsonify({
@@ -113,6 +129,7 @@ def recommend_reviewers_as_json(manuscript_no, subject_area, keywords, abstract,
   ))
 
 @app.route("/api/recommend-reviewers")
+@wrap_with_auth
 def recommend_reviewers_api():
   manuscript_no = request.args.get('manuscript_no')
   subject_area = request.args.get('subject_area')
