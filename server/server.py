@@ -185,4 +185,4 @@ def send_client_files(path):
   return send_from_directory(CLIENT_FOLDER, path)
 
 if __name__ == "__main__":
-  app.run(port=port, host=host)
+  app.run(port=port, host=host, threaded=True)
