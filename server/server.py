@@ -14,6 +14,11 @@ from services import (
 )
 
 from auth.Auth0 import Auth0
+from auth.EmailValidator import (
+  EmailValidator,
+  parse_valid_domains,
+  read_valid_emails
+)
 
 from shared_proxy import database, app_config, configure_logging
 
@@ -51,7 +56,8 @@ client_config = dict(config['client']) if 'client' in config else {}
 
 auth0_domain = client_config.get('auth0_domain', '')
 
-valid_emails_filename = config.get('auth', 'valid_emails')
+valid_emails_filename = config.get('auth', 'valid_emails', fallback=None)
+valid_domains = parse_valid_domains(config.get('auth', 'valid_domains', fallback=''))
 
 configure_logging()
 
@@ -111,11 +117,14 @@ else:
 
 def update_auth():
   if auth0:
-    if valid_emails_filename:
-      with open(valid_emails_filename, 'r') as valid_emails_f:
-        valid_emails = set([s.strip().lower() for s in valid_emails_f.readlines()]) - {''}
-      logger.info('valid emails: %d', len(valid_emails))
-      auth0.is_valid_email = lambda email: email.lower() in valid_emails
+    if valid_emails_filename or valid_domains:
+      valid_emails = read_valid_emails(valid_emails_filename) if valid_emails_filename else set()
+      logger.info('valid_emails: %d', len(valid_emails))
+      logger.info('valid_domains: %s', valid_domains)
+      auth0.is_valid_email = EmailValidator(
+        valid_emails=valid_emails,
+        valid_domains=valid_domains
+      )
 
 update_auth()
 
