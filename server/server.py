@@ -13,7 +13,11 @@ from services import (
   RecommendReviewers
 )
 
-from auth.Auth0 import Auth0
+from auth.FlaskAuth0 import (
+  FlaskAuth0,
+  parse_allowed_ips
+)
+
 from auth.EmailValidator import (
   EmailValidator,
   parse_valid_domains,
@@ -58,6 +62,7 @@ auth0_domain = client_config.get('auth0_domain', '')
 
 valid_emails_filename = config.get('auth', 'valid_emails', fallback=None)
 valid_email_domains = parse_valid_domains(config.get('auth', 'valid_email_domains', fallback=''))
+allowed_ips = parse_allowed_ips(config.get('auth', 'allowed_ips', fallback='127.0.0.1'))
 
 configure_logging()
 
@@ -104,19 +109,16 @@ CORS(app)
 
 if auth0_domain:
   logging.info('using Auth0 domain %s', auth0_domain)
-  auth0 = Auth0(auth0_domain)
-  wrap_with_auth = lambda f: auth0.wrap_request_handler(
-    f,
-    get_access_token=lambda: request.headers.get('access_token'),
-    not_authorized_handler=lambda: ('Not Authorized', 401)
-  )
+  logger.info('allowed_ips: %s', allowed_ips)
+  flask_auth0 = FlaskAuth0(domain=auth0_domain, allowed_ips=allowed_ips)
+  wrap_with_auth = flask_auth0.wrap_request_handler
 else:
   logging.info('not enabling authentication, no Auth0 domain configured')
   auth0 = None
   wrap_with_auth = lambda f: f
 
 def update_auth():
-  if auth0:
+  if flask_auth0:
     if valid_emails_filename or valid_email_domains:
       try:
         valid_emails = read_valid_emails(valid_emails_filename) if valid_emails_filename else set()
@@ -125,7 +127,7 @@ def update_auth():
         valid_emails = set()
       logger.info('valid_emails: %d', len(valid_emails))
       logger.info('valid_email_domains: %s', valid_email_domains)
-      auth0.is_valid_email = EmailValidator(
+      flask_auth0.auth0.is_valid_email = EmailValidator(
         valid_emails=valid_emails,
         valid_email_domains=valid_email_domains
       )
