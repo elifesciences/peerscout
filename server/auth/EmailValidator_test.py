@@ -59,13 +59,13 @@ class TestEmailValidator(object):
     assert validator('User1@Domain.org')
 
   def test_should_return_false_if_domain_not_in_list(self):
-    validator = EmailValidator(valid_domains={'domain.org'})
+    validator = EmailValidator(valid_email_domains={'domain.org'})
     assert not validator('user1@other.org')
 
   def test_should_return_true_if_email_domain_in_list(self):
-    validator = EmailValidator(valid_domains={'domain.org'})
+    validator = EmailValidator(valid_email_domains={'domain.org'})
     assert validator('user1@domain.org')
 
   def test_should_return_true_if_email_domain_in_list_with_different_case(self):
-    validator = EmailValidator(valid_domains={'domain.org'})
+    validator = EmailValidator(valid_email_domains={'domain.org'})
     assert validator('User1@Domain.org')

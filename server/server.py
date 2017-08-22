@@ -57,7 +57,7 @@ client_config = dict(config['client']) if 'client' in config else {}
 auth0_domain = client_config.get('auth0_domain', '')
 
 valid_emails_filename = config.get('auth', 'valid_emails', fallback=None)
-valid_domains = parse_valid_domains(config.get('auth', 'valid_domains', fallback=''))
+valid_email_domains = parse_valid_domains(config.get('auth', 'valid_email_domains', fallback=''))
 
 configure_logging()
 
@@ -117,13 +117,13 @@ else:
 
 def update_auth():
   if auth0:
-    if valid_emails_filename or valid_domains:
+    if valid_emails_filename or valid_email_domains:
       valid_emails = read_valid_emails(valid_emails_filename) if valid_emails_filename else set()
       logger.info('valid_emails: %d', len(valid_emails))
-      logger.info('valid_domains: %s', valid_domains)
+      logger.info('valid_email_domains: %s', valid_email_domains)
       auth0.is_valid_email = EmailValidator(
         valid_emails=valid_emails,
-        valid_domains=valid_domains
+        valid_email_domains=valid_email_domains
       )
 
 update_auth()

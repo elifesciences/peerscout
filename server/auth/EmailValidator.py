@@ -19,18 +19,18 @@ def email_to_domain(email):
       return parts[1]
   return None
 
-def EmailValidator(valid_emails=None, valid_domains=None):
+def EmailValidator(valid_emails=None, valid_email_domains=None):
   if valid_emails is None:
     valid_emails = set()
-  if valid_domains is None:
-    valid_domains = set()
+  if valid_email_domains is None:
+    valid_email_domains = set()
 
   def validate(email):
     if not email:
       return False
     domain = email_to_domain(email)
     return (
-      (domain and domain.lower() in valid_domains) or
+      (domain and domain.lower() in valid_email_domains) or
       (email.lower() in valid_emails)
     )
   return validate
