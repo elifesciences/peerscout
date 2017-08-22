@@ -1,7 +1,10 @@
 import os.path
 
+from shared_proxy.app_config import get_app_config
+
 def get_data_path(name=None):
-  root_path = os.path.join('..', '.data')
+  config = get_app_config()
+  root_path = config.get('data', 'data_root', fallback='../.data')
   if name is not None:
     return os.path.join(root_path, name)
   return root_path
