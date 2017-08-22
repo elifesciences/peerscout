@@ -118,7 +118,11 @@ else:
 def update_auth():
   if auth0:
     if valid_emails_filename or valid_email_domains:
-      valid_emails = read_valid_emails(valid_emails_filename) if valid_emails_filename else set()
+      try:
+        valid_emails = read_valid_emails(valid_emails_filename) if valid_emails_filename else set()
+      except Exception as e:
+        logger.warning('failed to load emails from %s (%s)', valid_emails_filename, e)
+        valid_emails = set()
       logger.info('valid_emails: %d', len(valid_emails))
       logger.info('valid_email_domains: %s', valid_email_domains)
       auth0.is_valid_email = EmailValidator(
