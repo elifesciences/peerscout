@@ -8,6 +8,7 @@ def main():
   logger = logging.getLogger(NAME)
   scripts = [
     'importDataToDatabase',
+    'convertEditorsCsv',
     'importEarlyCareerResearchersCsv',
     'enrichEarlyCareerResearchersInDatabase',
     'generateTextTokens',
