@@ -15,7 +15,8 @@ from services import (
 
 from auth.FlaskAuth0 import (
   FlaskAuth0,
-  parse_allowed_ips
+  parse_allowed_ips,
+  get_remote_ip
 )
 
 from auth.EmailValidator import (
@@ -197,8 +198,9 @@ def run():
 @app.route("/control/reload", methods=['POST'])
 def control_reload():
   global recommend_reviewers
-  if request.remote_addr != '127.0.0.1':
-    return jsonify({'ip': request.remote_addr}), 403
+  remote_ip = get_remote_ip()
+  if remote_ip != '127.0.0.1':
+    return jsonify({'ip': remote_ip}), 403
   logger.info("reloading...")
   recommend_reviewers = load_recommender()
   recommend_reviewers_as_json.clear()
