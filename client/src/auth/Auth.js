@@ -32,10 +32,11 @@ export default class Auth {
   }
 
   // The _doAuthentication function will get the user profile information if authentication is successful
-  _setAccessToken(access_token) {
-    console.log('_setAccessToken', !!access_token);
+  _setAccessToken(access_token, error_description) {
+    console.log('_setAccessToken', !!access_token, error_description);
     if (access_token !== this.access_token) {
       this.access_token = access_token;
+      this.error_description = error_description;
       if (access_token) {
         localStorage.setItem(ACCESS_TOKEN_KEY, access_token);
         this._userInfo(access_token, (err, user) => {
@@ -53,14 +54,16 @@ export default class Auth {
         this.email = null;
       }
       this._triggerStateChange();
+    } else if (error_description !== this.error_description) {
+      this.error_description = error_description;
+      this._triggerStateChange();
     }
   }
  
   // We’ll display an error if the user clicks an outdated or invalid magiclink
   _setAuthorizationError(error_description) {
-    this._setAccessToken(null);
-    this.error_description = error_description;
-    console.error('There was an error: ' + error_description);
+    this._setAccessToken(null, error_description);
+    console.error('There was an error:', error_description);
   }
 
   _triggerStateChange() {
@@ -93,7 +96,7 @@ export default class Auth {
       localStorage.setItem(ACCESS_TOKEN_KEY, access_token);
       this._userInfo(access_token, (err, user) => {
         if (err) {
-          this._setAuthorizationError(err);
+          this._setAuthorizationError('Session expired');
         } else {
           this.email = user.email;
         }
