@@ -137,7 +137,7 @@ class Main extends React.Component {
           limit: searchOptions.limit || '50',
         }, {
           headers: {
-            access_token: authenticationState && authenticationState.access_token
+            'X-Access-Token': authenticationState && authenticationState.access_token
           }
         });
       }

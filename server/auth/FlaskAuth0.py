@@ -3,7 +3,7 @@ from flask import request
 from .Auth0 import Auth0
 
 def get_access_token():
-  return request.headers.get('access_token')
+  return request.headers.get('X-Access-Token')
 
 def get_remote_ip():
   x_forwarded_for = request.headers.getlist('X-Forwarded-For')
