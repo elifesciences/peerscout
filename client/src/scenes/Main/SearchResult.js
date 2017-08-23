@@ -622,6 +622,7 @@ const SearchResult = ({
     potentialReviewers = [],
     matchingManuscripts = [],
     manuscriptsNotFound,
+    notAuthorized,
     error
   } = searchResult;
   const requestedSubjectAreas = extractAllSubjectAreas(matchingManuscripts);
@@ -632,14 +633,17 @@ const SearchResult = ({
       potentialReviewers.filter(r => reviewerPersonId(r) === reviewerPersonId(selectedReviewer))
     );
   const nonEmptySelection = selectedReviewer || selectedManuscript;
+  const errorMessage = error && (
+    notAuthorized ? 'You are not authorized to see the results.' :
+    'This is very unfortunate, but there seems to be some sort of technical issue. Have you tried turning it off and on again?'
+  );
   return (
     <View className="result-list">
       {
-        error && (
+        errorMessage && (
           <View style={ styles.errorMessage }>
             <Text>
-              This is very unfortunate, but there seems to be some sort of technical issue.
-              Have you tried turning it off and on again?
+              { errorMessage }
             </Text>
           </View>
         )

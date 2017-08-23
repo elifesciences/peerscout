@@ -160,12 +160,14 @@ class Main extends React.Component {
           shouldLoad: false,
           loading: false
         });
-      }).catch(err => {
-        reportError("failed to fetch results", err);
+      }).catch(error => {
+        reportError("failed to fetch results", error);
+        const notAuthorized = this.props.reviewerRecommendationApi.isNotAuthorizedError(error);
         this.actuallyLoading = false;
         this.setState({
           results: {
-            error: err
+            error,
+            notAuthorized
           },
           resultsSearchOptions,
           shouldLoad: false,
