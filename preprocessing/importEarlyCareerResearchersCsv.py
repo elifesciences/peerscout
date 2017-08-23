@@ -15,7 +15,12 @@ from dataNormalisationUtils import normalise_subject_area
 
 from shared_proxy import database
 
+from shared_proxy.app_config import get_app_config
+
 NAME = 'importEarlyCareerResearchersCsv'
+
+def get_logger():
+  return logging.getLogger(NAME)
 
 def frame_to_persons(df):
   ecr_person_map = (
@@ -179,6 +184,11 @@ def convert_last_csv_files_in_directory(root_dir, process_file, prefix):
     raise Exception("no csv files found with prefix {} in directory {}".format(prefix, root_dir))
 
 def main():
+  app_config = get_app_config()
+  ecr_prefix = app_config.get('storage', 'ecr_prefix')
+  if not ecr_prefix:
+    get_logger().info('ecr_prefix not configured')
+
   source = get_downloads_csv_path()
 
   db = database.connect_configured_database()
@@ -189,12 +199,12 @@ def main():
   convert_last_csv_files_in_directory(
     source,
     process_file,
-    prefix="ejp_query_tool_query_id_380_DataScience:_Early_Career_Researchers"
+    prefix=ecr_prefix
   )
 
   db.commit()
 
-  logging.getLogger(NAME).info("Done")
+  get_logger().info("Done")
 
 if __name__ == "__main__":
   from shared_proxy import configure_logging

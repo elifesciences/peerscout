@@ -17,12 +17,39 @@ import {
   reportError
 } from '../../monitoring';
 
+import {
+  Auth,
+  NullAuth,
+  LoggedInIndicator,
+  LoginForm
+} from '../../auth';
+
+import AppLoading from './AppLoading';
 import SearchHeader from './SearchHeader';
 import SearchResult from './SearchResult';
 import ChartResult from './ChartResult';
 import Help from './Help';
 
 const styles = {
+  appLoading: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  loggedInIndicator: {
+    position: 'absolute',
+    right: 0,
+    zIndex: 10,
+    padding: 5,
+    color: '#fff'
+  },
+  loginForm: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
   outerResultsContainer: {
     flex: 1
   },
@@ -83,17 +110,22 @@ class Main extends React.Component {
     this.state = {
       searchOptions: this.defaultSearchOptions,
       reqId: 0,
-      config: this.defaultConfig,
       helpOpen: getBooleanLocalStorageItem(HELP_OPEN_KEY, true),
       legendOpen: getBooleanLocalStorageItem(LEGEND_OPEN_KEY, true)
     };
 
     this.getResults = createSelector(
-      () => this.state.searchOptions,
-      (searchOptions) => {
+      [
+        () => this.state.searchOptions,
+        () => this.state.authenticationState
+      ],
+      (searchOptions, authenticationState) => {
         if (
-          !searchOptions.manuscriptNumber &&
-          !(searchOptions.subjectArea || searchOptions.keywords)
+          !authenticationState.authenticated ||
+          (
+            !searchOptions.manuscriptNumber &&
+            !(searchOptions.subjectArea || searchOptions.keywords)
+          )
         ) {
           return Promise.resolve();
         }
@@ -102,7 +134,11 @@ class Main extends React.Component {
           subject_area: searchOptions.subjectArea || '',
           keywords: searchOptions.keywords || '',
           abstract: searchOptions.abstract || '',
-          limit: searchOptions.limit || '50'
+          limit: searchOptions.limit || '50',
+        }, {
+          headers: {
+            access_token: authenticationState && authenticationState.access_token
+          }
         });
       }
     );
@@ -124,17 +160,22 @@ class Main extends React.Component {
           shouldLoad: false,
           loading: false
         });
-      }).catch(err => {
-        reportError("failed to fetch results", err);
+      }).catch(error => {
+        reportError("failed to fetch results", error);
+        const notAuthorized = this.props.reviewerRecommendationApi.isNotAuthorizedError(error);
         this.actuallyLoading = false;
         this.setState({
           results: {
-            error: err
+            error,
+            notAuthorized
           },
           resultsSearchOptions,
           shouldLoad: false,
           loading: false
         });
+        if (notAuthorized && this.auth) {
+          this.auth.revalidateToken();
+        }
       });
     };
 
@@ -170,7 +211,7 @@ class Main extends React.Component {
         selectedReviewer: null,
         selectedManuscript: null
       });
-    }
+    };
   }
 
   locationToSearchOptions(location, defaultSearchOptions) {
@@ -218,17 +259,40 @@ class Main extends React.Component {
         configResult.max_related_manuscripts != undefined ?
         configResult.max_related_manuscripts :
         this.defaultConfig.maxRelatedManuscripts,
+      auth0_domain: configResult.auth0_domain,
+      auth0_client_id: configResult.auth0_client_id
     }
   }
 
-  componentDidMount() {
+  initConfig(config) {
+    if (config.auth0_domain && config.auth0_client_id) {
+      this.auth = new Auth({
+        domain: config.auth0_domain,
+        client_id: config.auth0_client_id
+      });
+      this.auth.initialise();
+    } else {
+      this.auth = new NullAuth();
+    }
+    this.setState({
+      config,
+      authenticationState: this.auth.getAuthenticationState()
+    });
+    this.auth.onStateChange(authenticationState => {
+      this.setState({
+        authenticationState
+      });
+    });
     this.updateSearchOptionsFromLocation(this.history.location);
     this.unlisten = this.history.listen((location, action) => {
       this.updateSearchOptionsFromLocation(location);
     });
-    this.props.reviewerRecommendationApi.getConfig().then(config => this.setState({
-      config: this.translateConfig(config)
-    })).catch(err => {
+  }
+
+  componentDidMount() {
+    this.props.reviewerRecommendationApi.getConfig().then(config => this.initConfig(
+      this.translateConfig(config)
+    )).catch(err => {
       reportError('failed to fetch config', err);
     });
     this.props.reviewerRecommendationApi.getAllSubjectAreas().then(allSubjectAreas => this.setState({
@@ -297,10 +361,7 @@ class Main extends React.Component {
 
   render() {
     const {
-      config: {
-        showAllRelatedManuscripts,
-        maxRelatedManuscripts
-      },
+      config,
       loading,
       searchOptions,
       results,
@@ -310,63 +371,96 @@ class Main extends React.Component {
       selectedReviewer,
       selectedManuscript,
       helpOpen,
-      legendOpen
+      legendOpen,
+      authenticationState
     } = this.state;
+    if (!config) {
+      return (<AppLoading style={ styles.appLoading }/>);
+    }
+    const {
+      showAllRelatedManuscripts,
+      maxRelatedManuscripts
+    } = config;
     const hasPotentialReviewers =
       results && (results.potentialReviewers) && (results.potentialReviewers.length > 0);
+    let content;
+    let loggedInIndicator = null;
+    if (!authenticationState.authenticated && !authenticationState.authenticating) {
+      content = (
+        <LoginForm auth={ this.auth } style={ styles.loginForm }/>
+      );
+    } else {
+      if (authenticationState.logged_in) {
+        loggedInIndicator = (
+          <LoggedInIndicator style={ styles.loggedInIndicator } auth={ this.auth }/>
+        );
+      }
+      content = (
+        <FlexRow style={ styles.resultsContainer } className="inner-results-container">
+          {
+            results && !hasPotentialReviewers && (
+              <SearchResult
+                searchResult={ results }
+                selectedReviewer={ selectedReviewer }
+                selectedManuscript={ selectedManuscript }
+                onClearSelection={ this.onClearSelection }
+              />
+            )
+          }
+          {
+            results && hasPotentialReviewers && (
+              <SplitPane style={ styles.splitPane } split="vertical" defaultSize="50%">
+                <ChartResult
+                  searchResult={ results }
+                  onNodeClicked={ this.onNodeClicked }
+                  selectedNode={ selectedNode }
+                  selectedReviewer={ selectedReviewer }
+                  showAllRelatedManuscripts={ showAllRelatedManuscripts }
+                  maxRelatedManuscripts={ maxRelatedManuscripts }
+                  legendOpen={ legendOpen }
+                  onOpenLegend={ this.onOpenLegend }
+                  onCloseLegend={ this.onCloseLegend }
+                />
+                <SearchResult
+                  searchResult={ results }
+                  selectedReviewer={ selectedReviewer }
+                  selectedManuscript={ selectedManuscript }
+                  onClearSelection={ this.onClearSelection }
+                  onSelectPotentialReviewer={ this.onSelectPotentialReviewer }
+                />
+              </SplitPane>
+            )
+          }
+        </FlexRow>
+      );
+    }
     return (
       <FlexColumn>
-        <SearchHeader
-          searchOptions={ searchOptions }
-          onSearchOptionsChanged={ this.onSearchOptionsChanged }
-          allSubjectAreas={ allSubjectAreas }
-          allKeywords={ allKeywords }
-        />
+        { loggedInIndicator }
+        {
+          authenticationState.authenticated && (
+            <SearchHeader
+              searchOptions={ searchOptions }
+              onSearchOptionsChanged={ this.onSearchOptionsChanged }
+              allSubjectAreas={ allSubjectAreas }
+              allKeywords={ allKeywords }
+            />
+          )
+        }
         <FlexRow style={ styles.outerResultsContainer } className="results-container">
-          <LoadingIndicator style={ styles.loadingIndicator } loading={ loading }>
-            <FlexRow style={ styles.resultsContainer } className="inner-results-container">
-              {
-                results && !hasPotentialReviewers && (
-                  <SearchResult
-                    searchResult={ results }
-                    selectedReviewer={ selectedReviewer }
-                    selectedManuscript={ selectedManuscript }
-                    onClearSelection={ this.onClearSelection }
-                  />
-                )
-              }
-              {
-                results && hasPotentialReviewers && (
-                  <SplitPane style={ styles.splitPane } split="vertical" defaultSize="50%">
-                    <ChartResult
-                      searchResult={ results }
-                      onNodeClicked={ this.onNodeClicked }
-                      selectedNode={ selectedNode }
-                      selectedReviewer={ selectedReviewer }
-                      showAllRelatedManuscripts={ showAllRelatedManuscripts }
-                      maxRelatedManuscripts={ maxRelatedManuscripts }
-                      legendOpen={ legendOpen }
-                      onOpenLegend={ this.onOpenLegend }
-                      onCloseLegend={ this.onCloseLegend }
-                    />
-                    <SearchResult
-                      searchResult={ results }
-                      selectedReviewer={ selectedReviewer }
-                      selectedManuscript={ selectedManuscript }
-                      onClearSelection={ this.onClearSelection }
-                      onSelectPotentialReviewer={ this.onSelectPotentialReviewer }
-                    />
-                  </SplitPane>
-                )
-              }
-            </FlexRow>
+          <LoadingIndicator style={ styles.loadingIndicator } loading={ loading || authenticationState.authenticating }>
+            { content }
           </LoadingIndicator>
         </FlexRow>
-        <Help
-          open={ helpOpen }
-          onClose={ this.onCloseHelp }
-          onOpen={ this.onOpenHelp }
-        />
+        {
+          authenticationState.authenticated && (
+            <Help
+              open={ helpOpen }
+              onClose={ this.onCloseHelp }
+              onOpen={ this.onOpenHelp }
+            />
+          )
+        }
       </FlexColumn>
     );
   }

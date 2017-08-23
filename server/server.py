@@ -13,6 +13,18 @@ from services import (
   RecommendReviewers
 )
 
+from auth.FlaskAuth0 import (
+  FlaskAuth0,
+  parse_allowed_ips,
+  get_remote_ip
+)
+
+from auth.EmailValidator import (
+  EmailValidator,
+  parse_valid_domains,
+  read_valid_emails
+)
+
 from shared_proxy import database, app_config, configure_logging
 
 NAME = 'server'
@@ -46,6 +58,12 @@ filter_by_subject_area_enabled = config.getboolean(
 )
 
 client_config = dict(config['client']) if 'client' in config else {}
+
+auth0_domain = client_config.get('auth0_domain', '')
+
+valid_emails_filename = config.get('auth', 'valid_emails', fallback=None)
+valid_email_domains = parse_valid_domains(config.get('auth', 'valid_email_domains', fallback=''))
+allowed_ips = parse_allowed_ips(config.get('auth', 'allowed_ips', fallback='127.0.0.1'))
 
 configure_logging()
 
@@ -90,6 +108,33 @@ app = Flask(__name__, static_folder=CLIENT_FOLDER)
 app.json_encoder = CustomJSONEncoder
 CORS(app)
 
+if auth0_domain:
+  logging.info('using Auth0 domain %s', auth0_domain)
+  logger.info('allowed_ips: %s', allowed_ips)
+  flask_auth0 = FlaskAuth0(domain=auth0_domain, allowed_ips=allowed_ips)
+  wrap_with_auth = flask_auth0.wrap_request_handler
+else:
+  logging.info('not enabling authentication, no Auth0 domain configured')
+  auth0 = None
+  wrap_with_auth = lambda f: f
+
+def update_auth():
+  if flask_auth0:
+    if valid_emails_filename or valid_email_domains:
+      try:
+        valid_emails = read_valid_emails(valid_emails_filename) if valid_emails_filename else set()
+      except Exception as e:
+        logger.warning('failed to load emails from %s (%s)', valid_emails_filename, e)
+        valid_emails = set()
+      logger.info('valid_emails: %d', len(valid_emails))
+      logger.info('valid_email_domains: %s', valid_email_domains)
+      flask_auth0.auth0.is_valid_email = EmailValidator(
+        valid_emails=valid_emails,
+        valid_email_domains=valid_email_domains
+      )
+
+update_auth()
+
 @app.route("/api/")
 def api_root():
   return jsonify({
@@ -113,6 +158,7 @@ def recommend_reviewers_as_json(manuscript_no, subject_area, keywords, abstract,
   ))
 
 @app.route("/api/recommend-reviewers")
+@wrap_with_auth
 def recommend_reviewers_api():
   manuscript_no = request.args.get('manuscript_no')
   subject_area = request.args.get('subject_area')
@@ -152,11 +198,13 @@ def run():
 @app.route("/control/reload", methods=['POST'])
 def control_reload():
   global recommend_reviewers
-  if request.remote_addr != '127.0.0.1':
-    return jsonify({'ip': request.remote_addr}), 403
+  remote_ip = get_remote_ip()
+  if remote_ip != '127.0.0.1':
+    return jsonify({'ip': remote_ip}), 403
   logger.info("reloading...")
   recommend_reviewers = load_recommender()
   recommend_reviewers_as_json.clear()
+  update_auth()
   return jsonify({'status': 'OK'})
 
 @app.route('/')
@@ -168,4 +216,4 @@ def send_client_files(path):
   return send_from_directory(CLIENT_FOLDER, path)
 
 if __name__ == "__main__":
-  app.run(port=port, host=host)
+  app.run(port=port, host=host, threaded=True)

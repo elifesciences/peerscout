@@ -8,6 +8,8 @@ from tqdm import tqdm
 
 from preprocessingUtils import get_downloads_csv_path, get_downloads_xml_path
 
+from shared_proxy.app_config import get_app_config
+
 NAME = 'downloadFiles'
 
 # Prerequisites:
@@ -31,7 +33,18 @@ def configure_boto_logging():
   logging.getLogger('botocore').setLevel(logging.WARNING)
   logging.getLogger('nose').setLevel(logging.WARNING)
 
+def s3_object_list(s3, bucket, prefix=None):
+  if not bucket:
+    return []
+  if prefix:
+    return s3.Bucket(bucket).objects.filter(Prefix=prefix)
+  else:
+    return s3.Bucket(bucket).objects.all()
+
 def main():
+  app_config = get_app_config()
+  storage_config = dict(app_config['storage']) if 'storage' in app_config else {}
+
   configure_boto_logging()
 
   s3 = boto3.resource('s3')
@@ -42,15 +55,19 @@ def main():
 
   download_objects(
     client,
-    s3.Bucket("elife-ejp-ftp-db-xml-dump").objects.all(),
+    s3_object_list(s3, storage_config.get('xml_dump_bucket')),
     get_downloads_xml_path(),
     downloaded_files)
 
   download_objects(
     client,
-    s3.Bucket("elife-ejp-ftp").objects.filter(
-      Prefix="ejp_query_tool_query_id_380_DataScience:_Early_Career_Researchers"
-    ),
+    s3_object_list(s3, storage_config.get('ecr_bucket'), storage_config.get('ecr_prefix')),
+    get_downloads_csv_path(),
+    downloaded_files)
+
+  download_objects(
+    client,
+    s3_object_list(s3, storage_config.get('editors_bucket'), storage_config.get('editors_prefix')),
     get_downloads_csv_path(),
     downloaded_files)
 

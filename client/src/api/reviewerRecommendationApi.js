@@ -14,10 +14,17 @@ const datetimeReviver = (key, value) =>
 
 const logResponseTextEnabled = false;
 
-const fetchJson = url => fetch(url, {
+const NOT_AUTHORIZED_STATUS = 401;
+const NOT_AUTHORIZED_ERROR = 'NOT_AUTHORIZED_ERROR';
+
+const fetchJson = (url, options) => fetch(url, {
+  ...options,
   credentials: "same-origin"
 })
 .then(response => {
+  if (response.status === NOT_AUTHORIZED_STATUS) {
+    return Promise.reject(NOT_AUTHORIZED_ERROR);
+  }
   if (response.status !== 200) {
     return Promise.reject('request failed');
   }
@@ -29,6 +36,9 @@ const fetchJson = url => fetch(url, {
 .then(text => { logResponseTextEnabled && console.log('text:', text); return text; })
 .then(text => JSON.parse(text, datetimeReviver))
 .catch(err => {
+  if (err === NOT_AUTHORIZED_ERROR) {
+    return Promise.reject(err);
+  }
   throw new TraceError('failed to fetch ' + url, err);
 });
 
@@ -41,7 +51,8 @@ const api = baseUrl => {
     getConfig: () => fetchJson(urlWithParams(getConfigUrl, {})),
     getAllSubjectAreas: () => fetchJson(urlWithParams(getAllSubjectAreasUrl, {})),
     getAllKeywords: () => fetchJson(urlWithParams(getAllKeywordsUrl, {})),
-    recommendReviewers: params => fetchJson(urlWithParams(recommendReviewersUrl, params))
+    recommendReviewers: (params, options) => fetchJson(urlWithParams(recommendReviewersUrl, params), options),
+    isNotAuthorizedError: error => error === NOT_AUTHORIZED_ERROR
   };
 };
 
