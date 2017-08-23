@@ -173,6 +173,9 @@ class Main extends React.Component {
           shouldLoad: false,
           loading: false
         });
+        if (notAuthorized && this.auth) {
+          this.auth.revalidateToken();
+        }
       });
     };
 

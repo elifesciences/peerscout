@@ -38,19 +38,15 @@ export default class Auth {
       this.access_token = access_token;
       if (access_token) {
         localStorage.setItem(ACCESS_TOKEN_KEY, access_token);
-        const auth0 = new WebAuth({
-          domain: this.options.domain,
-          clientID: this.options.client_id
-        });
-        auth0.client.userInfo(access_token, (err, user) => {
+        this._userInfo(access_token, (err, user) => {
           if (err) {
             this._setAuthorizationError(err);
           } else {
             console.log('logged user:', user);
             this.email = user.email;
             console.log('logged in email:', this.email);
+            this._triggerStateChange();
           }
-          this._triggerStateChange();
         });
       } else {
         localStorage.removeItem(ACCESS_TOKEN_KEY);
@@ -81,6 +77,28 @@ export default class Auth {
       access_token: this.access_token,
       email: this.email
     };
+  }
+
+  _userInfo(access_token, callback) {
+    const auth0 = new WebAuth({
+      domain: this.options.domain,
+      clientID: this.options.client_id
+    });
+    return auth0.client.userInfo(access_token, callback);
+  }
+
+  revalidateToken() {
+    const access_token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    if (access_token) {
+      localStorage.setItem(ACCESS_TOKEN_KEY, access_token);
+      this._userInfo(access_token, (err, user) => {
+        if (err) {
+          this._setAuthorizationError(err);
+        } else {
+          this.email = user.email;
+        }
+      });
+    }
   }
 
   onStateChange(listener) {

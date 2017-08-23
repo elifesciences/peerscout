@@ -5,6 +5,9 @@ export default class NullAuth {
   initialise() {
   }
 
+  revalidateToken() {
+  }
+
   getAuthenticationState() {
     return {
       authenticating: false,
