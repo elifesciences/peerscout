@@ -6,13 +6,13 @@ elifePipeline {
     }
 
     stage 'Project tests', {
-        lock('reviewer-suggestions--ci') {
-            builderDeployRevision 'reviewer-suggestions--ci', commit
+        lock('peerscout--ci') {
+            builderDeployRevision 'peerscout--ci', commit
 
             // remove when builderProjectTests is in, as smoke tests are already run by builderProjectTests itself
-            builderSmokeTests 'reviewer-suggestions--ci', '/srv/reviewer-suggestions'
+            builderSmokeTests 'peerscout--ci', '/srv/peerscout'
 
-            //builderProjectTests 'reviewer-suggestions--ci', '/srv/reviewer-suggestions'
+            //builderProjectTests 'peerscout--ci', '/srv/peerscout'
         }
     }
 
