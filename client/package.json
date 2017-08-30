@@ -1,7 +1,7 @@
 {
-  "name": "reviewer-suggestions",
+  "name": "peerscout",
   "version": "1.0.0",
-  "description": "",
+  "description": "PeerScout",
   "main": "index.js",
   "scripts": {
     "start": "NODE_ENV=development webpack-dev-server --config webpack.config.js --progress --colors --hot --inline --host 0.0.0.0 --port 8081",
