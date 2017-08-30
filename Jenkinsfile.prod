@@ -6,9 +6,9 @@ elifePipeline {
     }
 
     stage 'Deploy to prod', {
-        elifeDeploySlackNotification 'reviewer-suggestions', 'prod'
+        elifeDeploySlackNotification 'peerscout', 'prod'
         elifeGitMoveToBranch commit, 'master'
-        builderDeployRevision 'reviewer-suggestions--prod', commit
-        builderSmokeTests 'reviewer-suggestions--prod', '/srv/reviewer-suggestions'
+        builderDeployRevision 'peerscout--prod', commit
+        builderSmokeTests 'peerscout--prod', '/srv/peerscout'
     }
 }
