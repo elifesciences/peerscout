@@ -25,6 +25,9 @@ def get_logger():
 def null_to_none(x):
   return None if pd.isnull(x) else x
 
+def null_to_none_list(data):
+  return [null_to_none(x) for x in data]
+
 def frame_to_persons(df):
   ecr_person_map = (
     df
@@ -53,10 +56,10 @@ def frame_to_subject_areas(df):
       df['p_id'] == person_id
     ]
     matching_subject_area = sorted(set([
-      normalise_subject_area(null_to_none(subject_area))
+      normalise_subject_area(subject_area)
       for subject_area in (
-        matching_df['First subject area'] +
-        matching_df['Second subject area']
+        null_to_none_list(matching_df['First subject area']) +
+        null_to_none_list(matching_df['Second subject area'])
       )
     ]) - {None})
     for subject_area in matching_subject_area:
@@ -75,7 +78,7 @@ def frame_to_person_membership(df):
       df['p_id'] == person_id
     ]
     matching_orcid = sorted(
-      set(matching_df['ORCID'])
+      set(null_to_none_list(matching_df['ORCID'])) - {None}
     )
     for orcid in matching_orcid:
       orcid = orcid.strip()

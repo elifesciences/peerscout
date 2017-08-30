@@ -103,3 +103,16 @@ def test_import_empty_subject_area(logger):
       set(df['person_id']) ==
       set([PERSON_ID_1])
     )
+
+def test_import_empty_orcid(logger):
+  csv_content = create_csv_content([{
+    **CSV_ITEM_1,
+    ORCID: ''
+  }])
+  with import_csv(csv_content) as db:
+    df = db.person.read_frame().reset_index()
+    logger.debug('df:\n%s', df)
+    assert (
+      set(df['person_id']) ==
+      set([PERSON_ID_1])
+    )
