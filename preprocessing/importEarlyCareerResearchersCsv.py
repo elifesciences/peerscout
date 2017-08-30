@@ -22,6 +22,9 @@ NAME = 'importEarlyCareerResearchersCsv'
 def get_logger():
   return logging.getLogger(NAME)
 
+def null_to_none(x):
+  return None if pd.isnull(x) else x
+
 def frame_to_persons(df):
   ecr_person_map = (
     df
@@ -50,12 +53,12 @@ def frame_to_subject_areas(df):
       df['p_id'] == person_id
     ]
     matching_subject_area = sorted(set([
-      normalise_subject_area(subject_area)
+      normalise_subject_area(null_to_none(subject_area))
       for subject_area in (
-        set(matching_df['First subject area'].unique()) |
-        set(matching_df['Second subject area'].unique())
+        matching_df['First subject area'] +
+        matching_df['Second subject area']
       )
-    ]))
+    ]) - {None})
     for subject_area in matching_subject_area:
       subject_area = subject_area.strip()
       if len(subject_area) > 0:
@@ -133,9 +136,15 @@ def update_early_career_researcher_status(db, person_ids):
 def convert_csv_file_to(filename, stream, db):
   logger = logging.getLogger(NAME)
   logger.info("converting: %s", filename)
+  field_names = [
+    'p_id', 'first_nm', 'last_nm', 'ORCID', 'First subject area', 'Second subject area'
+  ]
   df = (
-    pd.read_csv(stream, skiprows=3, dtype={'p_id': str})
-    [['p_id', 'first_nm', 'last_nm', 'ORCID', 'First subject area', 'Second subject area']]
+    pd.read_csv(stream, skiprows=3, dtype={
+      k: str
+      for k in field_names
+    })
+    [field_names]
   )
   person_ids = set(df['p_id'].values)
   person_table = db['person']
