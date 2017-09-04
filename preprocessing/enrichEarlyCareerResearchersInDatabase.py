@@ -172,17 +172,17 @@ def enrich_early_career_researchers(db, get_request_handler):
   crossref_dois = set([o.get('doi') for o in out_list])
 
   manuscript_table = db.manuscript
-  existing_dois = set(
-    x[0]
+  existing_dois_lower = {
+    x[0] and x[0].lower()
     for x in db.session.query(
       manuscript_table.table.doi
-    ).filter(
-      manuscript_table.table.doi.in_(
-        crossref_dois
-      )
     ).all()
-  )
-  new_dois = crossref_dois - existing_dois
+  }
+  new_dois = {
+    doi
+    for doi in crossref_dois
+    if doi.lower() not in existing_dois_lower
+  }
   new_manuscript_info = [
     {
       **m,
@@ -218,7 +218,7 @@ def enrich_early_career_researchers(db, get_request_handler):
   } for m in new_manuscript_info])
 
   logger.debug("crossref_dois: %d", len(crossref_dois))
-  logger.debug("existing_dois: %d", len(existing_dois))
+  logger.debug("existing_dois: %d", len(existing_dois_lower))
   logger.debug("new_dois: %d", len(new_dois))
   logger.debug("new_manuscript_info: %d", len(new_manuscript_info))
   logger.debug("new_manuscripts: %d", len(new_manuscripts))

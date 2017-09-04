@@ -212,3 +212,34 @@ class TestEnrichEarlyCareerResearchers(object):
         list(df[DOI]) ==
         [DOI_1]
       )
+
+  def test_should_not_import_one_if_doi_already_exists_with_different_case(self):
+    doi_1_original = 'Doi 1'
+    doi_1_new = 'doi 1'
+    response_by_url_map = {
+      get_crossref_works_by_orcid_url(ORCID_1): get_crossref_response([{
+        'DOI': doi_1_new,
+        'author': [{
+          'ORCID': ORCID_1
+        }]
+      }])
+    }
+    with empty_in_memory_database() as db:
+      db.manuscript.create_list([{
+        MANUSCRIPT_ID: MANUSCRIPT_ID_1,
+        DOI: doi_1_original
+      }])
+      db.person.create_list([
+        ECR_1
+      ])
+      db.person_membership.create_list([
+        ORCID_MEMBERSHIP_1
+      ])
+      enrich_early_career_researchers(db, MapRequestHandler(response_by_url_map))
+
+      df = db.manuscript.read_frame().reset_index()
+      get_logger().debug('df:\n%s', df)
+      assert (
+        list(df[DOI]) ==
+        [doi_1_original]
+      )
