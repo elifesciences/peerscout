@@ -14,6 +14,10 @@ from .collection_utils import (
   deep_get_list
 )
 
+from .manuscript_utils import (
+  duplicate_manuscript_titles_as_alternatives
+)
+
 NAME = 'RecommendReviewers'
 
 debugv_enabled = False
@@ -429,12 +433,16 @@ class RecommendReviewers(object):
       else:
         debugv("ignoring manuscript: %s", m)
 
+    remove_duplicate_titles_and_sort_by_date = lambda manuscripts: (
+      sort_manuscripts_by_date(duplicate_manuscript_titles_as_alternatives(manuscripts))
+    )
+
     self.manuscripts_by_author_map = applymap_dict(
-      self.manuscripts_by_author_map, sort_manuscripts_by_date
+      self.manuscripts_by_author_map, remove_duplicate_titles_and_sort_by_date
     )
 
     self.manuscripts_by_reviewer_map = applymap_dict(
-      self.manuscripts_by_reviewer_map, sort_manuscripts_by_date
+      self.manuscripts_by_reviewer_map, remove_duplicate_titles_and_sort_by_date
     )
 
     debugv("manuscripts_by_author_map: %s", self.manuscripts_by_author_map)
