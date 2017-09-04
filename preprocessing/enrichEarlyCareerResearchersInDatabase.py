@@ -95,7 +95,19 @@ def remove_duplicates(objs):
     return objs
   return pd.DataFrame(objs).drop_duplicates().to_dict(orient='records')
 
-def enrich_early_career_researchers(db):
+def get_crossref_works_by_orcid_url(orcid):
+  return (
+    "http://api.crossref.org/works?filter=orcid:{}&rows=30&sort=published&order=asc"
+    .format(orcid)
+  )
+
+def get_crossref_works_by_full_name_url(full_name):
+  return (
+    "http://api.crossref.org/works?query.author={}&rows=1000"
+    .format(full_name)
+  )
+
+def enrich_early_career_researchers(db, get_request_handler):
   logger = logging.getLogger(NAME)
 
   person_table = db.person
@@ -122,10 +134,6 @@ def enrich_early_career_researchers(db):
   )
   logger.info("number of early career researchers: %d", len(df))
   logger.info("number of early career researchers with orcid: %d", sum(pd.notnull(df['ORCID'])))
-  cached_get = create_str_cache(
-    get,
-    cache_dir=get_data_path('cache-http'),
-    suffix='.json')
   out_list = []
   pbar = tqdm(df.to_dict(orient='records'))
   for row in pbar:
@@ -137,12 +145,9 @@ def enrich_early_career_researchers(db):
     orcid = row['ORCID']
     if orcid is not None and len(orcid) > 0:
       # logger.debug("orcid: %s, %s, %s", orcid, first_name, last_name)
-      url = (
-        "http://api.crossref.org/works?filter=orcid:{}&rows=30&sort=published&order=asc"
-        .format(orcid)
-      )
+      url = get_crossref_works_by_orcid_url(orcid)
       # pbar.set_description("%40s" % shorten(url, width=40))
-      response = json.loads(cached_get(url))
+      response = json.loads(get_request_handler(url))
       items = [
         extract_manuscript(item)
         for item in response['message']['items']
@@ -150,12 +155,9 @@ def enrich_early_career_researchers(db):
       ]
     else:
       # logger.debug("name: %s, %s", row['first-name'], row['last-name'])
-      url = (
-        "http://api.crossref.org/works?query.author={}&rows=1000"
-        .format(full_name)
-      )
+      url = get_crossref_works_by_full_name_url(full_name)
       # pbar.set_description("%40s" % shorten(url, width=40))
-      response = json.loads(cached_get(url))
+      response = json.loads(get_request_handler(url))
       items = [
         extract_manuscript(item)
         for item in response['message']['items']
@@ -233,7 +235,16 @@ def enrich_early_career_researchers(db):
 def main():
   db = database.connect_configured_database()
 
-  enrich_early_career_researchers(db)
+  cached_get = create_str_cache(
+    get,
+    cache_dir=get_data_path('cache-http'),
+    suffix='.json'
+  )
+
+  enrich_early_career_researchers(
+    db,
+    get_request_handler=cached_get
+  )
 
   logging.getLogger(NAME).info('done')
 
