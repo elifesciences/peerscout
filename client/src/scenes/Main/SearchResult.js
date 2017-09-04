@@ -207,6 +207,22 @@ const ManuscriptRefLink = ({ manuscript }) => (
   </Link>
 );
 
+const ManuscriptRefLinkWithAlternatives = ({ manuscript }) => (
+  <InlineContainer>
+    <ManuscriptRefLink manuscript={ manuscript }/>
+    {
+      manuscript.alternatives && manuscript.alternatives.map(alternative =>
+        (
+          <InlineContainer>
+            <Text>{ ', ' }</Text>
+            <ManuscriptRefLink manuscript={ alternative }/>
+          </InlineContainer>
+        )
+      )
+    }
+  </InlineContainer>
+);
+
 const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectAreas }) => {
   return (
     <View
@@ -222,7 +238,7 @@ const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectArea
       <Text>{ ' ' }</Text>
       <Text>{ formatDate(manuscript['published_date']) }</Text>
       <Text>{ ' (' }</Text>
-      <ManuscriptRefLink manuscript={ manuscript }/>
+      <ManuscriptRefLinkWithAlternatives manuscript={ manuscript }/>
       <Text>{ ') ' }</Text>
       {
         scores.combined && (

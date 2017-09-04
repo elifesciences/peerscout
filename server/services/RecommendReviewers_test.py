@@ -178,6 +178,7 @@ def version_id(manuscript_no, version_no):
 MANUSCRIPT_ID1 = '12345'
 MANUSCRIPT_VERSION_ID1 = version_id(MANUSCRIPT_ID1, 1)
 MANUSCRIPT_TITLE1 = 'Manuscript Title1'
+MANUSCRIPT_ABSTRACT1 = 'Manuscript Abstract 1'
 
 MANUSCRIPT_ID2 = '22222'
 MANUSCRIPT_VERSION_ID2 = version_id(MANUSCRIPT_ID2, 2)
@@ -1132,6 +1133,40 @@ def test_matching_one_keyword_author_should_not_return_other_draft_papers(logger
     [MANUSCRIPT_ID1]
   )
 
+def _test_matching_one_keyword_author_should_return_papers_with_same_title_as_alternatives(logger):
+  datasets = dict(DATASETS)
+  datasets['person'] = pd.DataFrame([
+    PERSON1
+  ], columns=PERSON.columns)
+  datasets['manuscript_version'] = pd.DataFrame([
+    {
+      **MANUSCRIPT_VERSION1,
+      'title': MANUSCRIPT_TITLE1,
+      'abstract': MANUSCRIPT_ABSTRACT1
+    }, {
+      **MANUSCRIPT_VERSION2,
+      'title': MANUSCRIPT_TITLE1,
+      'abstract': None
+    }
+  ], columns=MANUSCRIPT_VERSION.columns)
+  datasets['manuscript_author'] = pd.DataFrame([
+    AUTHOR1, {
+      **AUTHOR1,
+      **MANUSCRIPT_ID_FIELDS2
+    }
+  ], columns=MANUSCRIPT_AUTHOR.columns)
+  datasets['manuscript_keyword'] = pd.DataFrame([
+    MANUSCRIPT_KEYWORD1
+  ], columns=MANUSCRIPT_KEYWORD.columns)
+  recommend_reviewers = create_recommend_reviewers(datasets)
+  result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
+  author_of_manuscripts = result['potential_reviewers'][0]['author_of_manuscripts']
+  author_of_manuscript_ids = [m[MANUSCRIPT_ID] for m in author_of_manuscripts]
+  logger.debug("author_of_manuscripts: %s", PP.pformat(author_of_manuscripts))
+  logger.debug("author_of_manuscript_ids: %s", author_of_manuscript_ids)
+  assert set(author_of_manuscript_ids) == set([
+    MANUSCRIPT_VERSION1_RESULT[MANUSCRIPT_ID]
+  ])
 
 def test_matching_one_keyword_should_return_previous_reviewer(logger):
   datasets = dict(DATASETS)
