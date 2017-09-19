@@ -109,6 +109,9 @@ class SearchHeader extends React.Component {
     }
     this.onAbstractFocus = () => this.setState({ abstractFocused: true });
     this.onAbstractBlur = () => this.setState({ abstractFocused: false });
+
+    this.allSubjectAreasAliasMap = this.buildAliasMap(props.allSubjectAreas);
+    this.allKeywordsAliasMap = this.buildAliasMap(props.allKeywords);
   }
 
   getInitialiseState(searchOptions) {
@@ -135,12 +138,14 @@ class SearchHeader extends React.Component {
 
   buildAliasMap(list) {
     const m = {};
-    list.forEach(s => {
-      const lower = s.toLowerCase();
-      if (lower !== s) {
-        m[lower] = s;
-      }
-    });
+    if (list) {
+      list.forEach(s => {
+        const lower = s.toLowerCase();
+        if (lower !== s) {
+          m[lower] = s;
+        }
+      });
+    }
     return m;
   }
 
