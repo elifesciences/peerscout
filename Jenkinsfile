@@ -1,4 +1,4 @@
-elifePipeline {
+elifePipeline({
     def commit
     stage 'Checkout', {
         checkout scm
@@ -29,4 +29,4 @@ elifePipeline {
             elifeGitMoveToBranch commit, 'approved'
         }
     }
-}
+}, 360)
