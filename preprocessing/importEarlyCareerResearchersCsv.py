@@ -203,20 +203,20 @@ def main():
 
   source = get_downloads_csv_path()
 
-  db = database.connect_configured_database()
+  with database.connect_managed_configured_database() as db:
 
-  process_file = lambda filename, stream:\
-    convert_csv_file_to(filename, stream, db)
+    process_file = lambda filename, stream:\
+      convert_csv_file_to(filename, stream, db)
 
-  convert_last_csv_files_in_directory(
-    source,
-    process_file,
-    prefix=ecr_prefix
-  )
+    convert_last_csv_files_in_directory(
+      source,
+      process_file,
+      prefix=ecr_prefix
+    )
 
-  db.commit()
+    db.commit()
 
-  get_logger().info("Done")
+    get_logger().info("Done")
 
 if __name__ == "__main__":
   from shared_proxy import configure_logging

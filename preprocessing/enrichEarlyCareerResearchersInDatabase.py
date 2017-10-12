@@ -233,20 +233,19 @@ def enrich_early_career_researchers(db, get_request_handler):
     db.commit()
 
 def main():
-  db = database.connect_configured_database()
+  with database.connect_managed_configured_database() as db:
+    cached_get = create_str_cache(
+      get,
+      cache_dir=get_data_path('cache-http'),
+      suffix='.json'
+    )
 
-  cached_get = create_str_cache(
-    get,
-    cache_dir=get_data_path('cache-http'),
-    suffix='.json'
-  )
+    enrich_early_career_researchers(
+      db,
+      get_request_handler=cached_get
+    )
 
-  enrich_early_career_researchers(
-    db,
-    get_request_handler=cached_get
-  )
-
-  logging.getLogger(NAME).info('done')
+    logging.getLogger(NAME).info('done')
 
 if __name__ == "__main__":
   from shared_proxy import configure_logging

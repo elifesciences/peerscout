@@ -85,9 +85,9 @@ def process_article_abstracts(db, n_topics=10):
 N_TOPICS = 20
 
 def main():
-  db = database.connect_configured_database()
+  with database.connect_managed_configured_database() as db:
 
-  process_article_abstracts(db)
+    process_article_abstracts(db)
 
 if __name__ == "__main__":
   from shared_proxy import configure_logging

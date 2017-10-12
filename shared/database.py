@@ -2,6 +2,7 @@ import json
 from json import JSONEncoder
 import datetime
 import logging
+from contextlib import contextmanager
 
 import pandas as pd
 import sqlalchemy
@@ -289,3 +290,9 @@ def connect_configured_database():
     user=db_user,
     password=db_password
   )
+
+@contextmanager
+def connect_managed_configured_database():
+  db = connect_configured_database()
+  yield db
+  db.close()
