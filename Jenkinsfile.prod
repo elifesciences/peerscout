@@ -11,4 +11,8 @@ elifePipeline {
         builderDeployRevision 'peerscout--prod', commit
         builderSmokeTests 'peerscout--prod', '/srv/peerscout'
     }
+
+    stage 'Prod update', {
+        builderCmd 'peerscout--prod', './update-data-and-reload.sh', '/srv/peerscout'
+    }
 }
