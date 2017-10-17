@@ -75,23 +75,22 @@ memory = Memory(cachedir=cache_dir, verbose=0)
 logger.debug("cache directory: %s", cache_dir)
 memory.clear(warn=False)
 
-db = database.connect_configured_database()
-
 def load_recommender():
-  manuscript_model = ManuscriptModel(
-    db,
-    valid_decisions=valid_decisions,
-    valid_manuscript_types=valid_manuscript_types,
-    published_decisions=published_decisions,
-    published_manuscript_types=published_manuscript_types
-  )
-  similarity_model = load_similarity_model_from_database(
-    db, manuscript_model=manuscript_model
-  )
-  return RecommendReviewers(
-    db, manuscript_model=manuscript_model, similarity_model=similarity_model,
-    filter_by_subject_area_enabled=filter_by_subject_area_enabled
-  )
+  with database.connect_managed_configured_database() as db:
+    manuscript_model = ManuscriptModel(
+      db,
+      valid_decisions=valid_decisions,
+      valid_manuscript_types=valid_manuscript_types,
+      published_decisions=published_decisions,
+      published_manuscript_types=published_manuscript_types
+    )
+    similarity_model = load_similarity_model_from_database(
+      db, manuscript_model=manuscript_model
+    )
+    return RecommendReviewers(
+      db, manuscript_model=manuscript_model, similarity_model=similarity_model,
+      filter_by_subject_area_enabled=filter_by_subject_area_enabled
+    )
 
 recommend_reviewers = load_recommender()
 

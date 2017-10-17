@@ -95,9 +95,9 @@ def process_article_abstracts(db, vec_size=100, n_epochs=10):
     db.commit()
 
 def main():
-  db = database.connect_configured_database()
+  with database.connect_managed_configured_database() as db:
 
-  process_article_abstracts(db)
+    process_article_abstracts(db)
 
 if __name__ == "__main__":
   from shared_proxy import configure_logging

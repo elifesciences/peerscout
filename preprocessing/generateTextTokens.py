@@ -60,9 +60,9 @@ def main():
       for s in texts
     ])
 
-  db = database.connect_configured_database()
+  with database.connect_managed_configured_database() as db:
 
-  process_manuscript_versions(db, extract_keywords_from_list)
+    process_manuscript_versions(db, extract_keywords_from_list)
 
 if __name__ == "__main__":
   from shared_proxy import configure_logging

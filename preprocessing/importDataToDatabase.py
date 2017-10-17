@@ -669,28 +669,28 @@ def main():
 
   field_mapping_by_table_name = default_field_mapping_by_table_name
 
-  db = database.connect_configured_database()
+  with database.connect_managed_configured_database() as db:
 
-  # keep the early career researcher status
-  person_table = db['person']
-  early_career_researcher_person_ids = set(
-    x[0]
-    for x in person_table.session.query(person_table.table.person_id).filter(
-      person_table.table.is_early_career_researcher == True # pylint: disable=C0121
-    ).all()
-  )
-
-  process_zip = lambda filename, stream:\
-    convert_zip_file(
-      filename, stream, db, field_mapping_by_table_name,
-      early_career_researcher_person_ids
+    # keep the early career researcher status
+    person_table = db['person']
+    early_career_researcher_person_ids = set(
+      x[0]
+      for x in person_table.session.query(person_table.table.person_id).filter(
+        person_table.table.is_early_career_researcher == True # pylint: disable=C0121
+      ).all()
     )
 
-  source = get_downloads_xml_path()
+    process_zip = lambda filename, stream:\
+      convert_zip_file(
+        filename, stream, db, field_mapping_by_table_name,
+        early_career_researcher_person_ids
+      )
 
-  process_files_in_directory_or_zip(source, process_zip, ext=".zip")
+    source = get_downloads_xml_path()
 
-  logging.getLogger(NAME).info("done")
+    process_files_in_directory_or_zip(source, process_zip, ext=".zip")
+
+    logging.getLogger(NAME).info("done")
 
 if __name__ == "__main__":
   from shared_proxy import configure_logging
