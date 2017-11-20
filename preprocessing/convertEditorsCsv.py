@@ -68,6 +68,6 @@ def main():
 
 if __name__ == "__main__":
   from shared_proxy import configure_logging
-  configure_logging()
+  configure_logging('update')
 
   main()

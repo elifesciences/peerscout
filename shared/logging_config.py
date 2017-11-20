@@ -2,7 +2,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 import os
 
-def configure_logging():
+def configure_logging(name):
   logging.getLogger().setLevel(logging.DEBUG)
 
   console_handler = logging.StreamHandler()
@@ -11,7 +11,7 @@ def configure_logging():
 
   log_filename = os.path.abspath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    '../logs/debug.log'
+    '../logs/%s.log' % name
   ))
   os.makedirs(os.path.dirname(log_filename), exist_ok=True)
 
