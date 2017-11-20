@@ -3,6 +3,7 @@
 /client/.inject-html
 /.data
 /venv
+/.vscode
 /app.cfg
 /logs
 
