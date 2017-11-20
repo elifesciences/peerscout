@@ -65,7 +65,7 @@ valid_emails_filename = config.get('auth', 'valid_emails', fallback=None)
 valid_email_domains = parse_valid_domains(config.get('auth', 'valid_email_domains', fallback=''))
 allowed_ips = parse_allowed_ips(config.get('auth', 'allowed_ips', fallback='127.0.0.1'))
 
-configure_logging()
+configure_logging('server')
 
 logging.getLogger('summa.preprocessing.cleaner').setLevel(logging.WARNING)
 
