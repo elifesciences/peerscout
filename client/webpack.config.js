@@ -88,5 +88,8 @@ module.exports = {
       path.resolve(__dirname, 'src')
     ],
     extensions: ['', '.js', '.jsx', '.json'],
+    alias: {
+      'd3': 'd3/build/d3.js'
+    }
   },
 };
