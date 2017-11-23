@@ -114,7 +114,7 @@ if auth0_domain:
   wrap_with_auth = flask_auth0.wrap_request_handler
 else:
   logging.info('not enabling authentication, no Auth0 domain configured')
-  auth0 = None
+  flask_auth0 = None
   wrap_with_auth = lambda f: f
 
 def update_auth():
