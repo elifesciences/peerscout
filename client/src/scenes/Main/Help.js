@@ -24,6 +24,14 @@ const styles = {
     color: '#ccf',
     textDecoration: 'none'
   },
+  tandcLink: {
+    float: 'right',
+    right: 5,
+    marginLeft: 5,
+    marginRight: 5,
+    color: '#ccf',
+    textDecoration: 'none'
+  },
   closeButton: {
     container: {
       color: '#fff',
@@ -95,6 +103,11 @@ const HelpContents = props => (
     <View style={ styles.paragraph }>
       <Text>If you have any questions, please email</Text>
       <EmailLink email="editorial@elifesciences.org"/>
+      <Link style={ styles.tandcLink } href="https://elifesciences.org/terms" target="_blank">
+        <FontAwesomeIcon name="gavel"/>
+        { ' ' }
+        Terms and policy
+      </Link>
     </View>
   </View>
 );
