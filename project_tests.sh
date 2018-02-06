@@ -3,11 +3,7 @@ set -e # everything must succeed.
 
 source venv/bin/activate
 
-cd server
 pytest
 
-cd ../preprocessing
-pytest
-
-cd ../client
+cd client
 npm test

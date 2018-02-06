@@ -70,8 +70,7 @@ Copy `app-example.cfg` to `app.cfg` and make the necessary configuration changes
 ## Create / Update Database Schema
 
 ```bash
-cd preprocessing
-python migrateSchema.py
+python -m peerscout.preprocessing.migrateSchema
 ```
 
 ## Populate Database
@@ -79,8 +78,7 @@ python migrateSchema.py
 This will download updates from AWS and populate the database with it. This may take a while. It will also download data from Crossref, which might fail, which is 'okay'.
 
 ```bash
-cd preprocessing
-python updateDataAndReload.py
+python -m peerscout.preprocessing.updateDataAndReload
 ```
 
 ## Compile Client
@@ -94,8 +92,7 @@ npm run bundle
 # Start Server
 
 ```bash
-cd server
-python server.py
+python -m peerscout.server
 ```
 
 Then go to [http://localhost:8080/](http://localhost:8080/). (If you are getting a 'Not Found' error you may not have compiled the client)
@@ -124,12 +121,6 @@ Then server will be availabe under [http://localhost:8081/](http://localhost:808
 ## Python Tests
 
 ```bash
-cd preprocessing
-pytest
-```
-
-```bash
-cd server
 pytest
 ```
 
