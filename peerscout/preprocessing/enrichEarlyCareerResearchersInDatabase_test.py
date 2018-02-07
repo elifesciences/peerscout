@@ -121,6 +121,8 @@ class TestEnrichEarlyCareerResearchers(object):
       db.person_membership.create_list([
         ORCID_MEMBERSHIP_1
       ])
+      db.commit()
+
       enrich_early_career_researchers(db, MapRequestHandler(response_by_url_map))
 
       df = db.manuscript.read_frame().reset_index()
@@ -145,6 +147,8 @@ class TestEnrichEarlyCareerResearchers(object):
       db.person.create_list([
         ECR_1
       ])
+      db.commit()
+
       # not adding ORCID membership, this will trigger search by name instead
       enrich_early_career_researchers(db, MapRequestHandler(response_by_url_map))
 
@@ -175,6 +179,8 @@ class TestEnrichEarlyCareerResearchers(object):
       db.person_membership.create_list([
         ORCID_MEMBERSHIP_1
       ])
+      db.commit()
+
       enrich_early_career_researchers(db, MapRequestHandler(response_by_url_map))
 
       df = db.manuscript.read_frame().reset_index()
@@ -204,6 +210,8 @@ class TestEnrichEarlyCareerResearchers(object):
       db.person_membership.create_list([
         ORCID_MEMBERSHIP_1
       ])
+      db.commit()
+
       enrich_early_career_researchers(db, MapRequestHandler(response_by_url_map))
 
       df = db.manuscript.read_frame().reset_index()
@@ -235,6 +243,8 @@ class TestEnrichEarlyCareerResearchers(object):
       db.person_membership.create_list([
         ORCID_MEMBERSHIP_1
       ])
+      db.commit()
+
       enrich_early_career_researchers(db, MapRequestHandler(response_by_url_map))
 
       df = db.manuscript.read_frame().reset_index()
