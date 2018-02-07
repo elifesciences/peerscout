@@ -46,7 +46,7 @@ class Doc2VecTransformer(object):
     ]
 
     model = gensim.models.Doc2Vec(
-      size=self.vec_size,
+      vector_size=self.vec_size,
       window=self.window,
       min_count=self.min_count,
       workers=self.workers,
@@ -69,4 +69,6 @@ class Doc2VecTransformer(object):
       model.min_alpha = model.alpha # fix the learning rate, no deca
       current_epoch += 1
 
-    return model.docvecs
+    model.delete_temporary_training_data(keep_doctags_vectors=True, keep_inference=True)
+
+    return [model.docvecs[i] for i in range(len(sentences))]
