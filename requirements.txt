@@ -3,7 +3,7 @@ numpy==1.13.1
 pandas==0.19.2
 requests==2.18.3
 tqdm==4.11.2
-bokeh==0.12.4
+bokeh==0.12.13
 boto3==1.4.4
 psycopg2==2.7.1
 SQLAlchemy==1.1.7
