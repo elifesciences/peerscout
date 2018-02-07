@@ -7,7 +7,7 @@ bokeh==0.12.13
 boto3==1.5.24
 psycopg2==2.7.1
 SQLAlchemy==1.1.7
-Flask==0.12
+Flask==0.12.2
 Flask-Cors==3.0.2
 gensim==3.3.0
 pyLDAvis==2.1.0
