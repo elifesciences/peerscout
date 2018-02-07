@@ -388,6 +388,7 @@ def create_recommend_reviewers(datasets, filter_by_subject_area_enabled=False):
       } for row in datasets[table_name].to_dict(orient='records')]
       logger.debug("objs %s:\n%s", table_name, objs)
       db[table_name].create_list(objs)
+  db.commit()
 
   logger.debug("view manuscript_person_review_times:\n%s",
     db.manuscript_person_review_times.read_frame())
