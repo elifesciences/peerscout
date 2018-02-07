@@ -27,7 +27,7 @@ NAME = 'importDataToDatabase'
 # The data version is similar to the schema version,
 # but rather means that the way the data should be interpreted has changed
 # (and therefore previously processed files may need to be processed again)
-DATA_VERSION = 5
+DATA_VERSION = 6
 
 def auto_convert(name, value):
   if name.endswith('-date'):

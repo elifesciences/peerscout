@@ -15,6 +15,6 @@ pytest==3.0.5
 pytest-watch==4.1.0
 scikit-learn==0.18.1
 scipy==0.19.1
-spacy==1.2.0
+spacy==2.0.7
 bhtsne==0.1.9
 newrelic==2.90.0.75
