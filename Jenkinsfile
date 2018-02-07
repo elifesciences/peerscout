@@ -12,7 +12,7 @@ elifePipeline({
             // remove when builderProjectTests is in, as smoke tests are already run by builderProjectTests itself
             builderSmokeTests 'peerscout--ci', '/srv/peerscout'
 
-            //builderProjectTests 'peerscout--ci', '/srv/peerscout'
+            builderProjectTests 'peerscout--ci', '/srv/peerscout'
         }
     }
 
