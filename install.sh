@@ -21,6 +21,6 @@ do
   pip install $line
 done
 
-python -m spacy.en.download all
+python -m spacy download en
 
 echo "[✓] install.sh"
