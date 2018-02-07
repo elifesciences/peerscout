@@ -10,7 +10,7 @@ SQLAlchemy==1.2.2
 Flask==0.12.2
 Flask-Cors==3.0.3
 gensim==3.3.0
-pyLDAvis==2.1.0
+pyLDAvis==2.1.1
 pytest==3.0.5
 pytest-watch==4.1.0
 scikit-learn==0.18.1
