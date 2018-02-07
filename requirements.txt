@@ -1,5 +1,5 @@
 Cython==0.27.3
-numpy==1.13.1
+numpy==1.14.0
 pandas==0.19.2
 requests==2.18.3
 tqdm==4.11.2
