@@ -9,7 +9,7 @@ elifePipeline {
         elifeDeploySlackNotification 'peerscout', 'prod'
         elifeGitMoveToBranch commit, 'master'
         builderDeployRevision 'peerscout--prod', commit
-        builderProjectTests 'peerscout--prod', '/srv/peerscout'
+        builderSmokeTests 'peerscout--prod', '/srv/peerscout'
     }
 
     stage 'Prod update', {
