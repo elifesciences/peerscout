@@ -16,9 +16,15 @@ from .preprocessingUtils import get_data_path
 
 from ..shared.database import connect_managed_configured_database
 
-NAME = 'enrichEarlyCareerResearchersInDatabase'
-
 PERSON_ID = 'person_id'
+
+def get_logger():
+  return logging.getLogger(__name__)
+
+class Columns(object):
+  FIRST_NAME = 'first_name'
+  LAST_NAME = 'last_name'
+  ORCID = 'ORCID'
 
 def get(url):
   response = requests.get(url)
@@ -29,7 +35,7 @@ def create_cache(f, cache_dir, serializer, deserializer, suffix=''):
   cache_path = Path(cache_dir)
   cache_path.mkdir(exist_ok=True, parents=True)
   clean_pattern = re.compile(r'[^\w]')
-  logger = logging.getLogger(NAME)
+  logger = get_logger()
 
   def clean_fn(fn):
     return clean_pattern.sub('_', fn)
@@ -107,12 +113,20 @@ def get_crossref_works_by_full_name_url(full_name):
     .format(full_name)
   )
 
-def enrich_early_career_researchers(db, get_request_handler):
-  logger = logging.getLogger(NAME)
+def clean_person_names(person):
+  return {
+    **person,
+    Columns.FIRST_NAME: unescape_and_strip_tags_if_not_none(person[Columns.FIRST_NAME]).strip(),
+    Columns.LAST_NAME: unescape_and_strip_tags_if_not_none(person[Columns.LAST_NAME]).strip()
+  }
 
+def clean_all_person_names(person_list):
+  return [clean_person_names(p) for p in person_list]
+
+def get_early_career_researchers(db):
   person_table = db.person
   person_membership_table = db.person_membership
-  df = pd.DataFrame(
+  return clean_all_person_names(pd.DataFrame(
     db.session.query(
       person_table.table.person_id,
       person_table.table.first_name,
@@ -130,44 +144,60 @@ def enrich_early_career_researchers(db, get_request_handler):
         )
       )
     ).all(),
-    columns=[PERSON_ID, 'first_name', 'last_name', 'ORCID']
-  )
-  logger.info("number of early career researchers: %d", len(df))
-  logger.info("number of early career researchers with orcid: %d", sum(pd.notnull(df['ORCID'])))
-  out_list = []
-  pbar = tqdm(df.to_dict(orient='records'))
-  for row in pbar:
-    person_id = row[PERSON_ID]
-    first_name = unescape_and_strip_tags_if_not_none(row['first_name']).strip()
-    last_name = unescape_and_strip_tags_if_not_none(row['last_name']).strip()
-    full_name = first_name + ' ' + last_name
-    pbar.set_description("%40s" % shorten(full_name, width=40))
-    orcid = row['ORCID']
-    if orcid is not None and len(orcid) > 0:
-      # logger.debug("orcid: %s, %s, %s", orcid, first_name, last_name)
-      url = get_crossref_works_by_orcid_url(orcid)
-      # pbar.set_description("%40s" % shorten(url, width=40))
-      response = json.loads(get_request_handler(url))
-      items = [
-        extract_manuscript(item)
-        for item in response['message']['items']
-        if contains_author_with_orcid(item, orcid)
-      ]
-    else:
-      # logger.debug("name: %s, %s", row['first-name'], row['last-name'])
-      url = get_crossref_works_by_full_name_url(full_name)
-      # pbar.set_description("%40s" % shorten(url, width=40))
-      response = json.loads(get_request_handler(url))
-      items = [
-        extract_manuscript(item)
-        for item in response['message']['items']
-        if contains_author_with_name(item, first_name, last_name)
-      ]
-    for item in items:
-      out_list.append({
-        **item,
+    columns=[PERSON_ID, Columns.FIRST_NAME, Columns.LAST_NAME, Columns.ORCID]
+  ).to_dict(orient='records'))
+
+def get_person_full_name(person):
+  return ' '.join([person[Columns.FIRST_NAME], person[Columns.LAST_NAME]])
+
+def get_persons_with_orcid(person_list):
+  return [p for p in person_list if p[Columns.ORCID]]
+
+def update_progress_with_person(pbar, person):
+  pbar.set_description("%40s" % shorten(get_person_full_name(person), width=40))
+
+def get_manuscripts_for_person(person, get_request_handler):
+  orcid = person[Columns.ORCID]
+  if orcid:
+    url = get_crossref_works_by_orcid_url(orcid)
+    response = json.loads(get_request_handler(url))
+    return [
+      extract_manuscript(item)
+      for item in response['message']['items']
+      if contains_author_with_orcid(item, orcid)
+    ]
+  else:
+    first_name = person[Columns.FIRST_NAME]
+    last_name = person[Columns.LAST_NAME]
+    full_name = get_person_full_name(person)
+    url = get_crossref_works_by_full_name_url(full_name)
+    response = json.loads(get_request_handler(url))
+    return [
+      extract_manuscript(item)
+      for item in response['message']['items']
+      if contains_author_with_name(item, first_name, last_name)
+    ]
+
+def get_person_with_manuscripts_list(person_list, get_request_handler):
+  with tqdm(list(person_list), leave=False) as pbar:
+    for person in pbar:
+      update_progress_with_person(pbar, person)
+      manuscripts = get_manuscripts_for_person(person, get_request_handler)
+      yield person, manuscripts
+
+def flatten_person_with_manuscripts_list(person_with_manuscripts_list):
+  for person, manuscripts in person_with_manuscripts_list:
+    person_id = person[PERSON_ID]
+    for m in manuscripts:
+      yield {
+        **m,
         PERSON_ID: person_id
-      })
+      }
+
+def update_database_with_person_with_manuscripts_list(db, person_with_manuscripts_list):
+  out_list = list(flatten_person_with_manuscripts_list(
+    person_with_manuscripts_list
+  ))
 
   crossref_dois = set([o.get('doi') for o in out_list])
 
@@ -217,6 +247,7 @@ def enrich_early_career_researchers(db, get_request_handler):
     'person_id': m.get('person_id')
   } for m in new_manuscript_info])
 
+  logger = get_logger()
   logger.debug("crossref_dois: %d", len(crossref_dois))
   logger.debug("existing_dois: %d", len(existing_dois_lower))
   logger.debug("new_dois: %d", len(new_dois))
@@ -232,6 +263,21 @@ def enrich_early_career_researchers(db, get_request_handler):
     db.manuscript_author.create_list(new_manuscript_authors)
     db.commit()
 
+def enrich_early_career_researchers(db, get_request_handler):
+  logger = get_logger()
+
+  person_list = get_early_career_researchers(db)
+  logger.info("number of early career researchers: %d", len(person_list))
+  logger.info(
+    "number of early career researchers with orcid: %d",
+    len(get_persons_with_orcid(person_list))
+  )
+
+  person_with_manuscripts_list = get_person_with_manuscripts_list(
+    person_list, get_request_handler
+  )
+  update_database_with_person_with_manuscripts_list(db, person_with_manuscripts_list)
+
 def main():
   with connect_managed_configured_database() as db:
     cached_get = create_str_cache(
@@ -245,7 +291,7 @@ def main():
       get_request_handler=cached_get
     )
 
-    logging.getLogger(NAME).info('done')
+    get_logger().info('done')
 
 if __name__ == "__main__":
   from ..shared.logging_config import configure_logging
