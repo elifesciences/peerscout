@@ -531,7 +531,7 @@ class RecommendReviewers(object):
         df = self._filter_manuscripts_by_subject_areas(df, subject_areas)
     else:
       if len(subject_areas) > 0:
-        df = self._find_manuscripts_by_subject_areas(subject_areas)
+        df = self._find_manuscripts_by_subject_areas(subject_areas).copy()
       else:
         df = self._empty_manuscripts()
       # add matching keyword count column
