@@ -5,6 +5,10 @@ import logging
 
 import pandas as pd
 
+from peerscout.utils.pandas import (
+  groupby_agg_droplevel
+)
+
 from .utils import unescape_and_strip_tags, filter_by
 
 from .collection_utils import (
@@ -66,16 +70,6 @@ def clean_result(result):
     return [clean_result(x) for x in result]
   else:
     return remove_none(applymap_dict(result, nat_to_none))
-
-def droplevel_keep_non_blanks(columns):
-  return [c[-1] if c[-1] != '' else c[0] for c in columns]
-
-def groupby_agg_droplevel(df, groupby_columns, agg_param):
-  # see https://github.com/pandas-dev/pandas/issues/8870
-  df = df.groupby(groupby_columns, as_index=False).agg(agg_param)
-  # magic droplevel that retains the main level if sub level label is blank
-  df.columns = droplevel_keep_non_blanks(df.columns)
-  return df
 
 def manuscript_number_to_no(x):
   return x.split('-')[-1]
@@ -537,7 +531,7 @@ class RecommendReviewers(object):
         df = self._filter_manuscripts_by_subject_areas(df, subject_areas)
     else:
       if len(subject_areas) > 0:
-        df = self._find_manuscripts_by_subject_areas(subject_areas)
+        df = self._find_manuscripts_by_subject_areas(subject_areas).copy()
       else:
         df = self._empty_manuscripts()
       # add matching keyword count column

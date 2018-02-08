@@ -15,7 +15,7 @@ from sqlalchemy.dialects import postgresql
 
 Base = declarative_base()
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 
 class SchemaVersion(Base):
   __tablename__ = "schema_version"
