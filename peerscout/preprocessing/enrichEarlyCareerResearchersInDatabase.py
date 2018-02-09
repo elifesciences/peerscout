@@ -12,6 +12,9 @@ from tqdm import tqdm
 import sqlalchemy
 from ratelimit import rate_limited
 
+from peerscout.utils.requests import configure_session_retry
+from peerscout.utils.threading import lazy_thread_local
+
 from .convertUtils import unescape_and_strip_tags_if_not_none, flatten
 
 from .preprocessingUtils import get_data_path
@@ -26,6 +29,10 @@ DEFAULT_MAX_WORKERS = 10
 DEFAULT_RATE_LIMIT_COUNT = 50
 DEFAULT_RATE_LIMIT_INTERVAL_SEC = 1
 
+DEFAULT_MAX_RETRY = 10
+
+DEFAULT_RETRY_ON_STATUS_CODES = [429, 500, 502, 503, 504]
+
 def get_logger():
   return logging.getLogger(__name__)
 
@@ -34,9 +41,9 @@ class Columns(object):
   LAST_NAME = 'last_name'
   ORCID = 'ORCID'
 
-def get(url):
+def get(url, session=None):
   get_logger().debug('requesting: %s', url)
-  response = requests.get(url)
+  response = (session or requests).get(url)
   get_logger().debug('response received: %s (%s)', url, response.status_code)
   response.raise_for_status()
   return response.text
@@ -294,24 +301,38 @@ def enrich_early_career_researchers(db, get_request_handler, max_workers=1):
   update_database_with_person_with_manuscripts_list(db, person_with_manuscripts_list)
 
 def get_configured_max_workers(app_config):
-  return int(app_config.get('pipeline', 'max_workers', fallback=DEFAULT_MAX_WORKERS))
+  return app_config.getint('pipeline', 'max_workers', fallback=DEFAULT_MAX_WORKERS)
 
 def get_configured_rate_limit_and_interval_sec(app_config):
   return (
-    int(app_config.get(
+    app_config.getint(
       'crossref', 'rate_limit_count', fallback=DEFAULT_RATE_LIMIT_COUNT
-    )),
-    int(app_config.get(
+    ),
+    app_config.getint(
       'crossref', 'rate_limit_interval_sec', fallback=DEFAULT_RATE_LIMIT_INTERVAL_SEC
-    ))
+    )
   )
 
-def main():
-  app_config = get_app_config()
+def get_configured_max_retries(app_config):
+  return app_config.getint('crossref', 'max_retries', fallback=DEFAULT_MAX_RETRY)
 
-  max_workers = get_configured_max_workers(app_config)
-  get_logger().info('using max_workers: %d', max_workers)
+def parse_int_list(s, default_value=None):
+  if s:
+    return [int(x.strip()) for x in s.split(',')]
+  return default_value
 
+def get_configured_retry_on_status_codes(app_config):
+  return parse_int_list(
+    app_config.get('crossref', 'retry_on_status_codes', fallback=None),
+    DEFAULT_RETRY_ON_STATUS_CODES
+  )
+
+def get_session_with_retry(**kwargs):
+  session = requests.Session()
+  configure_session_retry(session, **kwargs)
+  return session
+
+def decorate_get_request_handler(get_request_handler, app_config, cache_dir=None):
   # Note: could also get this from the Crossref API itself
   #   (via X-Rate-Limit-Limit and X-Rate-Limit-Interval)
   rate_limit_count, rate_limit_interval_sec = (
@@ -319,18 +340,46 @@ def main():
   )
   get_logger().info('using rate limit: %d / %ds', rate_limit_count, rate_limit_interval_sec)
 
-  rate_limited_get = rate_limited(rate_limit_count, rate_limit_interval_sec)(get)
+  max_retries = get_configured_max_retries(app_config)
+  retry_on_status_codes = get_configured_retry_on_status_codes(app_config)
+  get_logger().info(
+    'using max_retries: %d (status codes: %s)', max_retries, retry_on_status_codes
+  )
 
-  with connect_managed_configured_database() as db:
-    cached_get = create_str_cache(
+  get_session = lazy_thread_local(lambda: get_session_with_retry(
+    max_retries=max_retries,
+    status_forcelist=retry_on_status_codes
+  ))
+  get_with_retry = lambda url: get_request_handler(url, session=get_session())
+  rate_limited_get = rate_limited(rate_limit_count, rate_limit_interval_sec)(
+    get_with_retry
+  )
+
+  if cache_dir:
+    return create_str_cache(
       rate_limited_get,
-      cache_dir=get_data_path('cache-http'),
+      cache_dir=cache_dir,
       suffix='.json'
     )
+  else:
+    return rate_limited_get
 
+def main():
+  app_config = get_app_config()
+
+  max_workers = get_configured_max_workers(app_config)
+  get_logger().info('using max_workers: %d', max_workers)
+
+  get_request_handler = decorate_get_request_handler(
+    get,
+    app_config,
+    cache_dir=get_data_path('cache-http'),
+  )
+
+  with connect_managed_configured_database() as db:
     enrich_early_career_researchers(
       db,
-      get_request_handler=cached_get,
+      get_request_handler=get_request_handler,
       max_workers=max_workers
     )
 
