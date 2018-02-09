@@ -1,8 +1,9 @@
 import re
 from pathlib import Path
 import json
-from textwrap import shorten
 import logging
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 
 import dateutil
 import requests
@@ -15,8 +16,11 @@ from .convertUtils import unescape_and_strip_tags_if_not_none, flatten
 from .preprocessingUtils import get_data_path
 
 from ..shared.database import connect_managed_configured_database
+from ..shared.app_config import get_app_config
 
 PERSON_ID = 'person_id'
+
+DEFAULT_MAX_WORKERS = 10
 
 def get_logger():
   return logging.getLogger(__name__)
@@ -27,7 +31,9 @@ class Columns(object):
   ORCID = 'ORCID'
 
 def get(url):
+  get_logger().debug('requesting: %s', url)
   response = requests.get(url)
+  get_logger().debug('response received: %s (%s)', url, response.status_code)
   response.raise_for_status()
   return response.text
 
@@ -153,9 +159,6 @@ def get_person_full_name(person):
 def get_persons_with_orcid(person_list):
   return [p for p in person_list if p[Columns.ORCID]]
 
-def update_progress_with_person(pbar, person):
-  pbar.set_description("%40s" % shorten(get_person_full_name(person), width=40))
-
 def get_manuscripts_for_person(person, get_request_handler):
   orcid = person[Columns.ORCID]
   if orcid:
@@ -178,12 +181,20 @@ def get_manuscripts_for_person(person, get_request_handler):
       if contains_author_with_name(item, first_name, last_name)
     ]
 
-def get_person_with_manuscripts_list(person_list, get_request_handler):
-  with tqdm(list(person_list), leave=False) as pbar:
-    for person in pbar:
-      update_progress_with_person(pbar, person)
-      manuscripts = get_manuscripts_for_person(person, get_request_handler)
-      yield person, manuscripts
+def tqdm_parallel_map_unordered(executor, fn, iterable, **kwargs):
+  futures_list = [executor.submit(fn, item) for item in iterable]
+  yield from (
+    f.result()
+    for f in tqdm(concurrent.futures.as_completed(futures_list), total=len(futures_list), **kwargs)
+  )
+
+def get_person_with_manuscripts_list(person_list, get_request_handler, max_workers=1):
+  with ThreadPoolExecutor(max_workers=max_workers) as executor:
+    yield from tqdm_parallel_map_unordered(
+      executor,
+      lambda person: (person, get_manuscripts_for_person(person, get_request_handler)),
+      person_list
+    )
 
 def flatten_person_with_manuscripts_list(person_with_manuscripts_list):
   for person, manuscripts in person_with_manuscripts_list:
@@ -263,7 +274,7 @@ def update_database_with_person_with_manuscripts_list(db, person_with_manuscript
     db.manuscript_author.create_list(new_manuscript_authors)
     db.commit()
 
-def enrich_early_career_researchers(db, get_request_handler):
+def enrich_early_career_researchers(db, get_request_handler, max_workers=1):
   logger = get_logger()
 
   person_list = get_early_career_researchers(db)
@@ -274,11 +285,18 @@ def enrich_early_career_researchers(db, get_request_handler):
   )
 
   person_with_manuscripts_list = get_person_with_manuscripts_list(
-    person_list, get_request_handler
+    person_list, get_request_handler, max_workers=max_workers
   )
   update_database_with_person_with_manuscripts_list(db, person_with_manuscripts_list)
 
+def get_configured_max_workers():
+  app_config = get_app_config()
+  return int(app_config.get('pipeline', 'max_workers', fallback=DEFAULT_MAX_WORKERS))
+
 def main():
+  max_workers = get_configured_max_workers()
+  get_logger().info('using max_workers: %d', max_workers)
+
   with connect_managed_configured_database() as db:
     cached_get = create_str_cache(
       get,
@@ -288,7 +306,8 @@ def main():
 
     enrich_early_career_researchers(
       db,
-      get_request_handler=cached_get
+      get_request_handler=cached_get,
+      max_workers=max_workers
     )
 
     get_logger().info('done')
