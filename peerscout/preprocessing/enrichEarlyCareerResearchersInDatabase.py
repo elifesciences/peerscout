@@ -10,6 +10,7 @@ import requests
 import pandas as pd
 from tqdm import tqdm
 import sqlalchemy
+from ratelimit import rate_limited
 
 from .convertUtils import unescape_and_strip_tags_if_not_none, flatten
 
@@ -21,6 +22,9 @@ from ..shared.app_config import get_app_config
 PERSON_ID = 'person_id'
 
 DEFAULT_MAX_WORKERS = 10
+
+DEFAULT_RATE_LIMIT_COUNT = 50
+DEFAULT_RATE_LIMIT_INTERVAL_SEC = 1
 
 def get_logger():
   return logging.getLogger(__name__)
@@ -289,17 +293,37 @@ def enrich_early_career_researchers(db, get_request_handler, max_workers=1):
   )
   update_database_with_person_with_manuscripts_list(db, person_with_manuscripts_list)
 
-def get_configured_max_workers():
-  app_config = get_app_config()
+def get_configured_max_workers(app_config):
   return int(app_config.get('pipeline', 'max_workers', fallback=DEFAULT_MAX_WORKERS))
 
+def get_configured_rate_limit_and_interval_sec(app_config):
+  return (
+    int(app_config.get(
+      'crossref', 'rate_limit_count', fallback=DEFAULT_RATE_LIMIT_COUNT
+    )),
+    int(app_config.get(
+      'crossref', 'rate_limit_interval_sec', fallback=DEFAULT_RATE_LIMIT_INTERVAL_SEC
+    ))
+  )
+
 def main():
-  max_workers = get_configured_max_workers()
+  app_config = get_app_config()
+
+  max_workers = get_configured_max_workers(app_config)
   get_logger().info('using max_workers: %d', max_workers)
+
+  # Note: could also get this from the Crossref API itself
+  #   (via X-Rate-Limit-Limit and X-Rate-Limit-Interval)
+  rate_limit_count, rate_limit_interval_sec = (
+    get_configured_rate_limit_and_interval_sec(app_config)
+  )
+  get_logger().info('using rate limit: %d / %ds', rate_limit_count, rate_limit_interval_sec)
+
+  rate_limited_get = rate_limited(rate_limit_count, rate_limit_interval_sec)(get)
 
   with connect_managed_configured_database() as db:
     cached_get = create_str_cache(
-      get,
+      rate_limited_get,
       cache_dir=get_data_path('cache-http'),
       suffix='.json'
     )
