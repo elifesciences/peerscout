@@ -4,6 +4,7 @@
 /.data
 /venv
 /.vscode
+/.pytest_cache
 /app.cfg
 /logs
 
