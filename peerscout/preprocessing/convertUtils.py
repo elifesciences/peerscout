@@ -93,6 +93,11 @@ class TableOutput(object):
     self.rows_by_key = {}
     self.logger = logging.getLogger(NAME)
 
+  def __repr__(self):
+    return '%s(name=%s, columns=%s, n_rows=%d)' % (
+      type(self).__name__, self.name, self.columns, len(self.rows)
+    )
+
   def append(self, props):
     for k, v in props.items():
       if k not in self.columns:

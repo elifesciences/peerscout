@@ -22,12 +22,13 @@ from .dataNormalisationUtils import normalise_subject_area
 
 from ..shared.database import connect_managed_configured_database
 
-NAME = 'importDataToDatabase'
-
 # The data version is similar to the schema version,
 # but rather means that the way the data should be interpreted has changed
 # (and therefore previously processed files may need to be processed again)
 DATA_VERSION = 8
+
+def get_logger():
+  return logging.getLogger(__name__)
 
 def auto_convert(name, value):
   if name.endswith('-date'):
@@ -120,7 +121,7 @@ person_copy_paths = {
   'person_dates_not_available': ['dates-not-available/dna'],
   'person-addresses': ['addresses/address'],
   'person-notes': ['notes/note'],
-  'person-roles': ['roles/role'],
+  'person_role': ['roles/role'],
   'person_membership': ['memberships/membership']
 }
 
@@ -150,6 +151,10 @@ default_field_mapping_by_table_name = {
     'person_id': 'person-id',
     'member_type': 'member-type',
     'member_id': 'member-id'
+  },
+  'person_role': {
+    'person_id': 'person-id',
+    'role': 'role-type',
   },
   'manuscript': {
     'manuscript_id': 'manuscript-no',
@@ -561,7 +566,7 @@ def convert_zip_file(
   zip_filename, zip_stream, db, field_mapping_by_table_name,
   early_career_researcher_person_ids, export_emails=False):
 
-  logger = logging.getLogger(NAME)
+  logger = get_logger()
 
   processed = db.import_processed.get(zip_filename)
   if processed is not None and processed.version == DATA_VERSION:

@@ -1,10 +1,7 @@
 import logging
 import json
-from contextlib import contextmanager
 
-import sqlalchemy
-
-from ..shared.database import Database
+from ..shared.database import empty_in_memory_database
 
 from .enrichEarlyCareerResearchersInDatabase import (
   extract_manuscript,
@@ -22,15 +19,6 @@ def setup_module():
 
 def get_logger():
   return logging.getLogger(__name__)
-
-@contextmanager
-def empty_in_memory_database():
-  engine = sqlalchemy.create_engine('sqlite://', echo=False)
-  get_logger().debug("engine driver: %s", engine.driver)
-  db = Database(engine)
-  db.update_schema()
-  yield db
-  db.close()
 
 class TestExtractManuscript(object):
   def test_should_extract_title_if_present(self):
