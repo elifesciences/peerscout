@@ -695,7 +695,7 @@ def main():
 
     process_files_in_directory_or_zip(source, process_zip, ext=".zip")
 
-    logging.getLogger(NAME).info("done")
+    get_logger().info("done")
 
 if __name__ == "__main__":
   from ..shared.logging_config import configure_logging
