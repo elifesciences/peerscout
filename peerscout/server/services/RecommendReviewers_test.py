@@ -1134,7 +1134,7 @@ def test_matching_one_keyword_author_should_not_return_other_draft_papers(logger
     [MANUSCRIPT_ID1]
   )
 
-def _test_matching_one_keyword_author_should_return_papers_with_same_title_as_alternatives(logger):
+def test_matching_one_keyword_author_should_return_papers_with_same_title_as_alternatives(logger):
   datasets = dict(DATASETS)
   datasets['person'] = pd.DataFrame([
     PERSON1
