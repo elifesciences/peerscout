@@ -285,12 +285,8 @@ def create_recommend_reviewers(dataset, filter_by_subject_area_enabled=False):
 
     for table_name in sorted_table_names:
       if table_name in dataset:
-        objs = [{
-          k: v if not isinstance(v, list) and not pd.isnull(v) else None
-          for k, v in row.items()
-        } for row in dataset[table_name]]
-        logger.debug("objs %s:\n%s", table_name, objs)
-        db[table_name].create_list(objs)
+        logger.debug("data %s:\n%s", table_name, dataset[table_name])
+        db[table_name].create_list(dataset[table_name])
     db.commit()
 
     logger.debug("view manuscript_person_review_times:\n%s",
