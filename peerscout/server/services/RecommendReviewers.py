@@ -679,13 +679,7 @@ class RecommendReviewers(object):
       all_similar_manuscripts = self.similarity_model.find_similar_manuscripts(
         manuscript_version_ids or set()
       )
-    self.logger.debug(
-      "all_similar_manuscripts: %d, %s",
-      len(all_similar_manuscripts),
-      all_similar_manuscripts[
-        all_similar_manuscripts[VERSION_ID].isin(["10.1155/2013/435093"])
-      ]
-    )
+    self.logger.debug("all_similar_manuscripts: %d", len(all_similar_manuscripts))
     similar_manuscripts = all_similar_manuscripts
     if len(subject_areas) > 0:
       similar_manuscripts = self._filter_manuscripts_by_subject_areas(
