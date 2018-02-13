@@ -203,6 +203,14 @@ def clean_manuscript(m):
 def clean_manuscripts(manuscripts):
   return [clean_manuscript(m) for m in manuscripts]
 
+def score_by_manuscript(manuscript, keyword, similarity):
+  return {
+    **manuscript_id_fields(manuscript),
+    'keyword': keyword,
+    'similarity': similarity,
+    'combined': min(1.0, keyword + (similarity or 0) * 0.5)
+  }
+
 class RecommendReviewers(object):
   def __init__(
     self, db, manuscript_model, similarity_model=None,
@@ -667,14 +675,6 @@ class RecommendReviewers(object):
         [m[VERSION_ID] for m in involved_manuscripts]
       )
     ].set_index(VERSION_ID)[SIMILARITY_COLUMN].to_dict()
-
-    def score_by_manuscript(manuscript, keyword, similarity):
-      return {
-        **manuscript_id_fields(manuscript),
-        'keyword': keyword,
-        'similarity': similarity,
-        'combined': min(1.0, keyword + (similarity or 0) * 0.5)
-      }
 
     scores_by_manuscript = [
       score_by_manuscript(
