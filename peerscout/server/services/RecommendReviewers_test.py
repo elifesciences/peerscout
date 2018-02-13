@@ -6,9 +6,8 @@ import logging
 
 import pytest
 import pandas as pd
-import sqlalchemy
 
-from ...shared.database import Database
+from ...shared.database import empty_in_memory_database
 
 from .ManuscriptModel import ManuscriptModel
 from .DocumentSimilarityModel import DocumentSimilarityModel
@@ -282,47 +281,43 @@ def get_logger():
 
 def create_recommend_reviewers(dataset, filter_by_subject_area_enabled=False):
   logger = get_logger()
-  engine = sqlalchemy.create_engine('sqlite://', echo=False)
-  logger.debug("engine driver: %s", engine.driver)
-  db = Database(engine)
-  db.update_schema()
+  with empty_in_memory_database() as db:
 
-  sorted_table_names = db.sorted_table_names()
+    sorted_table_names = db.sorted_table_names()
+    unknown_table_names = set(dataset.keys()) - set(sorted_table_names)
+    if len(unknown_table_names) > 0:
+      raise Exception("unknown table names: {}".format(unknown_table_names))
 
-  unknown_table_names = set(dataset.keys()) - set(sorted_table_names)
-  if len(unknown_table_names) > 0:
-    raise Exception("unknown table names: {}".format(unknown_table_names))
+    for table_name in sorted_table_names:
+      if table_name in dataset:
+        objs = [{
+          k: v if not isinstance(v, list) and not pd.isnull(v) else None
+          for k, v in row.items()
+        } for row in dataset[table_name]]
+        logger.debug("objs %s:\n%s", table_name, objs)
+        db[table_name].create_list(objs)
+    db.commit()
 
-  for table_name in sorted_table_names:
-    if table_name in dataset:
-      objs = [{
-        k: v if not isinstance(v, list) and not pd.isnull(v) else None
-        for k, v in row.items()
-      } for row in dataset[table_name]]
-      logger.debug("objs %s:\n%s", table_name, objs)
-      db[table_name].create_list(objs)
-  db.commit()
+    logger.debug("view manuscript_person_review_times:\n%s",
+      db.manuscript_person_review_times.read_frame())
+    logger.debug("view person_review_stats_overall:\n%s",
+      db.person_review_stats_overall.read_frame())
 
-  logger.debug("view manuscript_person_review_times:\n%s",
-    db.manuscript_person_review_times.read_frame())
-  logger.debug("view person_review_stats_overall:\n%s",
-    db.person_review_stats_overall.read_frame())
-
-  manuscript_model = ManuscriptModel(
-    db,
-    valid_decisions=VALID_DECISIONS,
-    valid_manuscript_types=VALID_MANUSCRIPT_TYPES,
-    published_decisions=PUBLISHED_DECISIONS,
-    published_manuscript_types=PUBLISHED_MANUSCRIPT_TYPES
-  )
-  similarity_model = DocumentSimilarityModel(
-    db,
-    manuscript_model=manuscript_model
-  )
-  return RecommendReviewers(
-    db, manuscript_model=manuscript_model, similarity_model=similarity_model,
-    filter_by_subject_area_enabled=filter_by_subject_area_enabled
-  )
+    manuscript_model = ManuscriptModel(
+      db,
+      valid_decisions=VALID_DECISIONS,
+      valid_manuscript_types=VALID_MANUSCRIPT_TYPES,
+      published_decisions=PUBLISHED_DECISIONS,
+      published_manuscript_types=PUBLISHED_MANUSCRIPT_TYPES
+    )
+    similarity_model = DocumentSimilarityModel(
+      db,
+      manuscript_model=manuscript_model
+    )
+    return RecommendReviewers(
+      db, manuscript_model=manuscript_model, similarity_model=similarity_model,
+      filter_by_subject_area_enabled=filter_by_subject_area_enabled
+    )
 
 def _potential_reviewers_person_ids(potential_reviewers):
   return [r['person'][PERSON_ID] for r in potential_reviewers]
