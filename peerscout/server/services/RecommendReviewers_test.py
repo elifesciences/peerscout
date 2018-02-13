@@ -113,9 +113,6 @@ ML_MANUSCRIPT_DATA = pd.DataFrame(
 ML_MANUSCRIPT_DATA_DATASET = 'ml_manuscript_data'
 SUBJECT_AREAS_DATASET = 'manuscript_subject_area'
 
-DATASETS = {
-}
-
 PERSON_ID1 = 'person1'
 PERSON_ID2 = 'person2'
 PERSON_ID3 = 'person3'
@@ -375,10 +372,6 @@ def create_recommend_reviewers(datasets, filter_by_subject_area_enabled=False):
 
   sorted_table_names = db.sorted_table_names()
 
-  datasets = {
-    **DATASETS,
-    **datasets
-  }
   unknown_table_names = set(datasets.keys()) - set(sorted_table_names)
   if len(unknown_table_names) > 0:
     raise Exception("unknown table names: {}".format(unknown_table_names))
