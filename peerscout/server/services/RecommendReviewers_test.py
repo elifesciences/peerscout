@@ -110,8 +110,9 @@ ML_MANUSCRIPT_DATA = pd.DataFrame(
   [],
   columns=MANUSCRIPT_ID_COLUMNS + [LDA_DOCVEC_COLUMN, DOC2VEC_DOCVEC_COLUMN])
 
-ML_MANUSCRIPT_DATA_DATASET = 'ml_manuscript_data'
-SUBJECT_AREAS_DATASET = 'manuscript_subject_area'
+class TableNames:
+  ML_MANUSCRIPT_DATA = 'ml_manuscript_data'
+  MANUSCRIPT_SUBJECT_AREAS = 'manuscript_subject_area'
 
 PERSON_ID1 = 'person1'
 PERSON_ID2 = 'person2'
@@ -363,7 +364,7 @@ def setup_module():
 def get_logger():
   return logging.getLogger('test')
 
-def create_recommend_reviewers(datasets, filter_by_subject_area_enabled=False):
+def create_recommend_reviewers(dataset, filter_by_subject_area_enabled=False):
   logger = get_logger()
   engine = sqlalchemy.create_engine('sqlite://', echo=False)
   logger.debug("engine driver: %s", engine.driver)
@@ -372,16 +373,16 @@ def create_recommend_reviewers(datasets, filter_by_subject_area_enabled=False):
 
   sorted_table_names = db.sorted_table_names()
 
-  unknown_table_names = set(datasets.keys()) - set(sorted_table_names)
+  unknown_table_names = set(dataset.keys()) - set(sorted_table_names)
   if len(unknown_table_names) > 0:
     raise Exception("unknown table names: {}".format(unknown_table_names))
 
   for table_name in sorted_table_names:
-    if table_name in datasets:
+    if table_name in dataset:
       objs = [{
         k: v if not isinstance(v, list) and not pd.isnull(v) else None
         for k, v in row.items()
-      } for row in datasets[table_name]]
+      } for row in dataset[table_name]]
       logger.debug("objs %s:\n%s", table_name, objs)
       db[table_name].create_list(objs)
   db.commit()
@@ -411,23 +412,23 @@ def _potential_reviewers_person_ids(potential_reviewers):
   return [r['person'][PERSON_ID] for r in potential_reviewers]
 
 def test_no_match():
-  datasets = {
+  dataset = {
     'person' : [PERSON1],
     'manuscript_version': [MANUSCRIPT_VERSION1],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords='', manuscript_no='unknown')
   assert result['matching_manuscripts'] == []
   assert result['potential_reviewers'] == []
 
 def test_matching_manuscript():
-  datasets = {
+  dataset = {
     'person' : [PERSON1],
     'manuscript_version': [MANUSCRIPT_VERSION1],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_ID1)
   assert result == {
     'potential_reviewers': [],
@@ -437,45 +438,45 @@ def test_matching_manuscript():
   }
 
 def test_matching_manuscript_should_include_subject_areas():
-  datasets = {
+  dataset = {
     'person' : [PERSON1],
     'manuscript_version': [MANUSCRIPT_VERSION1],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1],
-    SUBJECT_AREAS_DATASET: [
+    TableNames.MANUSCRIPT_SUBJECT_AREAS: [
       MANUSCRIPT_SUBJECT_AREA1,
       MANUSCRIPT_SUBJECT_AREA2
     ]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_ID1)
   subject_areas = result['matching_manuscripts'][0]['subject_areas']
   assert subject_areas == [SUBJECT_AREA1, SUBJECT_AREA2]
 
 
 def test_matching_manuscript_with_docvecs():
-  datasets = {
+  dataset = {
     'person' : [PERSON1],
     'manuscript_version': [MANUSCRIPT_VERSION1],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1],
-    ML_MANUSCRIPT_DATA_DATASET: [ABSTRACT_DOCVEC1]
+    TableNames.ML_MANUSCRIPT_DATA: [ABSTRACT_DOCVEC1]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_ID1)
 
 
 def test_matching_manuscript_with_none_docvecs():
-  datasets = {
+  dataset = {
     'person' : [PERSON1],
     'manuscript_version': [MANUSCRIPT_VERSION1],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1],
-    ML_MANUSCRIPT_DATA_DATASET: [
+    TableNames.ML_MANUSCRIPT_DATA: [
       ABSTRACT_DOCVEC1, {
         **ABSTRACT_DOCVEC2,
         LDA_DOCVEC_COLUMN: None
       }
     ]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_ID1)
 
 EARLY_CAREER_RESEARCHER_WITH_SUBJECT_AREAS_DATASET = {
@@ -498,8 +499,8 @@ EARLY_CAREER_RESEARCHER_WITH_SUBJECT_AREAS_DATASET = {
 def test_search_should_filter_early_career_reviewer_by_subject_area(
   logger):
 
-  datasets = EARLY_CAREER_RESEARCHER_WITH_SUBJECT_AREAS_DATASET
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  dataset = EARLY_CAREER_RESEARCHER_WITH_SUBJECT_AREAS_DATASET
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(
     subject_area=SUBJECT_AREA1, keywords=None, manuscript_no=None
   )
@@ -513,8 +514,8 @@ def test_search_should_filter_early_career_reviewer_by_subject_area(
 def test_search_should_not_filter_early_career_reviewer_by_subject_area_if_blank(
   logger):
 
-  datasets = EARLY_CAREER_RESEARCHER_WITH_SUBJECT_AREAS_DATASET
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  dataset = EARLY_CAREER_RESEARCHER_WITH_SUBJECT_AREAS_DATASET
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(
     subject_area=None, keywords=KEYWORD1, manuscript_no=None
   )
@@ -531,7 +532,7 @@ def test_search_should_not_filter_early_career_reviewer_by_subject_area_if_blank
 def test_matching_manuscript_should_filter_early_career_reviewer_by_subject_area(
   logger):
 
-  datasets = {
+  dataset = {
     **EARLY_CAREER_RESEARCHER_WITH_SUBJECT_AREAS_DATASET,
     'person': (
       EARLY_CAREER_RESEARCHER_WITH_SUBJECT_AREAS_DATASET['person'] +
@@ -539,10 +540,10 @@ def test_matching_manuscript_should_filter_early_career_reviewer_by_subject_area
     ),
     'manuscript_version': [MANUSCRIPT_VERSION1],
     'manuscript_author': [{**AUTHOR3, **MANUSCRIPT_ID_FIELDS1}],
-    SUBJECT_AREAS_DATASET: [MANUSCRIPT_SUBJECT_AREA1]
+    TableNames.MANUSCRIPT_SUBJECT_AREAS: [MANUSCRIPT_SUBJECT_AREA1]
   }
   recommend_reviewers = create_recommend_reviewers(
-    datasets, filter_by_subject_area_enabled=False
+    dataset, filter_by_subject_area_enabled=False
   )
   result = recommend_reviewers.recommend(
     subject_area=None, keywords=None, manuscript_no=MANUSCRIPT_ID1
@@ -555,7 +556,7 @@ def test_matching_manuscript_should_filter_early_career_reviewer_by_subject_area
   assert recommended_person_ids == [(PERSON_ID1, True)]
 
 def test_matching_manuscript_should_return_draft_version_with_authors(logger):
-  datasets = {
+  dataset = {
     'person': [PERSON1],
     'manuscript_version': [{
       **MANUSCRIPT_VERSION1,
@@ -564,14 +565,14 @@ def test_matching_manuscript_should_return_draft_version_with_authors(logger):
     'manuscript_author': [AUTHOR1],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_ID1)
   logger.debug("result: %s", PP.pformat(result))
   assert [m[MANUSCRIPT_ID] for m in result['matching_manuscripts']] == [MANUSCRIPT_ID1]
   assert [p[PERSON_ID] for p in result['matching_manuscripts'][0]['authors']] == [PERSON_ID1]
 
 def test_matching_manuscript_should_return_multiple_authors(logger):
-  datasets = {
+  dataset = {
     'person': [PERSON1, PERSON2],
     'manuscript_version': [MANUSCRIPT_VERSION1, MANUSCRIPT_VERSION2],
     'manuscript_author': [
@@ -580,14 +581,14 @@ def test_matching_manuscript_should_return_multiple_authors(logger):
       {**AUTHOR2, **MANUSCRIPT_ID_FIELDS1}
     ]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_ID1)
   logger.debug("result: %s", PP.pformat(result))
   author_person_ids = [p[PERSON_ID] for p in result['matching_manuscripts'][0]['authors']]
   assert set(author_person_ids) == set([PERSON_ID1, PERSON_ID2])
 
 def test_matching_manuscript_should_indicate_corresponding_authors(logger):
-  datasets = {
+  dataset = {
     'person': [PERSON1, PERSON2],
     'manuscript_version': [MANUSCRIPT_VERSION1, MANUSCRIPT_VERSION2],
     'manuscript_author': [
@@ -608,7 +609,7 @@ def test_matching_manuscript_should_indicate_corresponding_authors(logger):
       }
     ]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_ID1)
   logger.debug("result: %s", PP.pformat(result))
   authors = sorted(result['matching_manuscripts'][0]['authors'], key=lambda p: p[PERSON_ID])
@@ -616,7 +617,7 @@ def test_matching_manuscript_should_indicate_corresponding_authors(logger):
   assert author_summary == [(PERSON_ID1, True), (PERSON_ID2, False)]
 
 def test_matching_manuscript_should_not_recommend_its_authors(logger):
-  datasets = {
+  dataset = {
     'person': [PERSON1, PERSON2],
     'manuscript_version': [MANUSCRIPT_VERSION1, MANUSCRIPT_VERSION2],
     'manuscript_keyword': [
@@ -629,7 +630,7 @@ def test_matching_manuscript_should_not_recommend_its_authors(logger):
       {**AUTHOR2, **MANUSCRIPT_ID_FIELDS2}
     ]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_ID1)
   logger.debug("result: %s", PP.pformat(result))
   recommended_person_ids = [r['person'][PERSON_ID] for r in result['potential_reviewers']]
@@ -637,7 +638,7 @@ def test_matching_manuscript_should_not_recommend_its_authors(logger):
 
 def _do_test_matching_manuscript_should_filter_by_subject_areas_if_enabled(
   logger, filter_by_subject_area_enabled):
-  datasets = {
+  dataset = {
     'person': [PERSON1, PERSON2, PERSON3],
     'manuscript_version': [MANUSCRIPT_VERSION1, MANUSCRIPT_VERSION2, MANUSCRIPT_VERSION3],
     'manuscript_keyword': [
@@ -645,7 +646,7 @@ def _do_test_matching_manuscript_should_filter_by_subject_areas_if_enabled(
       {**MANUSCRIPT_KEYWORD1, **MANUSCRIPT_ID_FIELDS2},
       {**MANUSCRIPT_KEYWORD1, **MANUSCRIPT_ID_FIELDS3}
     ],
-    SUBJECT_AREAS_DATASET: [
+    TableNames.MANUSCRIPT_SUBJECT_AREAS: [
       MANUSCRIPT_SUBJECT_AREA1,
       {**MANUSCRIPT_SUBJECT_AREA2, **MANUSCRIPT_ID_FIELDS2},
       {**MANUSCRIPT_SUBJECT_AREA1, **MANUSCRIPT_ID_FIELDS3}
@@ -657,7 +658,7 @@ def _do_test_matching_manuscript_should_filter_by_subject_areas_if_enabled(
     ]
   }
   recommend_reviewers = create_recommend_reviewers(
-    datasets, filter_by_subject_area_enabled=filter_by_subject_area_enabled
+    dataset, filter_by_subject_area_enabled=filter_by_subject_area_enabled
   )
   result = recommend_reviewers.recommend(keywords='', manuscript_no=MANUSCRIPT_ID1)
   logger.debug("result: %s", PP.pformat(result))
@@ -678,10 +679,10 @@ def test_matching_manuscript_should_not_filter_by_subject_areas_if_disabled(logg
   )
 
 def test_matching_manuscript_should_filter_by_search_subject_area_only(logger):
-  datasets = {
+  dataset = {
     'person': [PERSON2, PERSON3],
     'manuscript_version': [MANUSCRIPT_VERSION2, MANUSCRIPT_VERSION3],
-    SUBJECT_AREAS_DATASET: [
+    TableNames.MANUSCRIPT_SUBJECT_AREAS: [
       MANUSCRIPT_SUBJECT_AREA1,
       {
         **MANUSCRIPT_SUBJECT_AREA2,
@@ -704,7 +705,7 @@ def test_matching_manuscript_should_filter_by_search_subject_area_only(logger):
     ]
   }
   recommend_reviewers = create_recommend_reviewers(
-    datasets, filter_by_subject_area_enabled=False
+    dataset, filter_by_subject_area_enabled=False
   )
   result = recommend_reviewers.recommend(keywords='', subject_area=SUBJECT_AREA1)
   logger.debug("result: %s", PP.pformat(result))
@@ -712,19 +713,19 @@ def test_matching_manuscript_should_filter_by_search_subject_area_only(logger):
   assert recommended_person_ids == [PERSON_ID3]
 
 def test_matching_one_keyword_author_should_return_author(logger):
-  datasets = {
+  dataset = {
     'person': [PERSON1],
     'manuscript_version': [MANUSCRIPT_VERSION1],
     'manuscript_author': [AUTHOR1],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   logger.debug("result: %s", PP.pformat(result))
   assert [r['person'][PERSON_ID] for r in result['potential_reviewers']] == [PERSON_ID1]
 
 def test_matching_one_keyword_author_should_not_suggest_authors_of_rejected_manuscripts(logger):
-  datasets = {
+  dataset = {
     'person': [PERSON1],
     'manuscript_version': [{
       **MANUSCRIPT_VERSION1,
@@ -733,13 +734,13 @@ def test_matching_one_keyword_author_should_not_suggest_authors_of_rejected_manu
     'manuscript_author': [AUTHOR1],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   logger.debug("result: %s", PP.pformat(result))
   assert result['potential_reviewers'] == []
 
 def test_matching_one_keyword_author_should_suggest_reviewers_of_rejected_manuscripts(logger):
-  datasets = {
+  dataset = {
     'person': [PERSON1],
     'manuscript_version': [{
       **MANUSCRIPT_VERSION1,
@@ -753,13 +754,13 @@ def test_matching_one_keyword_author_should_suggest_reviewers_of_rejected_manusc
     ),
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   logger.debug("result: %s", PP.pformat(result))
   assert _potential_reviewers_person_ids(result['potential_reviewers']) == [PERSON_ID1]
 
 def test_matching_one_keyword_author_should_suggest_authors_with_unknown_decision_and_type(logger):
-  datasets = {
+  dataset = {
     'person': [PERSON1],
     'manuscript_version': [{
       **MANUSCRIPT_VERSION1,
@@ -769,7 +770,7 @@ def test_matching_one_keyword_author_should_suggest_authors_with_unknown_decisio
     'manuscript_author': [AUTHOR1],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   logger.debug("result: %s", PP.pformat(result))
   assert _potential_reviewers_person_ids(result['potential_reviewers']) == [PERSON_ID1]
@@ -819,7 +820,7 @@ def _awaiting_review_stages(id_fields, contacted, accepted):
   }]
 
 def test_matching_one_keyword_author_should_return_stats(logger):
-  datasets = {
+  dataset = {
     'person': [PERSON1],
     'manuscript_version': [
       MANUSCRIPT_VERSION1,
@@ -876,7 +877,7 @@ def test_matching_one_keyword_author_should_return_stats(logger):
       )
     )
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   review_duration = {
     'min': 1.0,
     'mean': 1.5,
@@ -898,21 +899,21 @@ def test_matching_one_keyword_author_should_return_stats(logger):
   }
 
 def test_matching_one_keyword_author_should_return_memberships(logger):
-  datasets = {
+  dataset = {
     'person': [PERSON1],
     'person_membership': [MEMBERSHIP1],
     'manuscript_version': [MANUSCRIPT_VERSION1],
     'manuscript_author': [AUTHOR1],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   result_person = result['potential_reviewers'][0]['person']
   logger.debug("result_person: %s", PP.pformat(result_person))
   assert result_person.get('memberships') == [MEMBERSHIP1_RESULT]
 
 def test_matching_one_keyword_author_should_return_other_accepted_papers(logger):
-  datasets = {
+  dataset = {
     'person': [PERSON1],
     'manuscript_version': [
       MANUSCRIPT_VERSION1, {
@@ -928,7 +929,7 @@ def test_matching_one_keyword_author_should_return_other_accepted_papers(logger)
     ],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   author_of_manuscripts = result['potential_reviewers'][0]['author_of_manuscripts']
   author_of_manuscript_ids = [m[MANUSCRIPT_ID] for m in author_of_manuscripts]
@@ -940,7 +941,7 @@ def test_matching_one_keyword_author_should_return_other_accepted_papers(logger)
   ])
 
 def test_matching_one_keyword_author_should_not_return_other_draft_papers(logger):
-  datasets = {
+  dataset = {
     'person': [PERSON1],
     'manuscript_version': [
       MANUSCRIPT_VERSION1, {
@@ -956,7 +957,7 @@ def test_matching_one_keyword_author_should_not_return_other_draft_papers(logger
     ],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   logger.debug("result: %s", result)
   assert (
@@ -965,7 +966,7 @@ def test_matching_one_keyword_author_should_not_return_other_draft_papers(logger
   )
 
 def test_matching_one_keyword_author_should_return_papers_with_same_title_as_alternatives(logger):
-  datasets = {
+  dataset = {
     'person': [PERSON1],
     'manuscript_version': [
       {
@@ -986,7 +987,7 @@ def test_matching_one_keyword_author_should_return_papers_with_same_title_as_alt
     ],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   author_of_manuscripts = result['potential_reviewers'][0]['author_of_manuscripts']
   author_of_manuscript_ids = [m[MANUSCRIPT_ID] for m in author_of_manuscripts]
@@ -997,19 +998,19 @@ def test_matching_one_keyword_author_should_return_papers_with_same_title_as_alt
   ])
 
 def test_should_consider_previous_reviewer_as_potential_reviewer(logger):
-  datasets = {
+  dataset = {
     'person': [PERSON1],
     'manuscript_version': [MANUSCRIPT_VERSION1],
     'manuscript_stage': [MANUSCRIPT_HISTORY_REVIEW_COMPLETE1],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   logger.debug("result: %s", PP.pformat(result))
   assert [r['person'][PERSON_ID] for r in result['potential_reviewers']] == [PERSON_ID1]
 
 def test_should_return_reviewer_as_potential_reviewer_only_once(logger):
-  datasets = {
+  dataset = {
     'person': [PERSON1],
     'manuscript_version': [MANUSCRIPT_VERSION1],
     'manuscript_stage': [
@@ -1024,7 +1025,7 @@ def test_should_return_reviewer_as_potential_reviewer_only_once(logger):
     ],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
   }
-  recommend_reviewers = create_recommend_reviewers(datasets)
+  recommend_reviewers = create_recommend_reviewers(dataset)
   result = recommend_reviewers.recommend(keywords=KEYWORD1, manuscript_no='')
   logger.debug("result: %s", PP.pformat(result))
   assert [
