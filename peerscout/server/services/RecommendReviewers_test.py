@@ -423,7 +423,7 @@ class TestRecommendReviewers:
     subject_areas = result['matching_manuscripts'][0]['subject_areas']
     assert subject_areas == [SUBJECT_AREA1, SUBJECT_AREA2]
 
-  def test_matching_manuscript_with_docvecs(self):
+  def test_should_not_fail_for_manuscript_with_docvecs(self):
     dataset = {
       'person' : [PERSON1],
       'manuscript_version': [MANUSCRIPT_VERSION1],
@@ -432,7 +432,7 @@ class TestRecommendReviewers:
     }
     recommend_for_dataset(dataset, keywords='', manuscript_no=MANUSCRIPT_ID1)
 
-  def test_matching_manuscript_with_none_docvecs(self):
+  def test_should_not_fail_for_manuscript_with_partial_docvecs(self):
     dataset = {
       'person' : [PERSON1],
       'manuscript_version': [MANUSCRIPT_VERSION1],
