@@ -203,12 +203,15 @@ def clean_manuscript(m):
 def clean_manuscripts(manuscripts):
   return [clean_manuscript(m) for m in manuscripts]
 
+def calculate_combined_score(keyword, similarity):
+  return min(1.0, keyword + (similarity or 0) * 0.5)
+
 def score_by_manuscript(manuscript, keyword, similarity):
   return {
     **manuscript_id_fields(manuscript),
     'keyword': keyword,
     'similarity': similarity,
-    'combined': min(1.0, keyword + (similarity or 0) * 0.5)
+    'combined': calculate_combined_score(keyword, similarity)
   }
 
 def sorted_potential_reviewers(potential_reviewers):
