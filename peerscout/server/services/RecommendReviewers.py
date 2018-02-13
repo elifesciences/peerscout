@@ -211,6 +211,36 @@ def score_by_manuscript(manuscript, keyword, similarity):
     'combined': min(1.0, keyword + (similarity or 0) * 0.5)
   }
 
+def sorted_potential_reviewers(potential_reviewers):
+  review_duration_mean_keys = ['person', 'stats', 'overall', 'review-duration', 'mean']
+  available_potential_reviewer_mean_durations = filter_none(deep_get_list(
+    potential_reviewers, review_duration_mean_keys
+  ))
+  potential_reviewer_mean_duration = (
+    float(pd.np.mean(available_potential_reviewer_mean_durations))
+    if len(available_potential_reviewer_mean_durations) > 0
+    else None
+  )
+
+  potential_reviewers = sorted(
+    potential_reviewers,
+    key=lambda potential_reviewer: (
+      -(potential_reviewer['scores'].get('combined') or 0),
+      -(potential_reviewer['scores'].get('keyword') or 0),
+      -(potential_reviewer['scores'].get('similarity') or 0),
+      deep_get(potential_reviewer, review_duration_mean_keys, potential_reviewer_mean_duration),
+      potential_reviewer['person']['first_name'],
+      potential_reviewer['person']['last_name']
+    )
+  )
+
+  # create a list with interleaving normal reviewer, ecr, ...
+  potential_reviewers = [x for x in itertools.chain.from_iterable(itertools.zip_longest(
+    [pr for pr in potential_reviewers if not pr['person'].get('is_early_career_researcher')],
+    [pr for pr in potential_reviewers if pr['person'].get('is_early_career_researcher')]
+  )) if x]
+  return potential_reviewers
+
 class RecommendReviewers(object):
   def __init__(
     self, db, manuscript_model, similarity_model=None,
@@ -791,7 +821,7 @@ class RecommendReviewers(object):
       .set_index(VERSION_ID).to_dict(orient='index').items()
     }
 
-    potential_reviewers = [
+    potential_reviewers = sorted_potential_reviewers([
       self._populate_potential_reviewer(
         person_id,
         all_similar_manuscripts=all_similar_manuscripts,
@@ -799,35 +829,7 @@ class RecommendReviewers(object):
         num_keywords=len(keyword_list)
       )
       for person_id in potential_reviewers_ids
-    ]
-
-    review_duration_mean_keys = ['person', 'stats', 'overall', 'review-duration', 'mean']
-    available_potential_reviewer_mean_durations = filter_none(deep_get_list(
-      potential_reviewers, review_duration_mean_keys
-    ))
-    potential_reviewer_mean_duration = (
-      float(pd.np.mean(available_potential_reviewer_mean_durations))
-      if len(available_potential_reviewer_mean_durations) > 0
-      else None
-    )
-
-    potential_reviewers = sorted(
-      potential_reviewers,
-      key=lambda potential_reviewer: (
-        -(potential_reviewer['scores'].get('combined') or 0),
-        -(potential_reviewer['scores'].get('keyword') or 0),
-        -(potential_reviewer['scores'].get('similarity') or 0),
-        deep_get(potential_reviewer, review_duration_mean_keys, potential_reviewer_mean_duration),
-        potential_reviewer['person']['first_name'],
-        potential_reviewer['person']['last_name']
-      )
-    )
-
-    # create a list with interleaving normal reviewer, ecr, ...
-    potential_reviewers = [x for x in itertools.chain.from_iterable(itertools.zip_longest(
-      [pr for pr in potential_reviewers if not pr['person'].get('is_early_career_researcher')],
-      [pr for pr in potential_reviewers if pr['person'].get('is_early_career_researcher')]
-    )) if x]
+    ])
 
     if limit is not None and limit > 0:
       potential_reviewers = potential_reviewers[:limit]
