@@ -1,6 +1,3 @@
-"""
-Unit test
-"""
 import pprint
 import logging
 from contextlib import contextmanager
