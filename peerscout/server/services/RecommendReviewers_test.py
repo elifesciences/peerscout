@@ -26,10 +26,6 @@ PERSON_ID_COLUMNS = [PERSON_ID]
 
 LDA_DOCVEC_COLUMN = 'lda_docvec'
 
-class TableNames:
-  ML_MANUSCRIPT_DATA = 'ml_manuscript_data'
-  MANUSCRIPT_SUBJECT_AREAS = 'manuscript_subject_area'
-
 PERSON_ID1 = 'person1'
 PERSON_ID2 = 'person2'
 PERSON_ID3 = 'person3'
@@ -362,7 +358,7 @@ def test_matching_manuscript_should_include_subject_areas():
     'person' : [PERSON1],
     'manuscript_version': [MANUSCRIPT_VERSION1],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1],
-    TableNames.MANUSCRIPT_SUBJECT_AREAS: [
+    'manuscript_subject_area': [
       MANUSCRIPT_SUBJECT_AREA1,
       MANUSCRIPT_SUBJECT_AREA2
     ]
@@ -376,7 +372,7 @@ def test_matching_manuscript_with_docvecs():
     'person' : [PERSON1],
     'manuscript_version': [MANUSCRIPT_VERSION1],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1],
-    TableNames.ML_MANUSCRIPT_DATA: [ABSTRACT_DOCVEC1]
+    'ml_manuscript_data': [ABSTRACT_DOCVEC1]
   }
   recommend_for_dataset(dataset, keywords='', manuscript_no=MANUSCRIPT_ID1)
 
@@ -385,7 +381,7 @@ def test_matching_manuscript_with_none_docvecs():
     'person' : [PERSON1],
     'manuscript_version': [MANUSCRIPT_VERSION1],
     'manuscript_keyword': [MANUSCRIPT_KEYWORD1],
-    TableNames.ML_MANUSCRIPT_DATA: [
+    'ml_manuscript_data': [
       ABSTRACT_DOCVEC1, {
         **ABSTRACT_DOCVEC2,
         LDA_DOCVEC_COLUMN: None
@@ -453,7 +449,7 @@ def test_matching_manuscript_should_filter_early_career_reviewer_by_subject_area
     ),
     'manuscript_version': [MANUSCRIPT_VERSION1],
     'manuscript_author': [{**AUTHOR3, **MANUSCRIPT_ID_FIELDS1}],
-    TableNames.MANUSCRIPT_SUBJECT_AREAS: [MANUSCRIPT_SUBJECT_AREA1]
+    'manuscript_subject_area': [MANUSCRIPT_SUBJECT_AREA1]
   }
   result = recommend_for_dataset(
     dataset, filter_by_subject_area_enabled=False,
@@ -548,7 +544,7 @@ def _do_test_matching_manuscript_should_filter_by_subject_areas_if_enabled(
       {**MANUSCRIPT_KEYWORD1, **MANUSCRIPT_ID_FIELDS2},
       {**MANUSCRIPT_KEYWORD1, **MANUSCRIPT_ID_FIELDS3}
     ],
-    TableNames.MANUSCRIPT_SUBJECT_AREAS: [
+    'manuscript_subject_area': [
       MANUSCRIPT_SUBJECT_AREA1,
       {**MANUSCRIPT_SUBJECT_AREA2, **MANUSCRIPT_ID_FIELDS2},
       {**MANUSCRIPT_SUBJECT_AREA1, **MANUSCRIPT_ID_FIELDS3}
@@ -583,7 +579,7 @@ def test_matching_manuscript_should_filter_by_search_subject_area_only(logger):
   dataset = {
     'person': [PERSON2, PERSON3],
     'manuscript_version': [MANUSCRIPT_VERSION2, MANUSCRIPT_VERSION3],
-    TableNames.MANUSCRIPT_SUBJECT_AREAS: [
+    'manuscript_subject_area': [
       MANUSCRIPT_SUBJECT_AREA1,
       {
         **MANUSCRIPT_SUBJECT_AREA2,
