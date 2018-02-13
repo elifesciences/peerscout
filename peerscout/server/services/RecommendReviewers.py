@@ -246,7 +246,7 @@ def sorted_manuscript_scores_descending(manuscript_scores_list):
     score['similarity']
   ))))
 
-def get_manuscript_list_person_ids(manuscript_list, person_list_key):
+def get_person_ids_for_manuscript_list(manuscript_list, person_list_key):
   return set(
     p[PERSON_ID] for p in iter_flatten(
       m[person_list_key] for m in manuscript_list
@@ -667,9 +667,9 @@ class RecommendReviewers(object):
       self.logger.debug("assigned_reviewers_by_person_id: %s", assigned_reviewers_by_person_id)
       self.logger.debug("subject_areas: %s", subject_areas)
       exclude_person_ids = (
-        get_manuscript_list_person_ids(matching_manuscripts_dicts, 'authors') |
-        get_manuscript_list_person_ids(matching_manuscripts_dicts, 'editors') |
-        get_manuscript_list_person_ids(matching_manuscripts_dicts, 'senior_editors')
+        get_person_ids_for_manuscript_list(matching_manuscripts_dicts, 'authors') |
+        get_person_ids_for_manuscript_list(matching_manuscripts_dicts, 'editors') |
+        get_person_ids_for_manuscript_list(matching_manuscripts_dicts, 'senior_editors')
       )
       return {
         **self._recommend_using_criteria(
