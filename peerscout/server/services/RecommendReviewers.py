@@ -45,7 +45,7 @@ def column_astype(df, col_name, col_type):
   return df
 
 def applymap_dict(d, f):
-  return dict((k, f(v)) for k, v in d.items())
+  return {k: f(v) for k, v in d.items()}
 
 def applymap_dict_list(dict_list, f):
   return [applymap_dict(row, f) for row in dict_list]
@@ -63,13 +63,13 @@ def null_to_none(x):
   return None if is_null(x) else x
 
 def remove_none(d):
-  return dict((k, v) for k, v in d.items() if not is_null(v))
+  return {k: v for k, v in d.items() if not is_null(v)}
 
 def clean_result(result):
-  if isinstance(result, list):
-    return [clean_result(x) for x in result]
-  else:
+  if isinstance(result, dict):
     return remove_none(applymap_dict(result, nat_to_none))
+  else:
+    return [clean_result(x) for x in result]
 
 def manuscript_number_to_no(x):
   return x.split('-')[-1]
@@ -86,7 +86,7 @@ def groupby_columns_to_dict(groupby_keys, version_keys, vf):
     k: [
       item for item in [
         vf(version_key) for version_key in
-        set([version_key for _, version_key in list(v)])
+        set(version_key for _, version_key in list(v))
       ] if item
     ]
     for k, v in groupby(sorted(
@@ -118,11 +118,6 @@ def groupby_index_to_dict(df):
 
 def map_to_dict(keys, d, default_value=None):
   return [d.get(k, default_value) for k in keys]
-
-# def clean_df(df):
-#   # TODO fix replace NaT
-#   #return df.where((pd.notnull(df)), None)
-#   return df.applymap(lambda x: None if type(x) == type(pd.NaT) else x)
 
 MANUSCRIPT_ID = 'manuscript_id'
 VERSION_ID = 'version_id'
@@ -239,8 +234,8 @@ def sorted_potential_reviewers(potential_reviewers):
 
   # create a list with interleaving normal reviewer, ecr, ...
   potential_reviewers = [x for x in itertools.chain.from_iterable(itertools.zip_longest(
-    [pr for pr in potential_reviewers if not pr['person'].get('is_early_career_researcher')],
-    [pr for pr in potential_reviewers if pr['person'].get('is_early_career_researcher')]
+    (pr for pr in potential_reviewers if not pr['person'].get('is_early_career_researcher')),
+    (pr for pr in potential_reviewers if pr['person'].get('is_early_career_researcher'))
   )) if x]
   return potential_reviewers
 
@@ -416,11 +411,11 @@ class RecommendReviewers(object):
     self.assigned_reviewers_by_manuscript_id_map = groupby_column_to_dict(
       self.assigned_reviewers_df,
       VERSION_ID,
-      lambda row: dict({
+      lambda row: {
         PERSON_ID: row[PERSON_ID],
         'status': row['status'],
         'excluded': row['suggested_to_exclude'] == 'yes'
-      })
+      }
     )
 
     debugv(
@@ -450,19 +445,23 @@ class RecommendReviewers(object):
         [MANUSCRIPT_ID] +
         ['title', 'decision', 'manuscript_type', 'abstract', 'decision_timestamp']
       ].rename(columns={'decision-date': 'published-date'})
-      .to_dict(orient='records'))
-    manuscripts_all_list = [{
-      **manuscript,
-      'doi': get_first(temp_doi_by_manuscript_no_map.get(manuscript[MANUSCRIPT_ID], [])),
-      'authors': temp_authors_map.get(manuscript[VERSION_ID], []),
-      'editors': temp_editors_map.get(manuscript[VERSION_ID], []),
-      'senior_editors': temp_senior_editors_map.get(manuscript[VERSION_ID], []),
-      'reviewers': temp_reviewers_map.get(manuscript[VERSION_ID], []),
-      'subject_areas': temp_subject_areas_map.get(manuscript[VERSION_ID], []),
-      'is_published': manuscript_model.is_manuscript_published(manuscript)
-    } for manuscript in manuscripts_all_list]
-    self.manuscripts_by_version_id_map = dict((
-      m[VERSION_ID], m) for m in manuscripts_all_list)
+      .to_dict(orient='records')
+    )
+    manuscripts_all_list = [
+      {
+        **manuscript,
+        'doi': get_first(temp_doi_by_manuscript_no_map.get(manuscript[MANUSCRIPT_ID], [])),
+        'authors': temp_authors_map.get(manuscript[VERSION_ID], []),
+        'editors': temp_editors_map.get(manuscript[VERSION_ID], []),
+        'senior_editors': temp_senior_editors_map.get(manuscript[VERSION_ID], []),
+        'reviewers': temp_reviewers_map.get(manuscript[VERSION_ID], []),
+        'subject_areas': temp_subject_areas_map.get(manuscript[VERSION_ID], []),
+        'is_published': manuscript_model.is_manuscript_published(manuscript)
+      } for manuscript in manuscripts_all_list
+    ]
+    self.manuscripts_by_version_id_map = {
+      m[VERSION_ID]: m for m in manuscripts_all_list
+    }
     debugv("manuscripts_by_version_id_map: %s", self.manuscripts_by_version_id_map)
 
     self.manuscripts_by_author_map = {}
@@ -521,7 +520,8 @@ class RecommendReviewers(object):
     )
     debugv(
       "early career researcher subject area keys: %s",
-      self.early_career_researcher_ids_by_subject_area.keys())
+      self.early_career_researcher_ids_by_subject_area.keys()
+    )
 
   def __find_manuscripts_by_keywords(self, keywords):
     other_manuscripts = self.manuscript_keywords_df[
@@ -714,7 +714,7 @@ class RecommendReviewers(object):
     reviewer_of_manuscripts = self.manuscripts_by_reviewer_map.get(person_id, [])
     involved_manuscripts = author_of_manuscripts + reviewer_of_manuscripts
 
-    scores_by_manuscript = sorted_manuscript_scores_descending([
+    scores_by_manuscript = sorted_manuscript_scores_descending(
       score_by_manuscript(
         manuscript,
         keyword=keyword_score_by_version_id.get(
@@ -723,11 +723,11 @@ class RecommendReviewers(object):
           manuscript[VERSION_ID], None)
       )
       for manuscript in involved_manuscripts
-    ])
+    )
 
     best_score = get_first(scores_by_manuscript, {})
 
-    author_of_manuscript_ids = set([m[VERSION_ID] for m in author_of_manuscripts])
+    author_of_manuscript_ids = set(m[VERSION_ID] for m in author_of_manuscripts)
 
     potential_reviewer = {
       'person': self.persons_map.get(person_id, None),
