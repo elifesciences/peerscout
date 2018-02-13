@@ -832,6 +832,34 @@ class RecommendReviewers(object):
       similarity_by_manuscript_version_id
     )
 
+  def _potential_reviewer_ids_for_matching_manuscript_ids(
+    self, matching_manuscript_ids):
+    matching_manuscript_list = filter_none(
+      self.manuscripts_by_version_id_map.get(version_id)
+      for version_id in matching_manuscript_ids
+    )
+    debugv('matching_manuscript_list:\n%s', matching_manuscript_list)
+
+    return set(
+      person[PERSON_ID] for person in
+      flatten([
+        m['authors'] + m['reviewers']
+        if m['is_published']
+        else m['reviewers']
+        for m in matching_manuscript_list
+      ])
+    )
+
+  def _find_potential_reviewer_ids(
+    self, matching_manuscript_ids, include_person_ids, exclude_person_ids, ecr_subject_areas):
+
+    return (
+      self._potential_reviewer_ids_for_matching_manuscript_ids(matching_manuscript_ids) |
+      self._get_early_career_reviewer_ids_by_subject_areas(
+        ecr_subject_areas
+      ) | include_person_ids
+    ) - exclude_person_ids
+
   def _recommend_using_criteria(
     self, subject_areas=None, keyword_list=None, abstract=None,
     include_person_ids=None, exclude_person_ids=None, ecr_subject_areas=None,
@@ -851,26 +879,11 @@ class RecommendReviewers(object):
       )
     )
 
-    matching_manuscript_list = filter_none(
-      self.manuscripts_by_version_id_map.get(version_id)
-      for version_id in matching_manuscript_ids
-    )
-    debugv('matching_manuscript_list:\n%s', matching_manuscript_list)
-
-    potential_reviewers_ids = (
-      (
-        set([
-          person[PERSON_ID] for person in
-          flatten([
-            m['authors'] + m['reviewers']
-            if m['is_published']
-            else m['reviewers']
-            for m in matching_manuscript_list
-          ])
-        ]) | self._get_early_career_reviewer_ids_by_subject_areas(
-          ecr_subject_areas
-        ) | include_person_ids
-      ) - exclude_person_ids
+    potential_reviewers_ids = self._find_potential_reviewer_ids(
+      matching_manuscript_ids=matching_manuscript_ids,
+      include_person_ids=include_person_ids,
+      exclude_person_ids=exclude_person_ids,
+      ecr_subject_areas=ecr_subject_areas
     )
 
     potential_reviewers = sorted_potential_reviewers([
