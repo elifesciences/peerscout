@@ -759,11 +759,9 @@ class RecommendReviewers(object):
 
     num_keywords = len(keyword_list)
     if num_keywords:
-      keyword_score_by_version_id = {
-        k: v['count'] / num_keywords
-        for k, v in other_manuscripts[[VERSION_ID, 'count']]\
-        .set_index(VERSION_ID).to_dict(orient='index').items()
-      }
+      keyword_score_by_version_id = (
+        other_manuscripts.set_index(VERSION_ID)['count'] / num_keywords
+      ).to_dict()
     else:
       keyword_score_by_version_id = {}
     return other_manuscripts[VERSION_ID].values, keyword_score_by_version_id
