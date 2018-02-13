@@ -12,7 +12,7 @@ from peerscout.utils.pandas import (
 from .utils import unescape_and_strip_tags, filter_by
 
 from .collection_utils import (
-  flatten,
+  iter_flatten,
   filter_none,
   deep_get,
   deep_get_list
@@ -250,6 +250,13 @@ def sorted_manuscript_scores_descending(manuscript_scores_list):
     score['keyword'],
     score['similarity']
   ))))
+
+def get_manuscript_list_person_ids(manuscript_list, person_list_key):
+  return set(
+    p[PERSON_ID] for p in iter_flatten(
+      m[person_list_key] for m in manuscript_list
+    )
+  )
 
 class RecommendReviewers(object):
   def __init__(
@@ -590,10 +597,10 @@ class RecommendReviewers(object):
     if len(subject_areas) == 0:
       result = self.all_early_career_researcher_person_ids
     else:
-      result = set(flatten([
+      result = set(iter_flatten(
         self.early_career_researcher_ids_by_subject_area.get(subject_area.lower(), [])
         for subject_area in subject_areas
-      ]))
+      ))
     self.logger.debug(
       "found %d early career researchers for subject areas: %s", len(result), subject_areas
     )
@@ -650,22 +657,20 @@ class RecommendReviewers(object):
         else {}
       )
       assigned_reviewers_by_person_id = groupby_to_dict(
-        flatten([
+        iter_flatten(
           self.assigned_reviewers_by_manuscript_id_map.get(manuscript_id, [])
           for manuscript_id in matching_manuscripts[VERSION_ID].values
-        ]),
+        ),
         lambda item: item[PERSON_ID],
         lambda item: filter_dict_keys(item, lambda key: key != PERSON_ID)
       )
       self.logger.debug("assigned_reviewers_by_person_id: %s", assigned_reviewers_by_person_id)
       self.logger.debug("subject_areas: %s", subject_areas)
-      authors = flatten([m['authors'] for m in matching_manuscripts_dicts])
-      author_ids = [a[PERSON_ID] for a in authors]
-      editors = flatten([m['editors'] for m in matching_manuscripts_dicts])
-      editor_ids = [a[PERSON_ID] for a in editors]
-      senior_editors = flatten([m['senior_editors'] for m in matching_manuscripts_dicts])
-      senior_editor_ids = [a[PERSON_ID] for a in senior_editors]
-      exclude_person_ids = (set(author_ids) | set(editor_ids) | set(senior_editor_ids))
+      exclude_person_ids = (
+        get_manuscript_list_person_ids(matching_manuscripts_dicts, 'authors') |
+        get_manuscript_list_person_ids(matching_manuscripts_dicts, 'editors') |
+        get_manuscript_list_person_ids(matching_manuscripts_dicts, 'senior_editors')
+      )
       return {
         **self._recommend_using_criteria(
           subject_areas=subject_areas,
@@ -842,12 +847,12 @@ class RecommendReviewers(object):
 
     return set(
       person[PERSON_ID] for person in
-      flatten([
+      iter_flatten(
         m['authors'] + m['reviewers']
         if m['is_published']
         else m['reviewers']
         for m in matching_manuscript_list
-      ])
+      )
     )
 
   def _find_potential_reviewer_ids(
@@ -855,9 +860,8 @@ class RecommendReviewers(object):
 
     return (
       self._potential_reviewer_ids_for_matching_manuscript_ids(matching_manuscript_ids) |
-      self._get_early_career_reviewer_ids_by_subject_areas(
-        ecr_subject_areas
-      ) | include_person_ids
+      self._get_early_career_reviewer_ids_by_subject_areas(ecr_subject_areas) |
+      include_person_ids
     ) - exclude_person_ids
 
   def _recommend_using_criteria(
