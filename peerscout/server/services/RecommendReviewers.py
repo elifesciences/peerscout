@@ -693,8 +693,7 @@ class RecommendReviewers(object):
     }
 
   def _populate_potential_reviewer(
-    self, person_id, similarity_by_manuscript_version_id, keyword_match_count_by_version_key,
-    num_keywords):
+    self, person_id, similarity_by_manuscript_version_id, keyword_score_by_version_key):
 
     author_of_manuscripts = self.manuscripts_by_author_map.get(person_id, [])
     reviewer_of_manuscripts = self.manuscripts_by_reviewer_map.get(person_id, [])
@@ -703,8 +702,8 @@ class RecommendReviewers(object):
     scores_by_manuscript = [
       score_by_manuscript(
         manuscript,
-        keyword=keyword_match_count_by_version_key.get(
-          manuscript[VERSION_ID], 0) / max(1, num_keywords),
+        keyword=keyword_score_by_version_key.get(
+          manuscript[VERSION_ID], 0),
         similarity=similarity_by_manuscript_version_id.get(
           manuscript[VERSION_ID], None)
       )
@@ -813,18 +812,21 @@ class RecommendReviewers(object):
       all_similar_manuscripts.set_index(VERSION_ID)[SIMILARITY_COLUMN].to_dict()
     )
 
-    keyword_match_count_by_version_key = {
-      k: v['count']
-      for k, v in other_manuscripts[[VERSION_ID, 'count']]\
-      .set_index(VERSION_ID).to_dict(orient='index').items()
-    }
+    num_keywords = len(keyword_list)
+    if num_keywords:
+      keyword_score_by_version_key = {
+        k: v['count'] / num_keywords
+        for k, v in other_manuscripts[[VERSION_ID, 'count']]\
+        .set_index(VERSION_ID).to_dict(orient='index').items()
+      }
+    else:
+      keyword_score_by_version_key = {}
 
     potential_reviewers = sorted_potential_reviewers([
       self._populate_potential_reviewer(
         person_id,
         similarity_by_manuscript_version_id=similarity_by_manuscript_version_id,
-        keyword_match_count_by_version_key=keyword_match_count_by_version_key,
-        num_keywords=len(keyword_list)
+        keyword_score_by_version_key=keyword_score_by_version_key
       )
       for person_id in potential_reviewers_ids
     ])
