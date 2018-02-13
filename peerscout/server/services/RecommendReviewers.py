@@ -654,6 +654,67 @@ class RecommendReviewers(object):
       })
     }
 
+  def _populate_potential_reviewer(
+    self, person_id, all_similar_manuscripts, keyword_match_count_by_by_version_key_map,
+    num_keywords):
+
+    author_of_manuscripts = self.manuscripts_by_author_map.get(person_id, [])
+    reviewer_of_manuscripts = self.manuscripts_by_reviewer_map.get(person_id, [])
+    involved_manuscripts = author_of_manuscripts + reviewer_of_manuscripts
+
+    similarity_by_manuscript_version_id = all_similar_manuscripts[
+      all_similar_manuscripts[VERSION_ID].isin(
+        [m[VERSION_ID] for m in involved_manuscripts]
+      )
+    ].set_index(VERSION_ID)[SIMILARITY_COLUMN].to_dict()
+
+    def score_by_manuscript(manuscript, keyword, similarity):
+      return {
+        **manuscript_id_fields(manuscript),
+        'keyword': keyword,
+        'similarity': similarity,
+        'combined': min(1.0, keyword + (similarity or 0) * 0.5)
+      }
+
+    scores_by_manuscript = [
+      score_by_manuscript(
+        manuscript,
+        keyword=keyword_match_count_by_by_version_key_map.get(
+          manuscript[VERSION_ID], 0) / max(1, num_keywords),
+        similarity=similarity_by_manuscript_version_id.get(
+          manuscript[VERSION_ID], None)
+      )
+      for manuscript in involved_manuscripts
+    ]
+    scores_by_manuscript = list(reversed(sorted(scores_by_manuscript, key=lambda score: (
+      score['combined'],
+      score['keyword'],
+      score['similarity']
+    ))))
+    best_score = get_first(scores_by_manuscript, {})
+
+    author_of_manuscript_ids = set([m[VERSION_ID] for m in author_of_manuscripts])
+
+    potential_reviewer = {
+      'person': self.persons_map.get(person_id, None),
+      'author_of_manuscripts': clean_manuscripts(author_of_manuscripts),
+      'scores': {
+        'keyword': best_score.get('keyword'),
+        'similarity': best_score.get('similarity'),
+        'combined': best_score.get('combined'),
+        'by_manuscript': [
+          m
+          for m in scores_by_manuscript
+          if m[VERSION_ID] in author_of_manuscript_ids
+        ]
+      }
+    }
+    if potential_reviewer.get('person') is None:
+      self.logger.warning('person id not found: %s', person_id)
+      debugv('valid persons: %s', self.persons_map.keys())
+    return potential_reviewer
+
+
   def _recommend_using_criteria(
     self, subject_areas=None, keyword_list=None, abstract=None,
     include_person_ids=None, exclude_person_ids=None, ecr_subject_areas=None,
@@ -730,66 +791,15 @@ class RecommendReviewers(object):
       .set_index(VERSION_ID).to_dict(orient='index').items()
     }
 
-    def populate_potential_reviewer(person_id):
-      author_of_manuscripts = self.manuscripts_by_author_map.get(person_id, [])
-      reviewer_of_manuscripts = self.manuscripts_by_reviewer_map.get(person_id, [])
-      involved_manuscripts = author_of_manuscripts + reviewer_of_manuscripts
-
-      similarity_by_manuscript_version_id = all_similar_manuscripts[
-        all_similar_manuscripts[VERSION_ID].isin(
-          [m[VERSION_ID] for m in involved_manuscripts]
-        )
-      ].set_index(VERSION_ID)[SIMILARITY_COLUMN].to_dict()
-
-      def score_by_manuscript(manuscript, keyword, similarity):
-        return {
-          **manuscript_id_fields(manuscript),
-          'keyword': keyword,
-          'similarity': similarity,
-          'combined': min(1.0, keyword + (similarity or 0) * 0.5)
-        }
-
-      scores_by_manuscript = [
-        score_by_manuscript(
-          manuscript,
-          keyword=keyword_match_count_by_by_version_key_map.get(
-            manuscript[VERSION_ID], 0) / max(1, len(keyword_list)),
-          similarity=similarity_by_manuscript_version_id.get(
-            manuscript[VERSION_ID], None)
-        )
-        for manuscript in involved_manuscripts
-      ]
-      scores_by_manuscript = list(reversed(sorted(scores_by_manuscript, key=lambda score: (
-        score['combined'],
-        score['keyword'],
-        score['similarity']
-      ))))
-      best_score = get_first(scores_by_manuscript, {})
-
-      author_of_manuscript_ids = set([m[VERSION_ID] for m in author_of_manuscripts])
-
-      potential_reviewer = {
-        'person': self.persons_map.get(person_id, None),
-        'author_of_manuscripts': clean_manuscripts(author_of_manuscripts),
-        'scores': {
-          'keyword': best_score.get('keyword'),
-          'similarity': best_score.get('similarity'),
-          'combined': best_score.get('combined'),
-          'by_manuscript': [
-            m
-            for m in scores_by_manuscript
-            if m[VERSION_ID] in author_of_manuscript_ids
-          ]
-        }
-      }
-      if potential_reviewer.get('person') is None:
-        self.logger.warning('person id not found: %s', person_id)
-        debugv('valid persons: %s', self.persons_map.keys())
-      return potential_reviewer
-
     potential_reviewers = [
-      populate_potential_reviewer(person_id)
-      for person_id in potential_reviewers_ids]
+      self._populate_potential_reviewer(
+        person_id,
+        all_similar_manuscripts=all_similar_manuscripts,
+        keyword_match_count_by_by_version_key_map=keyword_match_count_by_by_version_key_map,
+        num_keywords=len(keyword_list)
+      )
+      for person_id in potential_reviewers_ids
+    ]
 
     review_duration_mean_keys = ['person', 'stats', 'overall', 'review-duration', 'mean']
     available_potential_reviewer_mean_durations = filter_none(deep_get_list(
