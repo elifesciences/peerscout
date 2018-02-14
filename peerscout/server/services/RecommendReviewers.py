@@ -789,9 +789,7 @@ class RecommendReviewers(object):
 
   def _find_matching_manuscript_ids_with_scores(
     self, subject_areas=None, keyword_list=None, abstract=None,
-    manuscript_version_ids=None,
-    similarity_threshold=0.5,
-    max_similarity_count=50):
+    manuscript_version_ids=None):
 
     keyword_matching_manuscript_ids, keyword_score_by_version_id = (
       self._find_manuscript_ids_by_subject_areas_and_keywords_with_keyword_scores(
