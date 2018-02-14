@@ -6,6 +6,7 @@ import io
 import os
 from contextlib import contextmanager
 import logging
+from unittest.mock import patch, ANY
 
 import pytest
 
@@ -14,9 +15,13 @@ from lxml.builder import E
 
 from ..shared.database import empty_in_memory_database
 
+from . import importDataToDatabase as importDataToDatabaseModule
 from .importDataToDatabase import (
   default_field_mapping_by_table_name,
-  convert_zip_file
+  convert_zip_file,
+  extract_person_keywords_from_person_node,
+  parse_keyword_str,
+  NoteTypes
 )
 
 PERSON_ID = 'person_id'
@@ -24,6 +29,9 @@ AUTHOR_1_ID = 'author1'
 
 ROLE_1 = 'role1'
 ROLE_2 = 'role2'
+
+KEYWORD_1 = 'compound keyword 1'
+KEYWORD_2 = 'other keyword 2'
 
 VERSION_ID1 = '00001-1'
 
@@ -81,6 +89,7 @@ def empty_database_and_convert_zip_stream(zip_stream):
 def empty_database_and_convert_files(filenames):
   return empty_database_and_convert_zip_stream(zip_for_files(filenames))
 
+@pytest.mark.slow
 class TestConvertZipFile:
   def test_regular(self, logger):
     with empty_database_and_convert_files(['regular-00001.xml']) as db:
@@ -232,3 +241,72 @@ class TestConvertZipFile:
         {*zip(df[PERSON_ID], df['role'])} ==
         {(AUTHOR_1_ID, ROLE_1), (AUTHOR_1_ID, ROLE_2)}
       )
+
+  def test_should_import_multiple_person_keywords(self, logger):
+    with patch.object(importDataToDatabaseModule, 'extract_person_keywords_from_person_node') as\
+      extract_person_keywords_from_person_node_mock:
+
+      extract_person_keywords_from_person_node_mock.side_effect = lambda *args, person_id: [
+        {PERSON_ID: person_id, 'keyword': KEYWORD_1},
+        {PERSON_ID: person_id, 'keyword': KEYWORD_2}
+      ] if person_id == AUTHOR_1_ID else []
+
+      with empty_database_and_convert_files(['regular-00001.xml']) as db:
+        extract_person_keywords_from_person_node_mock.assert_any_call(
+          ANY, person_id=AUTHOR_1_ID
+        )
+        df = db.person_keyword.read_frame().reset_index()
+        logger.debug('df:\n%s', df)
+        assert (
+          {*zip(df[PERSON_ID], df['keyword'])} ==
+          {(AUTHOR_1_ID, KEYWORD_1), (AUTHOR_1_ID, KEYWORD_2)}
+        )
+
+class TestExtractPersonKeywordsFromPersonNode:
+  def test_should_not_extract_keyword_from_note_with_different_note_type(self):
+    with patch.object(importDataToDatabaseModule, 'parse_keyword_str') as parse_keyword_str_mock:
+      assert list(extract_person_keywords_from_person_node(
+        E.person(
+          E.notes(E.note(
+            E('note-type', 'other'),
+            E('note-text', KEYWORD_1)
+          ))
+        ),
+        person_id=AUTHOR_1_ID
+      )) == []
+      parse_keyword_str_mock.assert_not_called()
+
+  def test_should_extract_multiple_keyword_from_single_note(self):
+    with patch.object(importDataToDatabaseModule, 'parse_keyword_str') as parse_keyword_str_mock:
+      parse_keyword_str_mock.return_value = [KEYWORD_1, KEYWORD_2]
+      keyword_str = ','.join(parse_keyword_str_mock.return_value)
+
+      assert list(extract_person_keywords_from_person_node(
+        E.person(
+          E.notes(E.note(
+            E('note-type', NoteTypes.KEYWORDS),
+            E('note-text', keyword_str)
+          ))
+        ),
+        person_id=AUTHOR_1_ID
+      )) == [
+        {PERSON_ID: AUTHOR_1_ID, 'keyword': KEYWORD_1},
+        {PERSON_ID: AUTHOR_1_ID, 'keyword': KEYWORD_2}
+      ]
+      parse_keyword_str_mock.assert_called_with(keyword_str)
+
+class TestParseKeywordStr:
+  def test_should_return_empty_list_if_string_is_empty(self):
+    assert list(parse_keyword_str('')) == []
+
+  def test_should_return_list_with_single_keyword(self):
+    assert list(parse_keyword_str(KEYWORD_1)) == [KEYWORD_1]
+
+  def test_should_parse_multiple_keyword_separated_by_comma(self):
+    assert list(parse_keyword_str(','.join((KEYWORD_1, KEYWORD_2)))) == [KEYWORD_1, KEYWORD_2]
+
+  def test_should_strip_space_around_keywords(self):
+    assert list(parse_keyword_str(' , '.join((KEYWORD_1, KEYWORD_2)))) == [KEYWORD_1, KEYWORD_2]
+
+  def test_should_not_include_empty_keywords(self):
+    assert list(parse_keyword_str(' , '.join((KEYWORD_1, '')))) == [KEYWORD_1]

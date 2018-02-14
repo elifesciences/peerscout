@@ -15,7 +15,7 @@ from sqlalchemy.dialects import postgresql
 
 Base = declarative_base()
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 
 class SchemaVersion(Base):
   __tablename__ = "schema_version"
@@ -56,6 +56,12 @@ class PersonDatesNotAvailable(Base):
   person_id = create_person_id_fk(primary_key=True)
   start_date = Column(DateTime, primary_key=True)
   end_date = Column(DateTime, primary_key=True)
+
+class PersonKeyword(Base):
+  __tablename__ = "person_keyword"
+
+  person_id = create_person_id_fk(primary_key=True)
+  keyword = Column(String, primary_key=True)
 
 class PersonMembership(Base):
   __tablename__ = "person_membership"
@@ -220,6 +226,7 @@ TABLES = [
   ImportProcessed,
   Person,
   PersonDatesNotAvailable,
+  PersonKeyword,
   PersonMembership,
   PersonRole,
   PersonSubjectArea,
