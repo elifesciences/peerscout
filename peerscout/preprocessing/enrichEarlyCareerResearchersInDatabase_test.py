@@ -1,5 +1,7 @@
 import logging
 import json
+from unittest.mock import Mock
+from configparser import ConfigParser
 
 from ..shared.database import empty_in_memory_database
 
@@ -7,8 +9,12 @@ from .enrichEarlyCareerResearchersInDatabase import (
   extract_manuscript,
   enrich_early_career_researchers,
   get_crossref_works_by_orcid_url,
-  get_crossref_works_by_full_name_url
+  get_crossref_works_by_full_name_url,
+  parse_int_list,
+  decorate_get_request_handler
 )
+
+URL_1 = 'test://dummy.url'
 
 TITLE1 = 'Title 1'
 ABSTRACT1 = 'Abstract 1'
@@ -241,3 +247,23 @@ class TestEnrichEarlyCareerResearchers(object):
         list(df[DOI]) ==
         [doi_1_original]
       )
+
+class TestParseIntList(object):
+  def test_should_return_default_value_for_none(self):
+    assert parse_int_list(None, [1, 2, 3]) == [1, 2, 3]
+
+  def test_should_return_default_value_for_empty_string(self):
+    assert parse_int_list('', [1, 2, 3]) == [1, 2, 3]
+
+  def test_should_parse_multiple_values(self):
+    assert parse_int_list('100, 200, 300', [1, 2, 3]) == [100, 200, 300]
+
+class TestDecorateGetRequestHandler(object):
+  def test_should_call_through_with_decorators(self):
+    app_config = ConfigParser()
+    get_request_handler = Mock()
+    decorated_get_request_handler = decorate_get_request_handler(
+      get_request_handler, app_config, cache_dir=None
+    )
+    assert decorated_get_request_handler(URL_1) == get_request_handler.return_value
+    assert decorate_get_request_handler != get_request_handler
