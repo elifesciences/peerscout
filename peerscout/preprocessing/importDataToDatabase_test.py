@@ -312,8 +312,15 @@ class TestParseKeywordStr:
     assert list(parse_keyword_str(' , '.join((KEYWORD_1, '')))) == [KEYWORD_1]
 
   def test_should_remove_xml_encoding(self):
-    assert list(parse_keyword_str('&quot;quoted&quot;')) == ['"quoted"']
+    assert list(parse_keyword_str('this is &quot;quoted&quot;')) == ['this is "quoted"']
 
   def test_should_ignore_na_upper_and_lower_case(self):
     assert list(parse_keyword_str('N/A')) == []
     assert list(parse_keyword_str('n/a')) == []
+
+  def test_should_ignore_special_characters(self):
+    assert list(parse_keyword_str('-')) == []
+    assert list(parse_keyword_str('.')) == []
+
+  def test_should_ignore_special_digits(self):
+    assert list(parse_keyword_str('1')) == []
