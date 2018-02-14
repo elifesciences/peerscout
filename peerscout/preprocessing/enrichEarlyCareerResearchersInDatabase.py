@@ -1,27 +1,50 @@
 import re
 from pathlib import Path
 import json
-from textwrap import shorten
 import logging
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 
 import dateutil
 import requests
 import pandas as pd
 from tqdm import tqdm
 import sqlalchemy
+from ratelimit import rate_limited
+
+from peerscout.utils.requests import configure_session_retry
+from peerscout.utils.threading import lazy_thread_local
 
 from .convertUtils import unescape_and_strip_tags_if_not_none, flatten
 
 from .preprocessingUtils import get_data_path
 
 from ..shared.database import connect_managed_configured_database
-
-NAME = 'enrichEarlyCareerResearchersInDatabase'
+from ..shared.app_config import get_app_config
 
 PERSON_ID = 'person_id'
 
-def get(url):
-  response = requests.get(url)
+DEFAULT_MAX_WORKERS = 10
+
+DEFAULT_RATE_LIMIT_COUNT = 50
+DEFAULT_RATE_LIMIT_INTERVAL_SEC = 1
+
+DEFAULT_MAX_RETRY = 10
+
+DEFAULT_RETRY_ON_STATUS_CODES = [429, 500, 502, 503, 504]
+
+def get_logger():
+  return logging.getLogger(__name__)
+
+class Columns:
+  FIRST_NAME = 'first_name'
+  LAST_NAME = 'last_name'
+  ORCID = 'ORCID'
+
+def get(url, session=None):
+  get_logger().debug('requesting: %s', url)
+  response = (session or requests).get(url)
+  get_logger().debug('response received: %s (%s)', url, response.status_code)
   response.raise_for_status()
   return response.text
 
@@ -29,7 +52,7 @@ def create_cache(f, cache_dir, serializer, deserializer, suffix=''):
   cache_path = Path(cache_dir)
   cache_path.mkdir(exist_ok=True, parents=True)
   clean_pattern = re.compile(r'[^\w]')
-  logger = logging.getLogger(NAME)
+  logger = get_logger()
 
   def clean_fn(fn):
     return clean_pattern.sub('_', fn)
@@ -107,12 +130,20 @@ def get_crossref_works_by_full_name_url(full_name):
     .format(full_name)
   )
 
-def enrich_early_career_researchers(db, get_request_handler):
-  logger = logging.getLogger(NAME)
+def clean_person_names(person):
+  return {
+    **person,
+    Columns.FIRST_NAME: unescape_and_strip_tags_if_not_none(person[Columns.FIRST_NAME]).strip(),
+    Columns.LAST_NAME: unescape_and_strip_tags_if_not_none(person[Columns.LAST_NAME]).strip()
+  }
 
+def clean_all_person_names(person_list):
+  return [clean_person_names(p) for p in person_list]
+
+def get_early_career_researchers(db):
   person_table = db.person
   person_membership_table = db.person_membership
-  df = pd.DataFrame(
+  return clean_all_person_names(pd.DataFrame(
     db.session.query(
       person_table.table.person_id,
       person_table.table.first_name,
@@ -130,44 +161,65 @@ def enrich_early_career_researchers(db, get_request_handler):
         )
       )
     ).all(),
-    columns=[PERSON_ID, 'first_name', 'last_name', 'ORCID']
+    columns=[PERSON_ID, Columns.FIRST_NAME, Columns.LAST_NAME, Columns.ORCID]
+  ).to_dict(orient='records'))
+
+def get_person_full_name(person):
+  return ' '.join([person[Columns.FIRST_NAME], person[Columns.LAST_NAME]])
+
+def get_persons_with_orcid(person_list):
+  return [p for p in person_list if p[Columns.ORCID]]
+
+def get_manuscripts_for_person(person, get_request_handler):
+  orcid = person[Columns.ORCID]
+  if orcid:
+    url = get_crossref_works_by_orcid_url(orcid)
+    response = json.loads(get_request_handler(url))
+    return [
+      extract_manuscript(item)
+      for item in response['message']['items']
+      if contains_author_with_orcid(item, orcid)
+    ]
+  else:
+    first_name = person[Columns.FIRST_NAME]
+    last_name = person[Columns.LAST_NAME]
+    full_name = get_person_full_name(person)
+    url = get_crossref_works_by_full_name_url(full_name)
+    response = json.loads(get_request_handler(url))
+    return [
+      extract_manuscript(item)
+      for item in response['message']['items']
+      if contains_author_with_name(item, first_name, last_name)
+    ]
+
+def tqdm_parallel_map_unordered(executor, fn, iterable, **kwargs):
+  futures_list = [executor.submit(fn, item) for item in iterable]
+  yield from (
+    f.result()
+    for f in tqdm(concurrent.futures.as_completed(futures_list), total=len(futures_list), **kwargs)
   )
-  logger.info("number of early career researchers: %d", len(df))
-  logger.info("number of early career researchers with orcid: %d", sum(pd.notnull(df['ORCID'])))
-  out_list = []
-  pbar = tqdm(df.to_dict(orient='records'))
-  for row in pbar:
-    person_id = row[PERSON_ID]
-    first_name = unescape_and_strip_tags_if_not_none(row['first_name']).strip()
-    last_name = unescape_and_strip_tags_if_not_none(row['last_name']).strip()
-    full_name = first_name + ' ' + last_name
-    pbar.set_description("%40s" % shorten(full_name, width=40))
-    orcid = row['ORCID']
-    if orcid is not None and len(orcid) > 0:
-      # logger.debug("orcid: %s, %s, %s", orcid, first_name, last_name)
-      url = get_crossref_works_by_orcid_url(orcid)
-      # pbar.set_description("%40s" % shorten(url, width=40))
-      response = json.loads(get_request_handler(url))
-      items = [
-        extract_manuscript(item)
-        for item in response['message']['items']
-        if contains_author_with_orcid(item, orcid)
-      ]
-    else:
-      # logger.debug("name: %s, %s", row['first-name'], row['last-name'])
-      url = get_crossref_works_by_full_name_url(full_name)
-      # pbar.set_description("%40s" % shorten(url, width=40))
-      response = json.loads(get_request_handler(url))
-      items = [
-        extract_manuscript(item)
-        for item in response['message']['items']
-        if contains_author_with_name(item, first_name, last_name)
-      ]
-    for item in items:
-      out_list.append({
-        **item,
+
+def get_person_with_manuscripts_list(person_list, get_request_handler, max_workers=1):
+  with ThreadPoolExecutor(max_workers=max_workers) as executor:
+    yield from tqdm_parallel_map_unordered(
+      executor,
+      lambda person: (person, get_manuscripts_for_person(person, get_request_handler)),
+      person_list
+    )
+
+def flatten_person_with_manuscripts_list(person_with_manuscripts_list):
+  for person, manuscripts in person_with_manuscripts_list:
+    person_id = person[PERSON_ID]
+    for m in manuscripts:
+      yield {
+        **m,
         PERSON_ID: person_id
-      })
+      }
+
+def update_database_with_person_with_manuscripts_list(db, person_with_manuscripts_list):
+  out_list = list(flatten_person_with_manuscripts_list(
+    person_with_manuscripts_list
+  ))
 
   crossref_dois = set([o.get('doi') for o in out_list])
 
@@ -217,6 +269,7 @@ def enrich_early_career_researchers(db, get_request_handler):
     'person_id': m.get('person_id')
   } for m in new_manuscript_info])
 
+  logger = get_logger()
   logger.debug("crossref_dois: %d", len(crossref_dois))
   logger.debug("existing_dois: %d", len(existing_dois_lower))
   logger.debug("new_dois: %d", len(new_dois))
@@ -232,20 +285,105 @@ def enrich_early_career_researchers(db, get_request_handler):
     db.manuscript_author.create_list(new_manuscript_authors)
     db.commit()
 
-def main():
-  with connect_managed_configured_database() as db:
-    cached_get = create_str_cache(
-      get,
-      cache_dir=get_data_path('cache-http'),
+def enrich_early_career_researchers(db, get_request_handler, max_workers=1):
+  logger = get_logger()
+
+  person_list = get_early_career_researchers(db)
+  logger.info("number of early career researchers: %d", len(person_list))
+  logger.info(
+    "number of early career researchers with orcid: %d",
+    len(get_persons_with_orcid(person_list))
+  )
+
+  person_with_manuscripts_list = get_person_with_manuscripts_list(
+    person_list, get_request_handler, max_workers=max_workers
+  )
+  update_database_with_person_with_manuscripts_list(db, person_with_manuscripts_list)
+
+def get_configured_max_workers(app_config):
+  return app_config.getint('pipeline', 'max_workers', fallback=DEFAULT_MAX_WORKERS)
+
+def get_configured_rate_limit_and_interval_sec(app_config):
+  return (
+    app_config.getint(
+      'crossref', 'rate_limit_count', fallback=DEFAULT_RATE_LIMIT_COUNT
+    ),
+    app_config.getint(
+      'crossref', 'rate_limit_interval_sec', fallback=DEFAULT_RATE_LIMIT_INTERVAL_SEC
+    )
+  )
+
+def get_configured_max_retries(app_config):
+  return app_config.getint('crossref', 'max_retries', fallback=DEFAULT_MAX_RETRY)
+
+def parse_int_list(s, default_value=None):
+  if s:
+    return [int(x.strip()) for x in s.split(',')]
+  return default_value
+
+def get_configured_retry_on_status_codes(app_config):
+  return parse_int_list(
+    app_config.get('crossref', 'retry_on_status_codes', fallback=None),
+    DEFAULT_RETRY_ON_STATUS_CODES
+  )
+
+def get_session_with_retry(**kwargs):
+  session = requests.Session()
+  configure_session_retry(session, **kwargs)
+  return session
+
+def decorate_get_request_handler(get_request_handler, app_config, cache_dir=None):
+  # Note: could also get this from the Crossref API itself
+  #   (via X-Rate-Limit-Limit and X-Rate-Limit-Interval)
+  rate_limit_count, rate_limit_interval_sec = (
+    get_configured_rate_limit_and_interval_sec(app_config)
+  )
+  get_logger().info('using rate limit: %d / %ds', rate_limit_count, rate_limit_interval_sec)
+
+  max_retries = get_configured_max_retries(app_config)
+  retry_on_status_codes = get_configured_retry_on_status_codes(app_config)
+  get_logger().info(
+    'using max_retries: %d (status codes: %s)', max_retries, retry_on_status_codes
+  )
+
+  get_session = lazy_thread_local(lambda: get_session_with_retry(
+    max_retries=max_retries,
+    status_forcelist=retry_on_status_codes
+  ))
+  get_with_retry = lambda url: get_request_handler(url, session=get_session())
+  rate_limited_get = rate_limited(rate_limit_count, rate_limit_interval_sec)(
+    get_with_retry
+  )
+
+  if cache_dir:
+    return create_str_cache(
+      rate_limited_get,
+      cache_dir=cache_dir,
       suffix='.json'
     )
+  else:
+    return rate_limited_get
 
+def main():
+  app_config = get_app_config()
+
+  max_workers = get_configured_max_workers(app_config)
+  get_logger().info('using max_workers: %d', max_workers)
+
+  get_request_handler = decorate_get_request_handler(
+    get,
+    app_config,
+    cache_dir=get_data_path('cache-http'),
+  )
+
+  with connect_managed_configured_database() as db:
     enrich_early_career_researchers(
       db,
-      get_request_handler=cached_get
+      get_request_handler=get_request_handler,
+      max_workers=max_workers
     )
 
-    logging.getLogger(NAME).info('done')
+    get_logger().info('done')
 
 if __name__ == "__main__":
   from ..shared.logging_config import configure_logging
