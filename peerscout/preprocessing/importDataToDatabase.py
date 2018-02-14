@@ -111,7 +111,7 @@ def parse_keyword_str(keyword_str):
   return (
     keyword for keyword in
     (unescape_and_strip_tags_if_str(s.strip()) for s in keyword_str.split(','))
-    if keyword
+    if keyword and keyword.lower() != 'n/a'
   )
 
 def extract_person_keywords_from_person_node(person_node, person_id):
