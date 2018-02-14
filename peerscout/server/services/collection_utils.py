@@ -1,5 +1,7 @@
 flatten = lambda l: [item for sublist in l for item in sublist]
 
+iter_flatten = lambda l: (item for sublist in l for item in sublist)
+
 filter_none = lambda l: [item for item in l if item is not None]
 
 def deep_get(dictionary, keys, defaultValue=None):
