@@ -265,10 +265,7 @@ class RecommendReviewers(object):
 
     logger.debug('filter_by_subject_area_enabled: %s', filter_by_subject_area_enabled)
 
-    self.manuscript_versions_all_df = (
-      db.manuscript_version.read_frame().reset_index()
-      .rename(columns={'id': VERSION_ID})
-    )
+    self.manuscript_versions_all_df = db.manuscript_version.read_frame().reset_index()
 
     valid_version_ids = manuscript_model.get_valid_manuscript_version_ids()
 
@@ -320,25 +317,13 @@ class RecommendReviewers(object):
       valid_version_ids
     )
 
-    manuscripts_df = (
-      db.manuscript.read_frame().reset_index()
-      .rename(columns={'id': MANUSCRIPT_ID})
-    )
+    manuscripts_df = db.manuscript.read_frame().reset_index()
 
-    self.persons_df = (
-      db.person.read_frame().reset_index()
-      .rename(columns={'id': PERSON_ID})
-    )
+    self.persons_df = db.person.read_frame().reset_index()
 
-    memberships_df = (
-      db.person_membership.read_frame()
-      .rename(columns={'person_id': PERSON_ID})
-    )
+    memberships_df = db.person_membership.read_frame()
 
-    dates_not_available_df = (
-      db.person_dates_not_available.read_frame().reset_index()
-      .rename(columns={'person_id': PERSON_ID})
-    )
+    dates_not_available_df = db.person_dates_not_available.read_frame().reset_index()
 
     dates_not_available_df = dates_not_available_df[
       dates_not_available_df['end_date'] >= pd.to_datetime('today')
@@ -350,10 +335,7 @@ class RecommendReviewers(object):
       ['Review Received']
     )
 
-    self.assigned_reviewers_df = (
-      db.manuscript_potential_reviewer.read_frame().reset_index()
-      .rename(columns={'version_id': VERSION_ID})
-    )
+    self.assigned_reviewers_df = db.manuscript_potential_reviewer.read_frame().reset_index()
 
     temp_memberships_map = groupby_column_to_dict(memberships_df, PERSON_ID)
     dates_not_available_map = groupby_column_to_dict(dates_not_available_df, PERSON_ID)
