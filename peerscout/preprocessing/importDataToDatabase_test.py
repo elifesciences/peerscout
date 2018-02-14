@@ -310,3 +310,6 @@ class TestParseKeywordStr:
 
   def test_should_not_include_empty_keywords(self):
     assert list(parse_keyword_str(' , '.join((KEYWORD_1, '')))) == [KEYWORD_1]
+
+  def test_should_remove_xml_encoding(self):
+    assert list(parse_keyword_str('&quot;quoted&quot;')) == ['"quoted"']

@@ -110,7 +110,7 @@ def parse_keyword_str(keyword_str):
     return []
   return (
     keyword for keyword in
-    (s.strip() for s in keyword_str.split(','))
+    (unescape_and_strip_tags_if_str(s.strip()) for s in keyword_str.split(','))
     if keyword
   )
 
