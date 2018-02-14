@@ -19,7 +19,8 @@ from .database_views import create_views
 
 from .app_config import get_app_config
 
-NAME = 'database'
+def get_logger():
+  return logging.getLogger(__name__)
 
 class CustomJSONEncoder(JSONEncoder):
   def default(self, obj): # pylint: disable=E0202
@@ -182,7 +183,6 @@ class Entity(object):
 
 class Database(object):
   def __init__(self, engine):
-    self.logger = logging.getLogger(NAME)
     self.engine = engine
     self.session = sessionmaker(engine)()
     self.views = create_views(engine.dialect.name)
@@ -209,7 +209,7 @@ class Database(object):
 
   def create_views(self):
     for view in self.views:
-      self.logger.info('creating view %s', view.__tablename__)
+      get_logger().info('creating view %s', view.__tablename__)
       self.engine.execute('CREATE VIEW {} AS {}'.format(
         view.__tablename__,
         view.__query__
@@ -217,7 +217,7 @@ class Database(object):
     self.commit()
 
   def _shallow_migrate_schema(self):
-    self.logger.info('shallow migrate schema (no data modification)')
+    get_logger().info('shallow migrate schema (no data modification)')
     Base.metadata.create_all(self.engine)
     self.drop_views()
     self.create_views()
@@ -242,14 +242,14 @@ class Database(object):
       self._shallow_migrate_schema()
     else:
       if version is None:
-        self.logger.info("creating schema")
+        get_logger().info("creating schema")
       else:
-        self.logger.info(
+        get_logger().info(
           "schema out of sync, re-creating schema (was: %s, required: %s)",
           version.version if version else None, SCHEMA_VERSION
         )
       self._full_migrate_schema()
-      self.logger.info("done")
+      get_logger().info("done")
 
   def sorted_table_names(self):
     return [t.name for t in Base.metadata.sorted_tables]
@@ -294,5 +294,14 @@ def connect_configured_database():
 @contextmanager
 def connect_managed_configured_database():
   db = connect_configured_database()
+  yield db
+  db.close()
+
+@contextmanager
+def empty_in_memory_database():
+  engine = sqlalchemy.create_engine('sqlite://', echo=False)
+  get_logger().debug("engine driver: %s", engine.driver)
+  db = Database(engine)
+  db.update_schema()
   yield db
   db.close()
