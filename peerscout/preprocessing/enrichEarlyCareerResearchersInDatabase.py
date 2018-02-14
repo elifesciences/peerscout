@@ -36,7 +36,7 @@ DEFAULT_RETRY_ON_STATUS_CODES = [429, 500, 502, 503, 504]
 def get_logger():
   return logging.getLogger(__name__)
 
-class Columns(object):
+class Columns:
   FIRST_NAME = 'first_name'
   LAST_NAME = 'last_name'
   ORCID = 'ORCID'
