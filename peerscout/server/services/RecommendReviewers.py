@@ -784,8 +784,6 @@ class RecommendReviewers(object):
       similar_manuscripts = self._filter_manuscripts_by_subject_areas(
         similar_manuscripts, subject_areas
       )
-    similarity_threshold = 0.5
-    max_similarity_count = 50
     most_similar_manuscripts = similar_manuscripts[
       similar_manuscripts[SIMILARITY_COLUMN] >= similarity_threshold
     ]
