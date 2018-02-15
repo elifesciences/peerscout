@@ -16,11 +16,18 @@ from .collection_utils import (
   iter_flatten,
   filter_none,
   deep_get,
-  deep_get_list
+  deep_get_list,
+  groupby_to_dict,
+  groupby_columns_to_dict
 )
 
 from .manuscript_utils import (
   duplicate_manuscript_titles_as_alternatives
+)
+
+from .person_keywords import (
+  PersonKeywordService,
+  get_person_ids_of_person_keywords_scores
 )
 
 NAME = 'RecommendReviewers'
@@ -74,21 +81,6 @@ def clean_result(result):
 
 def manuscript_number_to_no(x):
   return x.split('-')[-1]
-
-def groupby_to_dict(l, kf, vf):
-  return {
-    k: [vf(v) for v in g]
-    for k, g in groupby(sorted(l, key=kf), kf)
-  }
-
-def groupby_columns_to_dict(groupby_values, values, vf=None):
-  if vf is None:
-    vf = lambda x: x
-  return groupby_to_dict(
-     zip(groupby_values, values),
-     lambda item: item[0],
-     lambda item: vf(item[1])
-  )
 
 def filter_dict_keys(d, f):
   return {k: v for k, v in d.items() if f(k)}
@@ -293,7 +285,7 @@ class RecommendReviewers(object):
       valid_version_ids
     )
 
-    temp_person_keywords_df = db.person_keyword.read_frame().reset_index()
+    self.person_keyword_service = PersonKeywordService.from_database(db)
 
     self.authors_all_df = (
       db.manuscript_author.read_frame().reset_index()
@@ -435,7 +427,7 @@ class RecommendReviewers(object):
 
     self.all_keywords = sorted(
       set(self.manuscript_keywords_df['keyword']) |
-      set(temp_person_keywords_df['keyword'])
+      self.person_keyword_service.get_all_keywords()
     )
 
     logger.debug("building manuscript list")
@@ -495,12 +487,6 @@ class RecommendReviewers(object):
 
     debugv("manuscripts_by_author_map: %s", self.manuscripts_by_author_map)
     debugv("manuscripts_by_reviewer_map: %s", self.manuscripts_by_reviewer_map)
-
-    self.person_ids_by_keyword_map = groupby_columns_to_dict(
-      temp_person_keywords_df['keyword'].str.lower(),
-      temp_person_keywords_df[PERSON_ID]
-    )
-    debugv("person_ids_by_keyword_map: %s", self.person_ids_by_keyword_map)
 
     early_career_researcher_person_id_query = db.session.query(
       db.person.table.person_id
@@ -598,26 +584,6 @@ class RecommendReviewers(object):
       # add matching keyword count column
       df['count'] = 0
     return df
-
-  def _get_person_keywords_scores(self, keyword_list):
-    if not keyword_list:
-      result = {}
-    else:
-      keyword_count = len(keyword_list)
-      result = {
-        k: v / keyword_count
-        for k, v in Counter(iter_flatten(
-          self.person_ids_by_keyword_map.get(keyword.lower(), [])
-          for keyword in keyword_list
-        )).items()
-      }
-    self.logger.debug(
-      "found %d persons by keywords: %s", len(result), keyword_list
-    )
-    return result
-
-  def _get_person_ids_of_person_keywords_scores(self, person_keyword_scores):
-    return person_keyword_scores.keys()
 
   def _get_early_career_reviewer_ids_by_subject_areas(self, subject_areas):
     if len(subject_areas) == 0:
@@ -902,7 +868,7 @@ class RecommendReviewers(object):
     return self._filter_person_ids_by_role(
       (
         self._potential_reviewer_ids_for_matching_manuscript_ids(matching_manuscript_ids) |
-        self._get_person_ids_of_person_keywords_scores(person_keyword_scores) |
+        get_person_ids_of_person_keywords_scores(person_keyword_scores) |
         self._get_early_career_reviewer_ids_by_subject_areas(ecr_subject_areas) |
         include_person_ids
       ) - exclude_person_ids,
@@ -929,7 +895,7 @@ class RecommendReviewers(object):
       )
     )
 
-    person_keyword_scores = self._get_person_keywords_scores(keyword_list)
+    person_keyword_scores = self.person_keyword_service.get_person_keywords_scores(keyword_list)
 
     potential_reviewers_ids = self._find_potential_reviewer_ids(
       matching_manuscript_ids=matching_manuscript_ids,

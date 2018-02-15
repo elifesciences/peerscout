@@ -5,13 +5,17 @@ from contextlib import contextmanager
 import pytest
 import pandas as pd
 
-from ...shared.database import empty_in_memory_database
+from ...shared.database import populated_in_memory_database
 
 from .ManuscriptModel import ManuscriptModel
 from .DocumentSimilarityModel import DocumentSimilarityModel
 from .RecommendReviewers import RecommendReviewers, set_debugv_enabled
 
-set_debugv_enabled(True)
+from .test_data import (
+  PERSON_ID,
+  PERSON_ID1, PERSON_ID2, PERSON_ID3,
+  PERSON1, PERSON2, PERSON3
+)
 
 MANUSCRIPT_ID = 'manuscript_id'
 VERSION_ID = 'version_id'
@@ -23,18 +27,6 @@ PERSON_ID_COLUMNS = [PERSON_ID]
 
 LDA_DOCVEC_COLUMN = 'lda_docvec'
 
-PERSON_ID1 = 'person1'
-PERSON_ID2 = 'person2'
-PERSON_ID3 = 'person3'
-
-PERSON1 = {
-  PERSON_ID: PERSON_ID1,
-  'first_name': 'John',
-  'last_name': 'Smith',
-  'status': 'Active',
-  'is_early_career_researcher': False
-}
-
 PERSON1_RESULT = {
   **PERSON1,
   'memberships': [],
@@ -45,23 +37,9 @@ PERSON1_RESULT = {
   }
 }
 
-PERSON2 = {
-  **PERSON1,
-  PERSON_ID: PERSON_ID2,
-  'first-name': 'Laura',
-  'last-name': 'Laudson'
-}
-
 PERSON2_RESULT = {
   **PERSON1_RESULT,
   **PERSON2
-}
-
-PERSON3 = {
-  **PERSON1,
-  PERSON_ID: PERSON_ID3,
-  'first-name': 'Mike',
-  'last-name': 'Michelson'
 }
 
 PERSON3_RESULT = {
@@ -290,6 +268,7 @@ PP = pprint.PrettyPrinter(indent=2, width=40)
 
 def setup_module():
   logging.basicConfig(level=logging.DEBUG)
+  set_debugv_enabled(True)
 
 @pytest.fixture(name='logger')
 def get_logger():
@@ -298,19 +277,7 @@ def get_logger():
 @contextmanager
 def create_recommend_reviewers(dataset, filter_by_subject_area_enabled=False):
   logger = get_logger()
-  with empty_in_memory_database() as db:
-
-    sorted_table_names = db.sorted_table_names()
-    unknown_table_names = set(dataset.keys()) - set(sorted_table_names)
-    if len(unknown_table_names) > 0:
-      raise Exception("unknown table names: {}".format(unknown_table_names))
-
-    for table_name in sorted_table_names:
-      if table_name in dataset:
-        logger.debug("data %s:\n%s", table_name, dataset[table_name])
-        db[table_name].create_list(dataset[table_name])
-    db.commit()
-
+  with populated_in_memory_database(dataset) as db:
     logger.debug("view manuscript_person_review_times:\n%s",
       db.manuscript_person_review_times.read_frame())
     logger.debug("view person_review_stats_overall:\n%s",
@@ -1023,55 +990,6 @@ class TestRecommendReviewersByRole:
       [r['scores']['keyword'] for r in result['potential_reviewers']] ==
       [1.0]
     )
-
-@pytest.mark.slow
-class TestGetPersonKeywordsScores:
-  def test_should_return_empty_dict_if_no_keywords_were_specified(self):
-    dataset = {
-      'person': [PERSON1],
-      'person_keyword': [{PERSON_ID: PERSON_ID1, 'keyword': KEYWORD1}]
-    }
-    with create_recommend_reviewers(dataset) as recommend_reviewers:
-      assert (
-        recommend_reviewers._get_person_keywords_scores([]) ==
-        {}
-      )
-
-  def test_should_not_include_persons_with_no_matching_keywords(self):
-    dataset = {
-      'person': [PERSON1],
-      'person_keyword': [{PERSON_ID: PERSON_ID1, 'keyword': KEYWORD1}]
-    }
-    with create_recommend_reviewers(dataset) as recommend_reviewers:
-      assert (
-        recommend_reviewers._get_person_keywords_scores([KEYWORD2]) ==
-        {}
-      )
-
-  def test_should_calculate_score_for_patially_matching_keywords(self):
-    dataset = {
-      'person': [PERSON1],
-      'person_keyword': [{PERSON_ID: PERSON_ID1, 'keyword': KEYWORD1}]
-    }
-    with create_recommend_reviewers(dataset) as recommend_reviewers:
-      assert (
-        recommend_reviewers._get_person_keywords_scores([KEYWORD1, KEYWORD2]) ==
-        {PERSON_ID1: 0.5}
-      )
-
-  def test_should_calculate_score_for_multiple_matching_keywords(self):
-    dataset = {
-      'person': [PERSON1],
-      'person_keyword': [
-        {PERSON_ID: PERSON_ID1, 'keyword': KEYWORD1},
-        {PERSON_ID: PERSON_ID1, 'keyword': KEYWORD2}
-      ]
-    }
-    with create_recommend_reviewers(dataset) as recommend_reviewers:
-      assert (
-        recommend_reviewers._get_person_keywords_scores([KEYWORD1, KEYWORD2]) ==
-        {PERSON_ID1: 1.0}
-      )
 
 @pytest.mark.slow
 class TestAllKeywords:

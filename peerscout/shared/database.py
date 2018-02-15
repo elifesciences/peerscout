@@ -305,3 +305,21 @@ def empty_in_memory_database():
   db.update_schema()
   yield db
   db.close()
+
+def insert_dataset(db, dataset):
+  sorted_table_names = db.sorted_table_names()
+  unknown_table_names = set(dataset.keys()) - set(sorted_table_names)
+  if len(unknown_table_names) > 0:
+    raise Exception("unknown table names: {}".format(unknown_table_names))
+
+  for table_name in sorted_table_names:
+    if table_name in dataset:
+      get_logger().debug("data %s:\n%s", table_name, dataset[table_name])
+      db[table_name].create_list(dataset[table_name])
+  db.commit()
+
+@contextmanager
+def populated_in_memory_database(dataset):
+  with empty_in_memory_database() as db:
+    insert_dataset(db, dataset)
+    yield db
