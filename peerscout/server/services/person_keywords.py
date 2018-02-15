@@ -33,7 +33,7 @@ class PersonKeywordService:
   @staticmethod
   def from_person_id_keyword_tuples(person_id_keyword_tuples):
     return PersonKeywordService(
-      person_ids_by_keyword_map = groupby_to_dict(
+      person_ids_by_keyword_map=groupby_to_dict(
         person_id_keyword_tuples,
         lambda x: x[1].lower(),
         lambda x: x[0]
