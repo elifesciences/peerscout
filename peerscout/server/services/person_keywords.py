@@ -3,8 +3,10 @@ from collections import Counter
 
 from peerscout.utils.collection import (
   iter_flatten,
-  groupby_columns_to_dict
+  groupby_to_dict
 )
+
+from ...shared.database_schema import Person
 
 LOGGER = logging.getLogger(__name__)
 
@@ -38,16 +40,23 @@ class PersonKeywordService:
 
   @staticmethod
   def from_database(db):
-    return PersonKeywordService.from_dataframe(
-      db.person_keyword.read_frame().reset_index()
+    return PersonKeywordService.from_person_id_keyword_tuples(
+      db.session.query(
+        db.person_keyword.table.person_id,
+        db.person_keyword.table.keyword
+      ).join(
+        db.person.table,
+        db.person.table.status == Person.Status.ACTIVE
+      ).all(),
     )
 
   @staticmethod
-  def from_dataframe(person_keywords_df):
+  def from_person_id_keyword_tuples(person_id_keyword_tuples):
     return PersonKeywordService(
-      person_ids_by_keyword_map = groupby_columns_to_dict(
-        person_keywords_df['keyword'].str.lower(),
-        person_keywords_df['person_id']
+      person_ids_by_keyword_map = groupby_to_dict(
+        person_id_keyword_tuples,
+        lambda x: x[1].lower(),
+        lambda x: x[0]
       ),
-      all_keywords=set(person_keywords_df['keyword'])
+      all_keywords=set(keyword for _, keyword in person_id_keyword_tuples)
     )

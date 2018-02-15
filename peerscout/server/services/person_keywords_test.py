@@ -3,6 +3,7 @@ from contextlib import contextmanager
 import pytest
 
 from ...shared.database import populated_in_memory_database
+from ...shared.database_schema import Person
 
 from .test_data import (
   PERSON_ID,
@@ -48,7 +49,7 @@ class TestPersonKeywordService:
           {}
         )
 
-    def test_should_calculate_score_for_matching_case_insensitve(self):
+    def test_should_matching_keyword_case_insensitve(self):
       dataset = {
         'person': [PERSON1],
         'person_keyword': [{PERSON_ID: PERSON_ID1, 'keyword': 'MixedCase'}]
@@ -57,6 +58,17 @@ class TestPersonKeywordService:
         assert (
           person_keyword_service.get_person_keywords_scores(['mIXEDcASE']) ==
           {PERSON_ID1: 1.0}
+        )
+
+    def test_should_not_match_inactive_persons(self):
+      dataset = {
+        'person': [{**PERSON1, 'status': Person.Status.INACTIVE}],
+        'person_keyword': [{PERSON_ID: PERSON_ID1, 'keyword': KEYWORD1}]
+      }
+      with create_person_keyword_service(dataset) as person_keyword_service:
+        assert (
+          person_keyword_service.get_person_keywords_scores([KEYWORD1]) ==
+          {}
         )
 
     def test_should_calculate_score_for_patially_matching_keywords(self):
@@ -97,6 +109,17 @@ class TestPersonKeywordService:
         assert (
           set(person_keyword_service.get_all_keywords()) ==
           {KEYWORD1.lower(), KEYWORD2.upper()}
+        )
+
+    def test_should_not_include_keywords_of_inactive_persons(self):
+      dataset = {
+        'person': [{**PERSON1, 'status': Person.Status.INACTIVE}],
+        'person_keyword': [{PERSON_ID: PERSON_ID1, 'keyword': KEYWORD1}]
+      }
+      with create_person_keyword_service(dataset) as person_keyword_service:
+        assert (
+          set(person_keyword_service.get_all_keywords()) ==
+          set()
         )
 
 class TestGetPersonIdsOfPersonKeywordsScores:

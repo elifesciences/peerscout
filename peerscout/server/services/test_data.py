@@ -1,3 +1,5 @@
+from ...shared.database_schema import Person
+
 PERSON_ID = 'person_id'
 
 PERSON_ID1 = 'person1'
@@ -8,7 +10,7 @@ PERSON1 = {
   PERSON_ID: PERSON_ID1,
   'first_name': 'John',
   'last_name': 'Smith',
-  'status': 'Active',
+  'status': Person.Status.ACTIVE,
   'is_early_career_researcher': False
 }
 

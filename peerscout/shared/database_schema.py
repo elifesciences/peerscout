@@ -33,6 +33,10 @@ class ImportProcessed(Base):
 class Person(Base):
   __tablename__ = "person"
 
+  class Status:
+    ACTIVE = 'Active'
+    INACTIVE = 'Inactive'
+
   person_id = Column(String, primary_key=True)
   title = Column(String)
   first_name = Column(String)
