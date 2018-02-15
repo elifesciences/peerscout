@@ -281,6 +281,10 @@ EARLY_CAREER_RESEARCHER_WITH_SUBJECT_AREAS_DATASET = {
   }]
 }
 
+class PersonRoles:
+  SENIOR_EDITOR = 'Senior Editor'
+  OTHER = 'Other'
+
 PP = pprint.PrettyPrinter(indent=2, width=40)
 
 def setup_module():
@@ -384,7 +388,7 @@ def _awaiting_review_stages(id_fields, contacted, accepted):
   }]
 
 @pytest.mark.slow
-class TestRecommendReviewers:
+class TestRecommendReviewersRegular:
   def test_no_match(self):
     dataset = {
       'person' : [PERSON1],
@@ -900,3 +904,104 @@ class TestRecommendReviewers:
     assert [
       r['person'][PERSON_ID] for r in result['potential_reviewers']
     ] == [PERSON_ID1]
+
+@pytest.mark.slow
+class TestRecommendReviewersByRole:
+  def test_should_not_recommend_regular_reviewer_when_searching_for_senior_editor_via_keyword(self):
+    # a regular reviewer doesn't have a role
+    dataset = {
+      'person': [PERSON1],
+      'manuscript_version': [MANUSCRIPT_VERSION1],
+      'manuscript_author': [AUTHOR1],
+      'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
+    }
+    result = recommend_for_dataset(
+      dataset, keywords=KEYWORD1, manuscript_no=None,
+      role=PersonRoles.SENIOR_EDITOR
+    )
+    person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+    assert person_ids == []
+
+  def test_should_not_recommend_regular_reviewer_when_searching_for_senior_editor_via_manuscript_no(self):
+    # a regular reviewer doesn't have a role
+    dataset = {
+      'person': [PERSON1],
+      'manuscript_version': [MANUSCRIPT_VERSION1, MANUSCRIPT_VERSION2],
+      'manuscript_author': [AUTHOR1],
+      'manuscript_keyword': [MANUSCRIPT_KEYWORD1, {
+        **MANUSCRIPT_KEYWORD1,
+        **MANUSCRIPT_ID_FIELDS2
+      }]
+    }
+    result = recommend_for_dataset(
+      dataset, keywords=None, manuscript_no=MANUSCRIPT_ID2,
+      role=PersonRoles.SENIOR_EDITOR
+    )
+    person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+    assert person_ids == []
+
+  def test_should_not_recommend_reviewer_with_other_role_when_searching_for_senior_editor(self):
+    dataset = {
+      'person': [PERSON1],
+      'person_role': [{PERSON_ID: PERSON_ID1, 'role': PersonRoles.OTHER}],
+      'manuscript_version': [MANUSCRIPT_VERSION1],
+      'manuscript_author': [AUTHOR1],
+      'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
+    }
+    result = recommend_for_dataset(
+      dataset, keywords=KEYWORD1, manuscript_no=None,
+      role=PersonRoles.SENIOR_EDITOR
+    )
+    person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+    assert person_ids == []
+
+  def test_should_recommend_senior_editor_based_on_manuscript_keyword(self):
+    dataset = {
+      'person': [PERSON1],
+      'person_role': [{PERSON_ID: PERSON_ID1, 'role': PersonRoles.SENIOR_EDITOR}],
+      'manuscript_version': [MANUSCRIPT_VERSION1],
+      'manuscript_author': [AUTHOR1],
+      'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
+    }
+    result = recommend_for_dataset(
+      dataset, keywords=KEYWORD1, manuscript_no=None,
+      role=PersonRoles.SENIOR_EDITOR
+    )
+    person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+    assert person_ids == [PERSON_ID1]
+
+  def test_should_recommend_senior_editor_based_on_manuscript_keyword_via_manuscript_no(self):
+    dataset = {
+      'person': [PERSON1],
+      'person_role': [{PERSON_ID: PERSON_ID1, 'role': PersonRoles.SENIOR_EDITOR}],
+      'manuscript_version': [MANUSCRIPT_VERSION1, MANUSCRIPT_VERSION2],
+      'manuscript_author': [AUTHOR1],
+      'manuscript_keyword': [MANUSCRIPT_KEYWORD1, {
+        **MANUSCRIPT_KEYWORD1,
+        **MANUSCRIPT_ID_FIELDS2
+      }]
+    }
+    result = recommend_for_dataset(
+      dataset, keywords=None, manuscript_no=MANUSCRIPT_ID2,
+      role=PersonRoles.SENIOR_EDITOR
+    )
+    person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+    assert person_ids == [PERSON_ID1]
+
+  def test_should_recommend_senior_editor_with_multiple_roles(self):
+    dataset = {
+      'person': [PERSON1],
+      'person_role': [
+        {PERSON_ID: PERSON_ID1, 'role': PersonRoles.SENIOR_EDITOR},
+        {PERSON_ID: PERSON_ID1, 'role': PersonRoles.OTHER}
+      ],
+      'manuscript_version': [MANUSCRIPT_VERSION1],
+      'manuscript_author': [AUTHOR1],
+      'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
+    }
+    result = recommend_for_dataset(
+      dataset, keywords=KEYWORD1, manuscript_no=None,
+      role=PersonRoles.SENIOR_EDITOR
+    )
+    person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+    assert person_ids == [PERSON_ID1]

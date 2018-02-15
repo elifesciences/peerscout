@@ -384,6 +384,11 @@ class RecommendReviewers(object):
       lambda person_id: self.persons_map.get(person_id, None)
     )
 
+    self.role_by_person_id_map = groupby_column_to_dict(
+      db.person_role.read_frame(), PERSON_ID, 'role'
+    )
+    debugv("role_by_person_id_map: %s", self.role_by_person_id_map)
+
     temp_reviewers_map = groupby_columns_to_dict(
       self.manuscript_history_review_received_df[VERSION_ID].values,
       self.manuscript_history_review_received_df[PERSON_ID].values,
@@ -595,15 +600,19 @@ class RecommendReviewers(object):
     return self.all_keywords
 
   def recommend(
-    self, manuscript_no=None, subject_area=None, keywords=None, abstract=None, limit=None):
+    self, manuscript_no=None, subject_area=None, keywords=None, abstract=None,
+    role=None,
+    limit=None):
 
     if manuscript_no:
       return self._recommend_using_manuscript_no(
-        manuscript_no=manuscript_no, limit=limit
+        manuscript_no=manuscript_no, role=role, limit=limit
       )
     else:
       return self._recommend_using_user_search_criteria(
-        subject_area=subject_area, keywords=keywords, abstract=abstract, limit=limit
+        subject_area=subject_area, keywords=keywords, abstract=abstract,
+        role=role,
+        limit=limit
       )
 
   def _no_manuscripts_found_response(self, manuscript_no):
@@ -613,7 +622,7 @@ class RecommendReviewers(object):
       'potential_reviewers': []
     }
 
-  def _recommend_using_manuscript_no(self, manuscript_no=None, limit=None):
+  def _recommend_using_manuscript_no(self, manuscript_no=None, role=None, limit=None):
     matching_manuscripts = self.__find_manuscripts_by_key(manuscript_no)
     if len(matching_manuscripts) == 0:
       return self._no_manuscripts_found_response(manuscript_no)
@@ -661,6 +670,7 @@ class RecommendReviewers(object):
           exclude_person_ids=exclude_person_ids,
           ecr_subject_areas=ecr_subject_areas,
           manuscript_version_ids=matching_manuscripts[VERSION_ID].values,
+          role=role,
           limit=limit
         ),
         'matching_manuscripts': clean_manuscripts(map_to_dict(
@@ -670,7 +680,9 @@ class RecommendReviewers(object):
       }
 
   def _recommend_using_user_search_criteria(
-    self, subject_area=None, keywords=None, abstract=None, limit=None):
+    self, subject_area=None, keywords=None, abstract=None,
+    role=None,
+    limit=None):
 
     subject_areas = (
       {subject_area}
@@ -680,7 +692,9 @@ class RecommendReviewers(object):
     keyword_list = self.__parse_keywords(keywords)
     return {
       **self._recommend_using_criteria(
-        subject_areas=subject_areas, keyword_list=keyword_list, abstract=abstract, limit=limit
+        subject_areas=subject_areas, keyword_list=keyword_list, abstract=abstract,
+        role=role,
+        limit=limit
       ),
       'search': remove_none({
         'subject_areas': subject_areas,
@@ -831,19 +845,32 @@ class RecommendReviewers(object):
       )
     )
 
-  def _find_potential_reviewer_ids(
-    self, matching_manuscript_ids, include_person_ids, exclude_person_ids, ecr_subject_areas):
+  def _filter_person_ids_by_role(self, person_ids, role):
+    result = {
+      person_id for person_id in person_ids
+      if role in self.role_by_person_id_map.get(person_id, [])
+    } if role else person_ids
+    self.logger.debug('filtered person ids by role: %d -> %d (role=%s)', len(person_ids), len(result), role)
+    return result
 
-    return (
-      self._potential_reviewer_ids_for_matching_manuscript_ids(matching_manuscript_ids) |
-      self._get_early_career_reviewer_ids_by_subject_areas(ecr_subject_areas) |
-      include_person_ids
-    ) - exclude_person_ids
+  def _find_potential_reviewer_ids(
+    self, matching_manuscript_ids, include_person_ids, exclude_person_ids, ecr_subject_areas,
+    role):
+
+    return self._filter_person_ids_by_role(
+      (
+        self._potential_reviewer_ids_for_matching_manuscript_ids(matching_manuscript_ids) |
+        self._get_early_career_reviewer_ids_by_subject_areas(ecr_subject_areas) |
+        include_person_ids
+      ) - exclude_person_ids,
+      role=role
+    )
 
   def _recommend_using_criteria(
     self, subject_areas=None, keyword_list=None, abstract=None,
     include_person_ids=None, exclude_person_ids=None, ecr_subject_areas=None,
     manuscript_version_ids=None,
+    role=None,
     limit=None):
 
     include_person_ids = include_person_ids or set()
@@ -863,7 +890,8 @@ class RecommendReviewers(object):
       matching_manuscript_ids=matching_manuscript_ids,
       include_person_ids=include_person_ids,
       exclude_person_ids=exclude_person_ids,
-      ecr_subject_areas=ecr_subject_areas
+      ecr_subject_areas=ecr_subject_areas,
+      role=role
     )
 
     potential_reviewers = sorted_potential_reviewers([
