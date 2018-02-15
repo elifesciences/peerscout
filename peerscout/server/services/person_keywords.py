@@ -1,7 +1,7 @@
 import logging
 from collections import Counter
 
-from .collection_utils import (
+from peerscout.utils.collection import (
   iter_flatten,
   groupby_columns_to_dict
 )

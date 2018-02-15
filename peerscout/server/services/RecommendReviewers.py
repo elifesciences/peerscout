@@ -12,7 +12,7 @@ from peerscout.utils.pandas import (
 
 from .utils import unescape_and_strip_tags, filter_by
 
-from .collection_utils import (
+from  peerscout.utils.collection import (
   iter_flatten,
   filter_none,
   deep_get,
