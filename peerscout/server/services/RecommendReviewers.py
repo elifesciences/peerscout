@@ -483,6 +483,16 @@ class RecommendReviewers(object):
     debugv("manuscripts_by_author_map: %s", self.manuscripts_by_author_map)
     debugv("manuscripts_by_reviewer_map: %s", self.manuscripts_by_reviewer_map)
 
+    self.person_ids_by_keyword_map = groupby_to_dict(
+      db.session.query(
+        db.person_keyword.table.keyword,
+        db.person_keyword.table.person_id
+      ).all(),
+      lambda row: row[0].lower(),
+      lambda row: row[1]
+    )
+    debugv("person_ids_by_keyword_map: %s", self.person_ids_by_keyword_map)
+
     early_career_researcher_person_id_query = db.session.query(
       db.person.table.person_id
     ).filter(
@@ -579,6 +589,19 @@ class RecommendReviewers(object):
       # add matching keyword count column
       df['count'] = 0
     return df
+
+  def _find_person_ids_by_person_keywords(self, keyword_list):
+    if not keyword_list:
+      result = set()
+    else:
+      result = set(iter_flatten(
+        self.person_ids_by_keyword_map.get(keyword.lower(), [])
+        for keyword in keyword_list
+      ))
+    self.logger.debug(
+      "found %d persons by keywords: %s", len(result), keyword_list
+    )
+    return result
 
   def _get_early_career_reviewer_ids_by_subject_areas(self, subject_areas):
     if len(subject_areas) == 0:
@@ -855,11 +878,12 @@ class RecommendReviewers(object):
 
   def _find_potential_reviewer_ids(
     self, matching_manuscript_ids, include_person_ids, exclude_person_ids, ecr_subject_areas,
-    role):
+    keyword_list, role):
 
     return self._filter_person_ids_by_role(
       (
         self._potential_reviewer_ids_for_matching_manuscript_ids(matching_manuscript_ids) |
+        self._find_person_ids_by_person_keywords(keyword_list) |
         self._get_early_career_reviewer_ids_by_subject_areas(ecr_subject_areas) |
         include_person_ids
       ) - exclude_person_ids,
@@ -891,6 +915,7 @@ class RecommendReviewers(object):
       include_person_ids=include_person_ids,
       exclude_person_ids=exclude_person_ids,
       ecr_subject_areas=ecr_subject_areas,
+      keyword_list=keyword_list,
       role=role
     )
 
