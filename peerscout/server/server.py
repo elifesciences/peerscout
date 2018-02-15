@@ -59,7 +59,9 @@ published_manuscript_types = parse_list(config.get(
 filter_by_subject_area_enabled = config.getboolean(
   'model', 'filter_by_subject_area_enabled', fallback=False
 )
-
+filter_by_role = config.get(
+  'model', 'filter_by_role', fallback=None
+)
 client_config = dict(config['client']) if 'client' in config else {}
 
 auth0_domain = client_config.get('auth0_domain', '')
@@ -152,12 +154,13 @@ def api_root():
   })
 
 @memory.cache
-def recommend_reviewers_as_json(manuscript_no, subject_area, keywords, abstract, limit):
+def recommend_reviewers_as_json(manuscript_no, subject_area, keywords, abstract, role, limit):
   return jsonify(recommend_reviewers.recommend(
     manuscript_no,
     subject_area,
     keywords,
     abstract,
+    role=role,
     limit=limit
   ))
 
@@ -180,6 +183,7 @@ def recommend_reviewers_api():
     subject_area,
     keywords,
     abstract,
+    role=filter_by_role,
     limit=limit
   )
 
@@ -194,10 +198,6 @@ def keywords_api():
 @app.route("/api/config")
 def config_api():
   return jsonify(client_config)
-
-@app.route("/api/hello")
-def run():
-  return "Hello!"
 
 @app.route("/control/reload", methods=['POST'])
 def control_reload():
