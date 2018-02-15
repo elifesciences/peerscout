@@ -1,5 +1,6 @@
 from itertools import groupby
 import itertools
+from collections import Counter
 import ast
 import logging
 
@@ -245,6 +246,19 @@ def sorted_manuscript_scores_descending(manuscript_scores_list):
     score['keyword'],
     score['similarity']
   ))))
+
+def get_reviewer_score(person_keyword_score, best_manuscript_score):
+  keyword_score = max(
+    person_keyword_score or 0,
+    best_manuscript_score.get('keyword', 0)
+  )
+  similarity_score = best_manuscript_score.get('similarity')
+  combined_score = calculate_combined_score(keyword_score, similarity_score)
+  return {
+    'keyword': keyword_score,
+    'similarity': similarity_score,
+    'combined': combined_score
+  }
 
 def get_person_ids_for_manuscript_list(manuscript_list, person_list_key):
   return set(
@@ -590,18 +604,25 @@ class RecommendReviewers(object):
       df['count'] = 0
     return df
 
-  def _find_person_ids_by_person_keywords(self, keyword_list):
+  def _get_person_keywords_scores(self, keyword_list):
     if not keyword_list:
-      result = set()
+      result = {}
     else:
-      result = set(iter_flatten(
-        self.person_ids_by_keyword_map.get(keyword.lower(), [])
-        for keyword in keyword_list
-      ))
+      keyword_count = len(keyword_list)
+      result = {
+        k: v / keyword_count
+        for k, v in Counter(iter_flatten(
+          self.person_ids_by_keyword_map.get(keyword.lower(), [])
+          for keyword in keyword_list
+        )).items()
+      }
     self.logger.debug(
       "found %d persons by keywords: %s", len(result), keyword_list
     )
     return result
+
+  def _get_person_ids_of_person_keywords_scores(self, person_keyword_scores):
+    return person_keyword_scores.keys()
 
   def _get_early_career_reviewer_ids_by_subject_areas(self, subject_areas):
     if len(subject_areas) == 0:
@@ -727,7 +748,8 @@ class RecommendReviewers(object):
     }
 
   def _populate_potential_reviewer(
-    self, person_id, similarity_by_manuscript_version_id, keyword_score_by_version_id):
+    self, person_id, keyword_score_by_person_id, keyword_score_by_version_id,
+    similarity_by_manuscript_version_id):
 
     author_of_manuscripts = self.manuscripts_by_author_map.get(person_id, [])
     reviewer_of_manuscripts = self.manuscripts_by_reviewer_map.get(person_id, [])
@@ -745,6 +767,10 @@ class RecommendReviewers(object):
     )
 
     best_score = get_first(scores_by_manuscript, {})
+    reviewer_score = get_reviewer_score(
+      person_keyword_score=keyword_score_by_person_id.get(person_id),
+      best_manuscript_score=best_score
+    )
 
     author_of_manuscript_ids = set(m[VERSION_ID] for m in author_of_manuscripts)
 
@@ -752,9 +778,7 @@ class RecommendReviewers(object):
       'person': self.persons_map.get(person_id, None),
       'author_of_manuscripts': clean_manuscripts(author_of_manuscripts),
       'scores': {
-        'keyword': best_score.get('keyword'),
-        'similarity': best_score.get('similarity'),
-        'combined': best_score.get('combined'),
+        **reviewer_score,
         'by_manuscript': [
           m
           for m in scores_by_manuscript
@@ -878,12 +902,12 @@ class RecommendReviewers(object):
 
   def _find_potential_reviewer_ids(
     self, matching_manuscript_ids, include_person_ids, exclude_person_ids, ecr_subject_areas,
-    keyword_list, role):
+    person_keyword_scores, role):
 
     return self._filter_person_ids_by_role(
       (
         self._potential_reviewer_ids_for_matching_manuscript_ids(matching_manuscript_ids) |
-        self._find_person_ids_by_person_keywords(keyword_list) |
+        self._get_person_ids_of_person_keywords_scores(person_keyword_scores) |
         self._get_early_career_reviewer_ids_by_subject_areas(ecr_subject_areas) |
         include_person_ids
       ) - exclude_person_ids,
@@ -910,18 +934,21 @@ class RecommendReviewers(object):
       )
     )
 
+    person_keyword_scores = self._get_person_keywords_scores(keyword_list)
+
     potential_reviewers_ids = self._find_potential_reviewer_ids(
       matching_manuscript_ids=matching_manuscript_ids,
       include_person_ids=include_person_ids,
       exclude_person_ids=exclude_person_ids,
       ecr_subject_areas=ecr_subject_areas,
-      keyword_list=keyword_list,
+      person_keyword_scores=person_keyword_scores,
       role=role
     )
 
     potential_reviewers = sorted_potential_reviewers([
       self._populate_potential_reviewer(
         person_id,
+        keyword_score_by_person_id=person_keyword_scores,
         keyword_score_by_version_id=keyword_score_by_version_id,
         similarity_by_manuscript_version_id=similarity_by_manuscript_version_id
       )

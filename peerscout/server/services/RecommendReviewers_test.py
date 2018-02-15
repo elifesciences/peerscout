@@ -175,6 +175,7 @@ MANUSCRIPT_VERSION5_RESULT = {
 MANUSCRIPT_VERSION5 = MANUSCRIPT_VERSION5_RESULT
 
 KEYWORD1 = 'keyword1'
+KEYWORD2 = 'keyword2'
 
 MANUSCRIPT_KEYWORD1 = {
   **MANUSCRIPT_ID_FIELDS1,
@@ -1006,7 +1007,7 @@ class TestRecommendReviewersByRole:
     person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
     assert person_ids == [PERSON_ID1]
 
-  def test_should_recommend_senior_editor_based_on_person_keyword(self):
+  def test_should_recommend_senior_editor_based_on_person_keyword_and_reflect_in_score(self):
     dataset = {
       'person': [PERSON1],
       'person_role': [{PERSON_ID: PERSON_ID1, 'role': PersonRoles.SENIOR_EDITOR}],
@@ -1018,3 +1019,56 @@ class TestRecommendReviewersByRole:
     )
     person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
     assert person_ids == [PERSON_ID1]
+    assert (
+      [r['scores']['keyword'] for r in result['potential_reviewers']] ==
+      [1.0]
+    )
+
+@pytest.mark.slow
+class TestGetPersonKeywordsScores:
+  def test_should_return_empty_dict_if_no_keywords_were_specified(self):
+    dataset = {
+      'person': [PERSON1],
+      'person_keyword': [{PERSON_ID: PERSON_ID1, 'keyword': KEYWORD1}]
+    }
+    with create_recommend_reviewers(dataset) as recommend_reviewers:
+      assert (
+        recommend_reviewers._get_person_keywords_scores([]) ==
+        {}
+      )
+
+  def test_should_not_include_persons_with_no_matching_keywords(self):
+    dataset = {
+      'person': [PERSON1],
+      'person_keyword': [{PERSON_ID: PERSON_ID1, 'keyword': KEYWORD1}]
+    }
+    with create_recommend_reviewers(dataset) as recommend_reviewers:
+      assert (
+        recommend_reviewers._get_person_keywords_scores([KEYWORD2]) ==
+        {}
+      )
+
+  def test_should_calculate_score_for_patially_matching_keywords(self):
+    dataset = {
+      'person': [PERSON1],
+      'person_keyword': [{PERSON_ID: PERSON_ID1, 'keyword': KEYWORD1}]
+    }
+    with create_recommend_reviewers(dataset) as recommend_reviewers:
+      assert (
+        recommend_reviewers._get_person_keywords_scores([KEYWORD1, KEYWORD2]) ==
+        {PERSON_ID1: 0.5}
+      )
+
+  def test_should_calculate_score_for_multiple_matching_keywords(self):
+    dataset = {
+      'person': [PERSON1],
+      'person_keyword': [
+        {PERSON_ID: PERSON_ID1, 'keyword': KEYWORD1},
+        {PERSON_ID: PERSON_ID1, 'keyword': KEYWORD2}
+      ]
+    }
+    with create_recommend_reviewers(dataset) as recommend_reviewers:
+      assert (
+        recommend_reviewers._get_person_keywords_scores([KEYWORD1, KEYWORD2]) ==
+        {PERSON_ID1: 1.0}
+      )
