@@ -18,26 +18,6 @@ class PersonKeywordService:
     self._person_ids_by_keyword_map = person_ids_by_keyword_map
     self._all_keywords = all_keywords
 
-  def get_all_keywords(self):
-    return self._all_keywords
-
-  def get_person_keywords_scores(self, keyword_list):
-    if not keyword_list:
-      result = {}
-    else:
-      keyword_count = len(keyword_list)
-      result = {
-        k: v / keyword_count
-        for k, v in Counter(iter_flatten(
-          self._person_ids_by_keyword_map.get(keyword.lower(), [])
-          for keyword in keyword_list
-        )).items()
-      }
-    LOGGER.debug(
-      "found %d persons by keywords: %s", len(result), keyword_list
-    )
-    return result
-
   @staticmethod
   def from_database(db):
     return PersonKeywordService.from_person_id_keyword_tuples(
@@ -60,3 +40,23 @@ class PersonKeywordService:
       ),
       all_keywords=set(keyword for _, keyword in person_id_keyword_tuples)
     )
+
+  def get_all_keywords(self):
+    return self._all_keywords
+
+  def get_person_keywords_scores(self, keyword_list):
+    if not keyword_list:
+      result = {}
+    else:
+      keyword_count = len(keyword_list)
+      result = {
+        k: v / keyword_count
+        for k, v in Counter(iter_flatten(
+          self._person_ids_by_keyword_map.get(keyword.lower(), [])
+          for keyword in keyword_list
+        )).items()
+      }
+    LOGGER.debug(
+      "found %d persons by keywords: %s", len(result), keyword_list
+    )
+    return result
