@@ -1072,3 +1072,21 @@ class TestGetPersonKeywordsScores:
         recommend_reviewers._get_person_keywords_scores([KEYWORD1, KEYWORD2]) ==
         {PERSON_ID1: 1.0}
       )
+
+@pytest.mark.slow
+class TestAllKeywords:
+  def test_should_include_manuscript_keywords_in_all_keywords(self):
+    dataset = {
+      'manuscript_version': [MANUSCRIPT_VERSION1],
+      'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
+    }
+    with create_recommend_reviewers(dataset) as recommend_reviewers:
+      assert recommend_reviewers.get_all_keywords() == [KEYWORD1]
+
+  def test_should_include_person_keywords_in_all_keywords(self):
+    dataset = {
+      'person': [PERSON1],
+      'person_keyword': [{PERSON_ID: PERSON_ID1, 'keyword': KEYWORD1}]
+    }
+    with create_recommend_reviewers(dataset) as recommend_reviewers:
+      assert recommend_reviewers.get_all_keywords() == [KEYWORD1]

@@ -81,20 +81,14 @@ def groupby_to_dict(l, kf, vf):
     for k, g in groupby(sorted(l, key=kf), kf)
   }
 
-def groupby_columns_to_dict(groupby_keys, version_keys, vf):
-  get_groupby_key = lambda x: x[0]
-  return {
-    k: [
-      item for item in [
-        vf(version_key) for version_key in
-        set(version_key for _, version_key in list(v))
-      ] if item
-    ]
-    for k, v in groupby(sorted(
-      zip(groupby_keys, version_keys),
-      key=get_groupby_key
-    ), get_groupby_key)
-  }
+def groupby_columns_to_dict(groupby_values, values, vf=None):
+  if vf is None:
+    vf = lambda x: x
+  return groupby_to_dict(
+     zip(groupby_values, values),
+     lambda item: item[0],
+     lambda item: vf(item[1])
+  )
 
 def filter_dict_keys(d, f):
   return {k: v for k, v in d.items() if f(k)}
@@ -299,6 +293,8 @@ class RecommendReviewers(object):
       valid_version_ids
     )
 
+    temp_person_keywords_df = db.person_keyword.read_frame().reset_index()
+
     self.authors_all_df = (
       db.manuscript_author.read_frame().reset_index()
     )
@@ -437,7 +433,10 @@ class RecommendReviewers(object):
       'subject_area'
     )
 
-    self.all_keywords = sorted(set(self.manuscript_keywords_df['keyword']))
+    self.all_keywords = sorted(
+      set(self.manuscript_keywords_df['keyword']) |
+      set(temp_person_keywords_df['keyword'])
+    )
 
     logger.debug("building manuscript list")
     manuscripts_all_list = clean_result(
@@ -497,13 +496,9 @@ class RecommendReviewers(object):
     debugv("manuscripts_by_author_map: %s", self.manuscripts_by_author_map)
     debugv("manuscripts_by_reviewer_map: %s", self.manuscripts_by_reviewer_map)
 
-    self.person_ids_by_keyword_map = groupby_to_dict(
-      db.session.query(
-        db.person_keyword.table.keyword,
-        db.person_keyword.table.person_id
-      ).all(),
-      lambda row: row[0].lower(),
-      lambda row: row[1]
+    self.person_ids_by_keyword_map = groupby_columns_to_dict(
+      temp_person_keywords_df['keyword'].str.lower(),
+      temp_person_keywords_df[PERSON_ID]
     )
     debugv("person_ids_by_keyword_map: %s", self.person_ids_by_keyword_map)
 
