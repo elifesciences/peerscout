@@ -956,24 +956,6 @@ class TestRecommendReviewersByRole:
     person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
     assert person_ids == [PERSON_ID1]
 
-  def test_should_recommend_senior_editor_with_multiple_roles(self):
-    dataset = {
-      'person': [PERSON1],
-      'person_role': [
-        {PERSON_ID: PERSON_ID1, 'role': PersonRoles.SENIOR_EDITOR},
-        {PERSON_ID: PERSON_ID1, 'role': PersonRoles.OTHER}
-      ],
-      'manuscript_version': [MANUSCRIPT_VERSION1],
-      'manuscript_author': [AUTHOR1],
-      'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
-    }
-    result = recommend_for_dataset(
-      dataset, keywords=KEYWORD1, manuscript_no=None,
-      role=PersonRoles.SENIOR_EDITOR
-    )
-    person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
-    assert person_ids == [PERSON_ID1]
-
   def test_should_recommend_senior_editor_based_on_person_keyword_and_reflect_in_score(self):
     dataset = {
       'person': [PERSON1],

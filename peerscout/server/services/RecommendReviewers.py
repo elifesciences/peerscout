@@ -30,6 +30,9 @@ from .person_keywords import (
   get_person_ids_of_person_keywords_scores
 )
 
+from .person_roles import PersonRoleService
+
+
 NAME = 'RecommendReviewers'
 
 debugv_enabled = False
@@ -386,10 +389,7 @@ class RecommendReviewers(object):
       lambda person_id: self.persons_map.get(person_id, None)
     )
 
-    self.role_by_person_id_map = groupby_column_to_dict(
-      db.person_role.read_frame(), PERSON_ID, 'role'
-    )
-    debugv("role_by_person_id_map: %s", self.role_by_person_id_map)
+    self.person_role_service = PersonRoleService.from_database(db)
 
     temp_reviewers_map = groupby_columns_to_dict(
       self.manuscript_history_review_received_df[VERSION_ID].values,
@@ -853,19 +853,11 @@ class RecommendReviewers(object):
       )
     )
 
-  def _filter_person_ids_by_role(self, person_ids, role):
-    result = {
-      person_id for person_id in person_ids
-      if role in self.role_by_person_id_map.get(person_id, [])
-    } if role else person_ids
-    self.logger.debug('filtered person ids by role: %d -> %d (role=%s)', len(person_ids), len(result), role)
-    return result
-
   def _find_potential_reviewer_ids(
     self, matching_manuscript_ids, include_person_ids, exclude_person_ids, ecr_subject_areas,
     person_keyword_scores, role):
 
-    return self._filter_person_ids_by_role(
+    return self.person_role_service.filter_person_ids_by_role(
       (
         self._potential_reviewer_ids_for_matching_manuscript_ids(matching_manuscript_ids) |
         get_person_ids_of_person_keywords_scores(person_keyword_scores) |
