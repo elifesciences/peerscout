@@ -44,7 +44,7 @@ class PersonKeywordService:
   def get_all_keywords(self):
     return self._all_keywords
 
-  def get_person_keywords_scores(self, keyword_list):
+  def get_person_keyword_scores(self, keyword_list):
     if not keyword_list:
       result = {}
     else:

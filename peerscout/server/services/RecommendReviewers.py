@@ -887,7 +887,7 @@ class RecommendReviewers(object):
       )
     )
 
-    person_keyword_scores = self.person_keyword_service.get_person_keywords_scores(keyword_list)
+    person_keyword_scores = self.person_keyword_service.get_person_keyword_scores(keyword_list)
 
     potential_reviewers_ids = self._find_potential_reviewer_ids(
       matching_manuscript_ids=matching_manuscript_ids,

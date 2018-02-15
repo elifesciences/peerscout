@@ -34,7 +34,7 @@ class TestPersonKeywordService:
       }
       with create_person_keyword_service(dataset) as person_keyword_service:
         assert (
-          person_keyword_service.get_person_keywords_scores([]) ==
+          person_keyword_service.get_person_keyword_scores([]) ==
           {}
         )
 
@@ -45,7 +45,7 @@ class TestPersonKeywordService:
       }
       with create_person_keyword_service(dataset) as person_keyword_service:
         assert (
-          person_keyword_service.get_person_keywords_scores([KEYWORD2]) ==
+          person_keyword_service.get_person_keyword_scores([KEYWORD2]) ==
           {}
         )
 
@@ -56,7 +56,7 @@ class TestPersonKeywordService:
       }
       with create_person_keyword_service(dataset) as person_keyword_service:
         assert (
-          person_keyword_service.get_person_keywords_scores(['mIXEDcASE']) ==
+          person_keyword_service.get_person_keyword_scores(['mIXEDcASE']) ==
           {PERSON_ID1: 1.0}
         )
 
@@ -67,7 +67,7 @@ class TestPersonKeywordService:
       }
       with create_person_keyword_service(dataset) as person_keyword_service:
         assert (
-          person_keyword_service.get_person_keywords_scores([KEYWORD1]) ==
+          person_keyword_service.get_person_keyword_scores([KEYWORD1]) ==
           {}
         )
 
@@ -78,7 +78,7 @@ class TestPersonKeywordService:
       }
       with create_person_keyword_service(dataset) as person_keyword_service:
         assert (
-          person_keyword_service.get_person_keywords_scores([KEYWORD1, KEYWORD2]) ==
+          person_keyword_service.get_person_keyword_scores([KEYWORD1, KEYWORD2]) ==
           {PERSON_ID1: 0.5}
         )
 
@@ -92,7 +92,7 @@ class TestPersonKeywordService:
       }
       with create_person_keyword_service(dataset) as person_keyword_service:
         assert (
-          person_keyword_service.get_person_keywords_scores([KEYWORD1, KEYWORD2]) ==
+          person_keyword_service.get_person_keyword_scores([KEYWORD1, KEYWORD2]) ==
           {PERSON_ID1: 1.0}
         )
 
