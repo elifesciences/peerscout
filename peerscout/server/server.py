@@ -25,7 +25,7 @@ from .auth.EmailValidator import (
   read_valid_emails
 )
 
-from ..shared.database import connect_managed_configured_database
+from ..shared.database import connect_configured_database
 from ..shared.app_config import get_app_config
 from ..shared.logging_config import configure_logging
 
@@ -82,8 +82,10 @@ memory = Memory(cachedir=cache_dir, verbose=0)
 logger.debug("cache directory: %s", cache_dir)
 memory.clear(warn=False)
 
+db = connect_configured_database(autocommit=True)
+
 def load_recommender():
-  with connect_managed_configured_database() as db:
+  with db.session.begin():
     manuscript_model = ManuscriptModel(
       db,
       valid_decisions=valid_decisions,
@@ -155,14 +157,15 @@ def api_root():
 
 @memory.cache
 def recommend_reviewers_as_json(manuscript_no, subject_area, keywords, abstract, role, limit):
-  return jsonify(recommend_reviewers.recommend(
-    manuscript_no,
-    subject_area,
-    keywords,
-    abstract,
-    role=role,
-    limit=limit
-  ))
+  with db.session.begin():
+    return jsonify(recommend_reviewers.recommend(
+      manuscript_no,
+      subject_area,
+      keywords,
+      abstract,
+      role=role,
+      limit=limit
+    ))
 
 @app.route("/api/recommend-reviewers")
 @wrap_with_auth
@@ -189,11 +192,13 @@ def recommend_reviewers_api():
 
 @app.route("/api/subject-areas")
 def subject_areas_api():
-  return jsonify(list(recommend_reviewers.get_all_subject_areas()))
+  with db.session.begin():
+    return jsonify(list(recommend_reviewers.get_all_subject_areas()))
 
 @app.route("/api/keywords")
 def keywords_api():
-  return jsonify(list(recommend_reviewers.get_all_keywords()))
+  with db.session.begin():
+    return jsonify(list(recommend_reviewers.get_all_keywords()))
 
 @app.route("/api/config")
 def config_api():
