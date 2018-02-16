@@ -38,3 +38,9 @@ def groupby_columns_to_dict(groupby_values, values, vf=None):
      lambda item: item[0],
      lambda item: vf(item[1])
   )
+
+def applymap_dict(d, f):
+  return {k: f(v) for k, v in d.items()}
+
+def applymap_dict_list(dict_list, f):
+  return [applymap_dict(row, f) for row in dict_list]

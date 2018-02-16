@@ -18,17 +18,22 @@ from  peerscout.utils.collection import (
   deep_get,
   deep_get_list,
   groupby_to_dict,
-  groupby_columns_to_dict
+  groupby_columns_to_dict,
+  applymap_dict
 )
 
 from .manuscript_utils import (
   duplicate_manuscript_titles_as_alternatives
 )
 
+from .manuscript_keywords import ManuscriptKeywordService
+from .manuscript_subject_areas import ManuscriptSubjectAreaService
+
 from .person_keywords import (
   PersonKeywordService,
   get_person_ids_of_person_keywords_scores
 )
+
 
 from .person_roles import PersonRoleService
 
@@ -54,12 +59,6 @@ def column_astype(df, col_name, col_type):
   df = df.copy()
   df[col_name] = df[col_name].astype(col_type)
   return df
-
-def applymap_dict(d, f):
-  return {k: f(v) for k, v in d.items()}
-
-def applymap_dict_list(dict_list, f):
-  return [applymap_dict(row, f) for row in dict_list]
 
 def is_nat(x):
   return isinstance(x, type(pd.NaT))
@@ -288,7 +287,20 @@ class RecommendReviewers(object):
       valid_version_ids
     )
 
+    logger.debug('loading ManuscriptKeywordService')
+    self.manuscript_keyword_service = ManuscriptKeywordService.from_database(
+      db, valid_version_ids=valid_version_ids
+    )
+
+    logger.debug('loading ManuscriptSubjectAreaService')
+    self.manuscript_subject_area_service = ManuscriptSubjectAreaService.from_database(
+      db, valid_version_ids=valid_version_ids
+    )
+
+    logger.debug('loading PersonKeywordService')
     self.person_keyword_service = PersonKeywordService.from_database(db)
+
+    logger.debug('loading other manuscript related data')
 
     self.authors_all_df = (
       db.manuscript_author.read_frame().reset_index()
@@ -308,16 +320,6 @@ class RecommendReviewers(object):
 
     self.manuscript_history_df = filter_by(
       self.manuscript_history_all_df,
-      VERSION_ID,
-      valid_version_ids
-    )
-
-    self.manuscript_subject_areas_all_df = (
-      db.manuscript_subject_area.read_frame().reset_index()
-    )
-
-    self.manuscript_subject_areas_df = filter_by(
-      self.manuscript_subject_areas_all_df,
       VERSION_ID,
       valid_version_ids
     )
@@ -418,12 +420,7 @@ class RecommendReviewers(object):
       MANUSCRIPT_ID,
       'doi')
 
-    self.all_subject_areas = sorted(set(self.manuscript_subject_areas_all_df['subject_area']))
-    temp_subject_areas_map = groupby_column_to_dict(
-      self.manuscript_subject_areas_all_df,
-      VERSION_ID,
-      'subject_area'
-    )
+    self.all_subject_areas = sorted(self.manuscript_subject_area_service.get_all_subject_areas())
 
     self.all_keywords = sorted(
       set(self.manuscript_keywords_df['keyword']) |
@@ -447,7 +444,11 @@ class RecommendReviewers(object):
         'editors': temp_editors_map.get(manuscript[VERSION_ID], []),
         'senior_editors': temp_senior_editors_map.get(manuscript[VERSION_ID], []),
         'reviewers': temp_reviewers_map.get(manuscript[VERSION_ID], []),
-        'subject_areas': temp_subject_areas_map.get(manuscript[VERSION_ID], []),
+        'subject_areas': (
+          self.manuscript_subject_area_service.get_subject_areas_by_id(
+            manuscript[VERSION_ID]
+          )
+        ),
         'is_published': manuscript_model.is_manuscript_published(manuscript)
       } for manuscript in manuscripts_all_list
     ]
@@ -551,39 +552,11 @@ class RecommendReviewers(object):
     return [keyword.strip() for keyword in keywords.split(',')]
 
   def _filter_manuscripts_by_subject_areas(self, manuscripts_df, subject_areas):
-    df = manuscripts_df.merge(
-      self.manuscript_subject_areas_df,
-      how='inner',
-      on=VERSION_ID
-    )[[VERSION_ID, 'subject_area']]
-    df = df[
-      df['subject_area'].isin(subject_areas)
-    ]
     return manuscripts_df[
       manuscripts_df[VERSION_ID].isin(
-        df[VERSION_ID]
+        self.manuscript_subject_area_service.get_ids_by_subject_areas(subject_areas)
       )
     ]
-
-  def _find_manuscripts_by_subject_areas(self, subject_areas):
-    return self._filter_manuscripts_by_subject_areas(
-      self.manuscript_versions_df,
-      subject_areas
-    )
-
-  def _find_manuscripts_by_subject_areas_and_keywords(self, subject_areas, keywords):
-    if len(keywords) > 0:
-      df = self.__find_manuscripts_by_keywords(keywords)
-      if len(subject_areas) > 0:
-        df = self._filter_manuscripts_by_subject_areas(df, subject_areas)
-    else:
-      if len(subject_areas) > 0:
-        df = self._find_manuscripts_by_subject_areas(subject_areas).copy()
-      else:
-        df = self._empty_manuscripts()
-      # add matching keyword count column
-      df['count'] = 0
-    return df
 
   def _get_early_career_reviewer_ids_by_subject_areas(self, subject_areas):
     if len(subject_areas) == 0:
@@ -633,17 +606,17 @@ class RecommendReviewers(object):
       return self._no_manuscripts_found_response(manuscript_no)
     else:
       manuscript_keywords = self.__find_keywords_by_version_keys(
-        matching_manuscripts[VERSION_ID])
+        matching_manuscripts[VERSION_ID]
+      )
       matching_manuscripts_dicts = map_to_dict(
         matching_manuscripts[VERSION_ID],
         self.manuscripts_by_version_id_map
       )
       keyword_list = list(manuscript_keywords.values)
-      manuscript_subject_areas = set(self.manuscript_subject_areas_all_df[
-        self.manuscript_subject_areas_all_df[VERSION_ID].isin(
-          matching_manuscripts[VERSION_ID]
-        )
-      ]['subject_area'])
+      manuscript_subject_areas = set(iter_flatten(
+        self.manuscript_subject_area_service.get_subject_areas_by_id(version_id)
+        for version_id in matching_manuscripts[VERSION_ID]
+      ))
       # we search by subject areas for ECRs as there may otherwise not much data
       # available
       ecr_subject_areas = manuscript_subject_areas
@@ -757,18 +730,20 @@ class RecommendReviewers(object):
 
     self.logger.debug("keyword_list: %s", keyword_list)
     self.logger.debug("subject_areas: %s", subject_areas)
-    other_manuscripts = self._find_manuscripts_by_subject_areas_and_keywords(
-      subject_areas, keyword_list
-    )
 
-    num_keywords = len(keyword_list)
-    if num_keywords:
-      keyword_score_by_version_id = (
-        other_manuscripts.set_index(VERSION_ID)['count'] / num_keywords
-      ).to_dict()
+    if keyword_list:
+      keyword_score_by_version_id = self.manuscript_keyword_service.get_keyword_scores(keyword_list)
+      version_ids = keyword_score_by_version_id.keys()
+      if subject_areas and version_ids:
+        version_ids = version_ids & self.manuscript_subject_area_service.get_ids_by_subject_areas(
+          subject_areas
+        )
+      return version_ids, keyword_score_by_version_id
+    elif subject_areas:
+      version_ids = self.manuscript_subject_area_service.get_ids_by_subject_areas(subject_areas)
+      return version_ids, {}
     else:
-      keyword_score_by_version_id = {}
-    return other_manuscripts[VERSION_ID].values, keyword_score_by_version_id
+      return set(), {}
 
   def _find_most_similar_manuscript_ids_with_scores(
     self, subject_areas=None, abstract=None, manuscript_version_ids=None,
@@ -887,7 +862,7 @@ class RecommendReviewers(object):
       )
     )
 
-    person_keyword_scores = self.person_keyword_service.get_person_keyword_scores(keyword_list)
+    person_keyword_scores = self.person_keyword_service.get_keyword_scores(keyword_list)
 
     potential_reviewers_ids = self._find_potential_reviewer_ids(
       matching_manuscript_ids=matching_manuscript_ids,
