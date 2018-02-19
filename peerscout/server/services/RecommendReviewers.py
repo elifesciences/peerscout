@@ -417,7 +417,7 @@ class RecommendReviewers(object):
     debugv("temp_authors_map: %s", temp_authors_map)
     debugv("temp_reviewers_map: %s", temp_reviewers_map)
 
-    logger.debug("building manuscript by doi map")
+    logger.debug("building doi by manuscript map")
     temp_doi_by_manuscript_no_map = groupby_column_to_dict(
       manuscripts_df,
       MANUSCRIPT_ID,
