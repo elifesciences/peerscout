@@ -352,19 +352,18 @@ class RecommendReviewers(object):
     overall_stats_map = stats_by_person_for_period(db.person_review_stats_overall)
     last12m_stats_map = stats_by_person_for_period(db.person_review_stats_last12m)
 
-    logger.debug("building person list")
-    persons_list = [{
-      **person,
-      # 'is-early-career-researcher': person['person-id'] in early_career_researchers_person_ids,
-      'memberships': temp_memberships_map.get(person[PERSON_ID], []),
-      'dates_not_available': dates_not_available_map.get(person[PERSON_ID], []),
-      'stats': {
-        'overall': overall_stats_map.get(person[PERSON_ID], None),
-        'last_12m': last12m_stats_map.get(person[PERSON_ID], None)
-      }
-    } for person in clean_result(self.persons_df[PERSON_COLUMNS].to_dict(orient='records'))]
-
-    self.persons_map = dict((p[PERSON_ID], p) for p in persons_list)
+    logger.debug("building person map")
+    self.persons_map = {
+      person[PERSON_ID]: {
+        **person,
+        'memberships': temp_memberships_map.get(person[PERSON_ID], []),
+        'dates_not_available': dates_not_available_map.get(person[PERSON_ID], []),
+        'stats': {
+          'overall': overall_stats_map.get(person[PERSON_ID], None),
+          'last_12m': last12m_stats_map.get(person[PERSON_ID], None)
+        }
+      } for person in clean_result(self.persons_df[PERSON_COLUMNS].to_dict(orient='records'))
+    }
 
     debugv("self.persons_df: %s", self.persons_df)
     debugv("persons_map: %s", self.persons_map)
