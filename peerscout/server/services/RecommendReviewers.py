@@ -277,16 +277,6 @@ class RecommendReviewers(object):
       valid_version_ids
     )
 
-    self.manuscript_keywords_all_df = (
-      db.manuscript_keyword.read_frame().reset_index()
-    )
-
-    self.manuscript_keywords_df = filter_by(
-      self.manuscript_keywords_all_df,
-      VERSION_ID,
-      valid_version_ids
-    )
-
     logger.debug('loading ManuscriptKeywordService')
     self.manuscript_keyword_service = ManuscriptKeywordService.from_database(
       db, valid_version_ids=valid_version_ids
@@ -428,7 +418,7 @@ class RecommendReviewers(object):
 
     logger.debug("getting all keywords")
     self.all_keywords = sorted(
-      set(self.manuscript_keywords_df['keyword']) |
+      self.manuscript_keyword_service.get_all_keywords() |
       self.person_keyword_service.get_all_keywords()
     )
 
@@ -521,27 +511,6 @@ class RecommendReviewers(object):
       self.early_career_researcher_ids_by_subject_area.keys()
     )
 
-  def __find_manuscripts_by_keywords(self, keywords):
-    other_manuscripts = self.manuscript_keywords_df[
-      self.manuscript_keywords_df['keyword'].isin(keywords)
-    ]
-    other_manuscripts = groupby_agg_droplevel(
-      other_manuscripts,
-      MANUSCRIPT_ID_COLUMNS,
-      {
-        'keyword': {
-          'keywords': lambda x: tuple(x),
-          'count': pd.np.size
-        }
-      }
-    )
-    return other_manuscripts
-
-  def __find_keywords_by_version_keys(self, version_ids):
-    return self.manuscript_keywords_all_df[
-      self.manuscript_keywords_all_df[VERSION_ID].isin(version_ids)
-    ]['keyword']
-
   def __find_manuscripts_by_key(self, manuscript_no):
     return self.manuscript_versions_all_df[
       self.manuscript_versions_all_df[MANUSCRIPT_ID] == manuscript_no
@@ -610,17 +579,17 @@ class RecommendReviewers(object):
     if len(matching_manuscripts) == 0:
       return self._no_manuscripts_found_response(manuscript_no)
     else:
-      manuscript_keywords = self.__find_keywords_by_version_keys(
-        matching_manuscripts[VERSION_ID]
-      )
+      matching_version_ids = matching_manuscripts[VERSION_ID]
+      keyword_list = sorted(self.manuscript_keyword_service.get_keywords_by_ids(
+        matching_version_ids
+      ))
       matching_manuscripts_dicts = map_to_dict(
-        matching_manuscripts[VERSION_ID],
+        matching_version_ids,
         self.manuscripts_by_version_id_map
       )
-      keyword_list = list(manuscript_keywords.values)
       manuscript_subject_areas = set(iter_flatten(
         self.manuscript_subject_area_service.get_subject_areas_by_id(version_id)
-        for version_id in matching_manuscripts[VERSION_ID]
+        for version_id in matching_version_ids
       ))
       # we search by subject areas for ECRs as there may otherwise not much data
       # available

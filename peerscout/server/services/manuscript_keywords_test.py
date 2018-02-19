@@ -6,7 +6,7 @@ from ...shared.database import populated_in_memory_database
 
 from .test_data import (
   MANUSCRIPT_VERSION1,
-  MANUSCRIPT_VERSION_ID1,
+  MANUSCRIPT_VERSION_ID1, MANUSCRIPT_ID_FIELDS2,
   MANUSCRIPT_ID_FIELDS1
 )
 
@@ -135,4 +135,29 @@ class TestManuscriptKeywordService:
         assert (
           set(manuscript_keyword_service.get_all_keywords()) ==
           set()
+        )
+
+  class TestGetKeywordsByIds:
+    def test_should_return_none_if_manuscript_has_no_keywords(self):
+      dataset = {
+        'manuscript_version': [MANUSCRIPT_VERSION1]
+      }
+      with create_manuscript_keyword_service(dataset) as manuscript_keyword_service:
+        assert (
+          manuscript_keyword_service.get_keywords_by_ids({MANUSCRIPT_VERSION_ID1}) ==
+          set()
+        )
+
+    def test_should_return_keywords_of_single_manuscript(self):
+      dataset = {
+        'manuscript_version': [MANUSCRIPT_VERSION1],
+        'manuscript_keyword': [
+          {**MANUSCRIPT_ID_FIELDS1, 'keyword': KEYWORD1},
+          {**MANUSCRIPT_ID_FIELDS2, 'keyword': KEYWORD2}
+        ]
+      }
+      with create_manuscript_keyword_service(dataset) as manuscript_keyword_service:
+        assert (
+          manuscript_keyword_service.get_keywords_by_ids({MANUSCRIPT_VERSION_ID1}) ==
+          {KEYWORD1}
         )

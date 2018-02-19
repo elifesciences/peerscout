@@ -52,3 +52,16 @@ class ManuscriptKeywordService:
         [s.lower() for s in keyword_list]
       )
     ).group_by(db.manuscript_keyword.table.version_id).all())
+
+  def get_keywords_by_ids(self, manuscript_version_ids):
+    db = self._db
+    return set(
+      r[0] for r in
+      db.session.query(db.manuscript_keyword.table.keyword)
+      .filter(
+        sqlalchemy.func.lower(db.manuscript_keyword.table.version_id).in_(
+          manuscript_version_ids
+        )
+      )
+      .distinct()
+    )
