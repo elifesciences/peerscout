@@ -84,7 +84,19 @@ class TestManuscriptSubjectAreaService:
           set()
         )
   class TestGetSubjectAreasById:
-    def test_should_return_subject_areas_of_matching_id(self):
+    def test_should_return_single_subject_area_of_matching_id(self):
+      dataset = {
+        'manuscript_version': [MANUSCRIPT_VERSION1],
+        'manuscript_subject_area': [{**MANUSCRIPT_ID_FIELDS1, 'subject_area': SUBJECT_AREA1}]
+      }
+      with create_manuscript_subject_area_service(dataset) as manuscript_subject_area_service:
+        assert (
+          set(manuscript_subject_area_service.get_subject_areas_by_id(
+            MANUSCRIPT_VERSION_ID1
+          )) == {SUBJECT_AREA1}
+        )
+
+    def test_should_return_multiple_subject_areas_of_matching_id(self):
       dataset = {
         'manuscript_version': [MANUSCRIPT_VERSION1],
         'manuscript_subject_area': [
