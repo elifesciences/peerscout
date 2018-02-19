@@ -1,6 +1,8 @@
 import logging
 from collections import Counter
 
+import sqlalchemy
+
 from peerscout.utils.collection import (
   iter_flatten,
   groupby_to_dict
@@ -19,31 +21,40 @@ LOGGER = logging.getLogger(__name__)
 def get_person_ids_of_person_keywords_scores(person_keyword_scores):
   return person_keyword_scores.keys()
 
-class ManuscriptKeywordService(KeywordService):
-  def __init__(self, keyword_map, all_keywords):
-    super(ManuscriptKeywordService, self).__init__(
-      keyword_map, all_keywords, entity_name='manuscript'
-    )
+class ManuscriptKeywordService:
+  def __init__(self, db, valid_version_ids=None):
+    self._db = db
+    self._valid_version_ids = valid_version_ids
 
   @staticmethod
   def from_database(db, valid_version_ids=None):
-    query = db.session.query(
-      db.manuscript_keyword.table.version_id,
-      db.manuscript_keyword.table.keyword
-    )
-    if valid_version_ids is not None:
+    return ManuscriptKeywordService(db, valid_version_ids=valid_version_ids)
+
+  def _query(self, columns):
+    db = self._db
+    query = db.session.query(*columns)
+    if self._valid_version_ids is not None:
       query = query.filter(
-        db.manuscript_keyword.table.version_id.in_(valid_version_ids)
+        db.manuscript_keyword.table.version_id.in_(self._valid_version_ids)
       )
-    return ManuscriptKeywordService.from_manuscript_version_id_keyword_tuples(
-      query.all()
+    return query
+
+  def get_all_keywords(self):
+    return set(
+      r[0] for r in
+      self._query([self._db.manuscript_keyword.table.keyword]).distinct()
     )
 
-  @staticmethod
-  def from_manuscript_version_id_keyword_tuples(manuscript_version_id_keyword_tuples):
-    return ManuscriptKeywordService(
-      keyword_map=create_keyword_map_for_id_keyword_tuples(
-        manuscript_version_id_keyword_tuples
-      ),
-      all_keywords=set(keyword for _, keyword in manuscript_version_id_keyword_tuples)
-    )
+  def get_keyword_scores(self, keyword_list):
+    if not keyword_list:
+      return {}
+    num_keywords = len(keyword_list)
+    db = self._db
+    return dict((keyword, count / num_keywords) for keyword, count in self._query([
+      db.manuscript_keyword.table.version_id,
+      sqlalchemy.func.count(db.manuscript_keyword.table.version_id)
+    ]).filter(
+      sqlalchemy.func.lower(db.manuscript_keyword.table.keyword).in_(
+        [s.lower() for s in keyword_list]
+      )
+    ).group_by(db.manuscript_keyword.table.version_id).all())
