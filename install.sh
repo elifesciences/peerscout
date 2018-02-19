@@ -21,6 +21,8 @@ do
   pip install $line
 done
 
+pip install -r requirements-debug.txt
+
 python -m spacy download en
 
 echo "[✓] install.sh"

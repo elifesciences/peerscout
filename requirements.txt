@@ -12,8 +12,6 @@ Flask-Cors==3.0.3
 gensim==3.3.0
 lxml==4.1.1
 pyLDAvis==2.1.1
-pytest==3.4.0
-pytest-watch==4.1.0
 ratelimit==1.4.1
 scikit-learn==0.19.1
 scipy==1.0.0
