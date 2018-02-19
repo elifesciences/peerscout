@@ -7,7 +7,7 @@ from ...shared.database_schema import Person
 
 from .test_data import (
   PERSON_ID,
-  PERSON_ID1,
+  PERSON_ID1, PERSON_ID2,
   PERSON1
 )
 
@@ -26,6 +26,14 @@ def create_person_role_service(dataset):
 @pytest.mark.slow
 class TestPersonRoleService:
   class TestFilterPersonIdsByRole:
+    def test_should_not_filter_if_role_is_none(self):
+      dataset = {}
+      with create_person_role_service(dataset) as person_role_service:
+        assert (
+          person_role_service.filter_person_ids_by_role({PERSON_ID1}, None) ==
+          {PERSON_ID1}
+        )
+
     def test_should_include_person_with_specified_role(self):
       dataset = {
         'person': [PERSON1],
@@ -33,8 +41,19 @@ class TestPersonRoleService:
       }
       with create_person_role_service(dataset) as person_role_service:
         assert (
-          person_role_service.filter_person_ids_by_role([PERSON_ID1], ROLE_1) ==
+          person_role_service.filter_person_ids_by_role({PERSON_ID1}, ROLE_1) ==
           {PERSON_ID1}
+        )
+
+    def test_should_not_include_other_persons(self):
+      dataset = {
+        'person': [PERSON1],
+        'person_role': [{PERSON_ID: PERSON_ID2, 'role': ROLE_1}]
+      }
+      with create_person_role_service(dataset) as person_role_service:
+        assert (
+          person_role_service.filter_person_ids_by_role({PERSON_ID1}, ROLE_1) ==
+          set()
         )
 
     def test_should_not_include_person_with_other_role(self):
@@ -44,7 +63,7 @@ class TestPersonRoleService:
       }
       with create_person_role_service(dataset) as person_role_service:
         assert (
-          person_role_service.filter_person_ids_by_role([PERSON_ID1], ROLE_1) ==
+          person_role_service.filter_person_ids_by_role({PERSON_ID1}, ROLE_1) ==
           set()
         )
 
@@ -58,7 +77,7 @@ class TestPersonRoleService:
       }
       with create_person_role_service(dataset) as person_role_service:
         assert (
-          person_role_service.filter_person_ids_by_role([PERSON_ID1], ROLE_1) ==
+          person_role_service.filter_person_ids_by_role({PERSON_ID1}, ROLE_1) ==
           {PERSON_ID1}
         )
 
@@ -69,6 +88,6 @@ class TestPersonRoleService:
       }
       with create_person_role_service(dataset) as person_role_service:
         assert (
-          person_role_service.filter_person_ids_by_role([PERSON_ID1], ROLE_1) ==
+          person_role_service.filter_person_ids_by_role({PERSON_ID1}, ROLE_1) ==
           set()
         )
