@@ -10,12 +10,6 @@ from peerscout.utils.collection import (
 
 from ...shared.database_schema import Person
 
-from .keywords import (
-  create_keyword_map_for_id_keyword_tuples,
-  calculate_keyword_scores_using_keyword_map,
-  KeywordService
-)
-
 LOGGER = logging.getLogger(__name__)
 
 def get_person_ids_of_person_keywords_scores(person_keyword_scores):
