@@ -369,6 +369,7 @@ class RecommendReviewers(object):
     debugv("self.persons_df: %s", self.persons_df)
     debugv("persons_map: %s", self.persons_map)
 
+    logger.debug("building temp author etc. maps")
     temp_authors_map = groupby_column_to_dict(
       self.authors_all_df,
       VERSION_ID,
@@ -391,14 +392,16 @@ class RecommendReviewers(object):
       lambda person_id: self.persons_map.get(person_id, None)
     )
 
-    self.person_role_service = PersonRoleService.from_database(db)
-
     temp_reviewers_map = groupby_columns_to_dict(
       self.manuscript_history_review_received_df[VERSION_ID].values,
       self.manuscript_history_review_received_df[PERSON_ID].values,
       lambda person_id: self.persons_map.get(person_id, None)
     )
 
+    logger.debug("building person roles")
+    self.person_role_service = PersonRoleService.from_database(db)
+
+    logger.debug("building reviewers by manuscript map")
     self.assigned_reviewers_by_manuscript_id_map = groupby_column_to_dict(
       self.assigned_reviewers_df,
       VERSION_ID,
@@ -415,13 +418,16 @@ class RecommendReviewers(object):
     debugv("temp_authors_map: %s", temp_authors_map)
     debugv("temp_reviewers_map: %s", temp_reviewers_map)
 
+    logger.debug("building manuscript by doi map")
     temp_doi_by_manuscript_no_map = groupby_column_to_dict(
       manuscripts_df,
       MANUSCRIPT_ID,
       'doi')
 
+    logger.debug("getting all subject areas")
     self.all_subject_areas = sorted(self.manuscript_subject_area_service.get_all_subject_areas())
 
+    logger.debug("getting all keywords")
     self.all_keywords = sorted(
       set(self.manuscript_keywords_df['keyword']) |
       self.person_keyword_service.get_all_keywords()
