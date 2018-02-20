@@ -11,6 +11,7 @@ def main():
     scripts = [
       'importDataToDatabase',
       'convertEditorsCsv',
+      'import_editor_roles_and_keywords_csv',
       'importEarlyCareerResearchersCsv',
       'enrichEarlyCareerResearchersInDatabase',
       'generateTextTokens',

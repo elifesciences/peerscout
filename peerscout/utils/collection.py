@@ -6,6 +6,13 @@ iter_flatten = lambda l: (item for sublist in l for item in sublist)
 
 filter_none = lambda l: [item for item in l if item is not None]
 
+def force_list(x):
+  if x is None:
+    return []
+  if isinstance(x, list):
+    return x
+  return [x]
+
 def deep_get(dictionary, keys, defaultValue=None):
   result = dictionary
   for key in keys:
