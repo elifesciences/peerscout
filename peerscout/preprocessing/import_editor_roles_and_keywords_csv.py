@@ -76,6 +76,7 @@ def import_csv_file_to_database(filename, stream, db):
   update_person_keywords(
     db, dedup_map_values(to_keywords_by_person_id_map(df))
   )
+  db.person_role.delete_all()
   update_person_roles(db, to_roles_by_person_id_map(df))
 
 def find_file_to_import():

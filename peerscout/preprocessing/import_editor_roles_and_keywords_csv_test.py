@@ -33,6 +33,8 @@ SUBJECT_AREA_1 = 'Subject Area 1'
 SUBJECT_AREA_2 = 'Subject Area 2'
 KEYWORD_1 = 'keyword1'
 KEYWORD_2 = 'keyword2'
+ROLE_1 = 'role1'
+ROLE_2 = 'role2'
 
 CSV_ITEM_1 = {
   CsvColumns.PERSON_ID: PERSON_ID_1,
@@ -178,6 +180,36 @@ class TestImportCsvFileToDatabase:
       LOGGER.debug('df:\n%s', df)
       assert set(zip(df['person_id'], df['keyword'])) == {
         (PERSON_ID_2, KEYWORD_2)
+      }
+
+  def test_should_import_role(self):
+    csv_content = create_csv_content([{
+      **CSV_ITEM_1,
+      CsvColumns.ROLE: ROLE_1
+    }])
+    with import_csv(csv_content) as db:
+      df = db.person_role.read_frame().reset_index()
+      LOGGER.debug('df:\n%s', df)
+      assert set(zip(df['person_id'], df['role'])) == {
+        (PERSON_ID_1, ROLE_1)
+      }
+
+  def test_should_clear_roles_of_persons_not_in_csv(self):
+    csv_content = create_csv_content([{
+      **CSV_ITEM_1,
+      CsvColumns.ROLE: ROLE_1
+    }])
+    dataset = {
+      'person': [{'person_id': PERSON_ID_2}],
+      'person_role': [
+        {'person_id': PERSON_ID_2, 'role': ROLE_2}
+      ]
+    }
+    with import_csv(csv_content, dataset) as db:
+      df = db.person_role.read_frame().reset_index()
+      LOGGER.debug('df:\n%s', df)
+      assert set(zip(df['person_id'], df['role'])) == {
+        (PERSON_ID_1, ROLE_1)
       }
 
 class TestFindFileToImport:
