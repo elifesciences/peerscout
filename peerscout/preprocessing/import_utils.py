@@ -8,6 +8,7 @@ from peerscout.utils.collection import force_list, applymap_dict
 
 from .dataNormalisationUtils import normalise_subject_area
 from .convertUtils import filter_filenames_by_ext
+from .convertUtils import unescape_and_strip_tags_if_not_none
 
 LOGGER = logging.getLogger(__name__)
 
@@ -33,6 +34,11 @@ def normalise_subject_area_map(subject_area_map):
 
 def dedup_map_values(values_map):
   return applymap_dict(values_map, lambda values: sorted(set(values)))
+
+def xml_decode_person_names(persons_df):
+  persons_df['first_name'] = persons_df['first_name'].apply(unescape_and_strip_tags_if_not_none)
+  persons_df['last_name'] = persons_df['last_name'].apply(unescape_and_strip_tags_if_not_none)
+  return persons_df
 
 def add_or_update_persons_from_dataframe(db, df):
   person_ids = set(df.index.values)

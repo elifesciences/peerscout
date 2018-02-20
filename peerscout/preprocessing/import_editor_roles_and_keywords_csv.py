@@ -13,6 +13,7 @@ from .import_utils import (
   comma_separated_column_to_map,
   normalise_subject_area_map,
   dedup_map_values,
+  xml_decode_person_names,
   find_last_csv_file_in_directory,
   hack_fix_double_quote_encoding_issue_in_stream
 )
@@ -69,7 +70,9 @@ def to_roles_by_person_id_map(df):
 def import_csv_file_to_database(filename, stream, db):
   LOGGER.info("converting: %s", filename)
   df = read_editors_csv(stream)
-  add_or_update_persons_from_dataframe(db, to_persons_df(df))
+  add_or_update_persons_from_dataframe(
+    db, xml_decode_person_names(to_persons_df(df))
+  )
   update_person_subject_areas(
     db, normalise_subject_area_map(to_subject_areas_by_person_id_map(df))
   )

@@ -60,12 +60,25 @@ def create_csv_content(data):
 
 @pytest.mark.slow
 class TestImportCsvFileToDatabase:
-  def test_should_import_single_line(self):
+  def test_should_import_single_person(self):
     csv_content = create_csv_content([CSV_ITEM_1])
     with import_csv(csv_content) as db:
       df = db.person.read_frame().reset_index()
       LOGGER.debug('df:\n%s', df)
       assert set(df['person_id']) == set([PERSON_ID_1])
+
+  def test_should_xml_decode_first_and_last_name(self):
+    csv_content = create_csv_content([{
+      **CSV_ITEM_1,
+      CsvColumns.FIRST_NAME: 'Andr&#x00E9;s',
+      CsvColumns.LAST_NAME: 'Andr&#x00E9;s'
+    }])
+    with import_csv(csv_content) as db:
+      df = db.person.read_frame().reset_index()
+      LOGGER.debug('df:\n%s', df)
+      assert set(zip(df['person_id'], df['first_name'], df['last_name'])) == {
+        (PERSON_ID_1, 'Andrés', 'Andrés')
+      }
 
   def test_should_import_empty_subject_area(self):
     csv_content = create_csv_content([{
