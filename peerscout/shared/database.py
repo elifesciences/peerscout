@@ -182,9 +182,9 @@ class Entity(object):
     return self.session.query(self.table).count()
 
 class Database(object):
-  def __init__(self, engine):
+  def __init__(self, engine, autocommit=False):
     self.engine = engine
-    self.session = sessionmaker(engine)()
+    self.session = sessionmaker(engine, autocommit=autocommit)()
     self.views = create_views(engine.dialect.name)
     self.tables = {
       t.__tablename__: Entity(self.session, t)
@@ -269,11 +269,11 @@ class Database(object):
   def __getattr__(self, name):
     return self.tables[name]
 
-def connect_database(*args, **kwargs):
+def connect_database(*args, autocommit=False, **kwargs):
   engine = db_connect(*args, **kwargs)
-  return Database(engine)
+  return Database(engine, autocommit=autocommit)
 
-def connect_configured_database():
+def connect_configured_database(autocommit=False):
   config = get_app_config()
   db_config = config['database']
   name = db_config['name']
@@ -288,20 +288,39 @@ def connect_configured_database():
     host=db_host,
     port=db_port,
     user=db_user,
-    password=db_password
+    password=db_password,
+    autocommit=autocommit
   )
 
 @contextmanager
-def connect_managed_configured_database():
-  db = connect_configured_database()
+def connect_managed_configured_database(autocommit=False):
+  db = connect_configured_database(autocommit=autocommit)
   yield db
   db.close()
 
 @contextmanager
-def empty_in_memory_database():
+def empty_in_memory_database(autocommit=False):
   engine = sqlalchemy.create_engine('sqlite://', echo=False)
   get_logger().debug("engine driver: %s", engine.driver)
-  db = Database(engine)
+  db = Database(engine, autocommit=autocommit)
   db.update_schema()
   yield db
   db.close()
+
+def insert_dataset(db, dataset):
+  sorted_table_names = db.sorted_table_names()
+  unknown_table_names = set(dataset.keys()) - set(sorted_table_names)
+  if len(unknown_table_names) > 0:
+    raise Exception("unknown table names: {}".format(unknown_table_names))
+
+  for table_name in sorted_table_names:
+    if table_name in dataset:
+      get_logger().debug("data %s:\n%s", table_name, dataset[table_name])
+      db[table_name].create_list(dataset[table_name])
+  db.commit()
+
+@contextmanager
+def populated_in_memory_database(dataset):
+  with empty_in_memory_database() as db:
+    insert_dataset(db, dataset)
+    yield db

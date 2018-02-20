@@ -5,13 +5,26 @@ from contextlib import contextmanager
 import pytest
 import pandas as pd
 
-from ...shared.database import empty_in_memory_database
+from ...shared.database import populated_in_memory_database
 
 from .ManuscriptModel import ManuscriptModel
 from .DocumentSimilarityModel import DocumentSimilarityModel
 from .RecommendReviewers import RecommendReviewers, set_debugv_enabled
 
-set_debugv_enabled(True)
+from .test_data import (
+  PERSON_ID,
+  PERSON_ID1, PERSON_ID2, PERSON_ID3,
+  PERSON1, PERSON2, PERSON3,
+  MANUSCRIPT_VERSION1,
+  MANUSCRIPT_ID1, MANUSCRIPT_ID2,
+  MANUSCRIPT_ID_FIELDS1, MANUSCRIPT_ID_FIELDS2, MANUSCRIPT_ID_FIELDS3,
+  MANUSCRIPT_ID_FIELDS4, MANUSCRIPT_ID_FIELDS5,
+  MANUSCRIPT_TITLE1, MANUSCRIPT_TITLE2, MANUSCRIPT_TITLE3,
+  MANUSCRIPT_ABSTRACT1,
+  VALID_DECISIONS, VALID_MANUSCRIPT_TYPES,
+  PUBLISHED_DECISIONS, PUBLISHED_MANUSCRIPT_TYPES,
+  DECISSION_ACCEPTED, DECISSION_REJECTED
+)
 
 MANUSCRIPT_ID = 'manuscript_id'
 VERSION_ID = 'version_id'
@@ -23,18 +36,6 @@ PERSON_ID_COLUMNS = [PERSON_ID]
 
 LDA_DOCVEC_COLUMN = 'lda_docvec'
 
-PERSON_ID1 = 'person1'
-PERSON_ID2 = 'person2'
-PERSON_ID3 = 'person3'
-
-PERSON1 = {
-  PERSON_ID: PERSON_ID1,
-  'first_name': 'John',
-  'last_name': 'Smith',
-  'status': 'Active',
-  'is_early_career_researcher': False
-}
-
 PERSON1_RESULT = {
   **PERSON1,
   'memberships': [],
@@ -45,23 +46,9 @@ PERSON1_RESULT = {
   }
 }
 
-PERSON2 = {
-  **PERSON1,
-  PERSON_ID: PERSON_ID2,
-  'first-name': 'Laura',
-  'last-name': 'Laudson'
-}
-
 PERSON2_RESULT = {
   **PERSON1_RESULT,
   **PERSON2
-}
-
-PERSON3 = {
-  **PERSON1,
-  PERSON_ID: PERSON_ID3,
-  'first-name': 'Mike',
-  'last-name': 'Michelson'
 }
 
 PERSON3_RESULT = {
@@ -79,70 +66,12 @@ MEMBERSHIP1 = {
   PERSON_ID: PERSON_ID1,
 }
 
-def version_id(manuscript_no, version_no):
-  return '{}-{}'.format(manuscript_no, version_no)
-
-MANUSCRIPT_ID1 = '12345'
-MANUSCRIPT_VERSION_ID1 = version_id(MANUSCRIPT_ID1, 1)
-MANUSCRIPT_TITLE1 = 'Manuscript Title1'
-MANUSCRIPT_ABSTRACT1 = 'Manuscript Abstract 1'
-
-MANUSCRIPT_ID2 = '22222'
-MANUSCRIPT_VERSION_ID2 = version_id(MANUSCRIPT_ID2, 2)
-MANUSCRIPT_TITLE2 = 'Manuscript Title2'
-
-MANUSCRIPT_ID3 = '33333'
-MANUSCRIPT_VERSION_ID3 = version_id(MANUSCRIPT_ID3, 3)
-MANUSCRIPT_TITLE3 = 'Manuscript Title3'
-
-MANUSCRIPT_ID_FIELDS1 = {
-  MANUSCRIPT_ID: MANUSCRIPT_ID1,
-  VERSION_ID: MANUSCRIPT_VERSION_ID1
-}
-
-MANUSCRIPT_ID_FIELDS2 = {
-  MANUSCRIPT_ID: MANUSCRIPT_ID2,
-  VERSION_ID: MANUSCRIPT_VERSION_ID2
-}
-
-MANUSCRIPT_ID_FIELDS3 = {
-  MANUSCRIPT_ID: MANUSCRIPT_ID3,
-  VERSION_ID: MANUSCRIPT_VERSION_ID3
-}
-
-create_manuscript_id_fields = lambda i: ({
-  MANUSCRIPT_ID: str(i),
-  VERSION_ID: version_id(str(i), 1)
-})
-
-MANUSCRIPT_ID_FIELDS4 = create_manuscript_id_fields(4)
-MANUSCRIPT_ID_FIELDS5 = create_manuscript_id_fields(5)
-
-DECISSION_ACCEPTED = 'Accept Full Submission'
-DECISSION_REJECTED = 'Reject Full Submission'
-
-TYPE_RESEARCH_ARTICLE = 'Research Article'
-
-PUBLISHED_DECISIONS = {DECISSION_ACCEPTED}
-PUBLISHED_MANUSCRIPT_TYPES = {TYPE_RESEARCH_ARTICLE}
-
-VALID_DECISIONS = PUBLISHED_DECISIONS | {DECISSION_REJECTED}
-VALID_MANUSCRIPT_TYPES = PUBLISHED_MANUSCRIPT_TYPES
-
 MANUSCRIPT_VERSION1_RESULT = {
-  **MANUSCRIPT_ID_FIELDS1,
-  MANUSCRIPT_ID: MANUSCRIPT_ID1,
+  **MANUSCRIPT_VERSION1,
   'authors': [],
   'senior_editors': [],
-  'doi': None,
-  'title': MANUSCRIPT_TITLE1,
-  'decision': DECISSION_ACCEPTED,
-  'manuscript_type': TYPE_RESEARCH_ARTICLE,
-  'subject_areas': [],
-  'is_published': True
+  'subject_areas': []
 }
-
-MANUSCRIPT_VERSION1 = MANUSCRIPT_VERSION1_RESULT
 
 MANUSCRIPT_VERSION2_RESULT = {
   **MANUSCRIPT_VERSION1_RESULT,
@@ -175,6 +104,7 @@ MANUSCRIPT_VERSION5_RESULT = {
 MANUSCRIPT_VERSION5 = MANUSCRIPT_VERSION5_RESULT
 
 KEYWORD1 = 'keyword1'
+KEYWORD2 = 'keyword2'
 
 MANUSCRIPT_KEYWORD1 = {
   **MANUSCRIPT_ID_FIELDS1,
@@ -281,10 +211,15 @@ EARLY_CAREER_RESEARCHER_WITH_SUBJECT_AREAS_DATASET = {
   }]
 }
 
+class PersonRoles:
+  SENIOR_EDITOR = 'Senior Editor'
+  OTHER = 'Other'
+
 PP = pprint.PrettyPrinter(indent=2, width=40)
 
 def setup_module():
   logging.basicConfig(level=logging.DEBUG)
+  set_debugv_enabled(True)
 
 @pytest.fixture(name='logger')
 def get_logger():
@@ -293,19 +228,7 @@ def get_logger():
 @contextmanager
 def create_recommend_reviewers(dataset, filter_by_subject_area_enabled=False):
   logger = get_logger()
-  with empty_in_memory_database() as db:
-
-    sorted_table_names = db.sorted_table_names()
-    unknown_table_names = set(dataset.keys()) - set(sorted_table_names)
-    if len(unknown_table_names) > 0:
-      raise Exception("unknown table names: {}".format(unknown_table_names))
-
-    for table_name in sorted_table_names:
-      if table_name in dataset:
-        logger.debug("data %s:\n%s", table_name, dataset[table_name])
-        db[table_name].create_list(dataset[table_name])
-    db.commit()
-
+  with populated_in_memory_database(dataset) as db:
     logger.debug("view manuscript_person_review_times:\n%s",
       db.manuscript_person_review_times.read_frame())
     logger.debug("view person_review_stats_overall:\n%s",
@@ -384,7 +307,7 @@ def _awaiting_review_stages(id_fields, contacted, accepted):
   }]
 
 @pytest.mark.slow
-class TestRecommendReviewers:
+class TestRecommendReviewersRegular:
   def test_no_match(self):
     dataset = {
       'person' : [PERSON1],
@@ -900,3 +823,121 @@ class TestRecommendReviewers:
     assert [
       r['person'][PERSON_ID] for r in result['potential_reviewers']
     ] == [PERSON_ID1]
+
+@pytest.mark.slow
+class TestRecommendReviewersByRole:
+  def test_should_not_recommend_regular_reviewer_when_searching_for_senior_editor_via_keyword(self):
+    # a regular reviewer doesn't have a role
+    dataset = {
+      'person': [PERSON1],
+      'manuscript_version': [MANUSCRIPT_VERSION1],
+      'manuscript_author': [AUTHOR1],
+      'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
+    }
+    result = recommend_for_dataset(
+      dataset, keywords=KEYWORD1, manuscript_no=None,
+      role=PersonRoles.SENIOR_EDITOR
+    )
+    person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+    assert person_ids == []
+
+  def test_should_not_recommend_regular_reviewer_when_searching_for_senior_editor_via_manuscript_no(self):
+    # a regular reviewer doesn't have a role
+    dataset = {
+      'person': [PERSON1],
+      'manuscript_version': [MANUSCRIPT_VERSION1, MANUSCRIPT_VERSION2],
+      'manuscript_author': [AUTHOR1],
+      'manuscript_keyword': [MANUSCRIPT_KEYWORD1, {
+        **MANUSCRIPT_KEYWORD1,
+        **MANUSCRIPT_ID_FIELDS2
+      }]
+    }
+    result = recommend_for_dataset(
+      dataset, keywords=None, manuscript_no=MANUSCRIPT_ID2,
+      role=PersonRoles.SENIOR_EDITOR
+    )
+    person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+    assert person_ids == []
+
+  def test_should_not_recommend_reviewer_with_other_role_when_searching_for_senior_editor(self):
+    dataset = {
+      'person': [PERSON1],
+      'person_role': [{PERSON_ID: PERSON_ID1, 'role': PersonRoles.OTHER}],
+      'manuscript_version': [MANUSCRIPT_VERSION1],
+      'manuscript_author': [AUTHOR1],
+      'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
+    }
+    result = recommend_for_dataset(
+      dataset, keywords=KEYWORD1, manuscript_no=None,
+      role=PersonRoles.SENIOR_EDITOR
+    )
+    person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+    assert person_ids == []
+
+  def test_should_recommend_senior_editor_based_on_manuscript_keyword(self):
+    dataset = {
+      'person': [PERSON1],
+      'person_role': [{PERSON_ID: PERSON_ID1, 'role': PersonRoles.SENIOR_EDITOR}],
+      'manuscript_version': [MANUSCRIPT_VERSION1],
+      'manuscript_author': [AUTHOR1],
+      'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
+    }
+    result = recommend_for_dataset(
+      dataset, keywords=KEYWORD1, manuscript_no=None,
+      role=PersonRoles.SENIOR_EDITOR
+    )
+    person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+    assert person_ids == [PERSON_ID1]
+
+  def test_should_recommend_senior_editor_based_on_manuscript_keyword_via_manuscript_no(self):
+    dataset = {
+      'person': [PERSON1],
+      'person_role': [{PERSON_ID: PERSON_ID1, 'role': PersonRoles.SENIOR_EDITOR}],
+      'manuscript_version': [MANUSCRIPT_VERSION1, MANUSCRIPT_VERSION2],
+      'manuscript_author': [AUTHOR1],
+      'manuscript_keyword': [MANUSCRIPT_KEYWORD1, {
+        **MANUSCRIPT_KEYWORD1,
+        **MANUSCRIPT_ID_FIELDS2
+      }]
+    }
+    result = recommend_for_dataset(
+      dataset, keywords=None, manuscript_no=MANUSCRIPT_ID2,
+      role=PersonRoles.SENIOR_EDITOR
+    )
+    person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+    assert person_ids == [PERSON_ID1]
+
+  def test_should_recommend_senior_editor_based_on_person_keyword_and_reflect_in_score(self):
+    dataset = {
+      'person': [PERSON1],
+      'person_role': [{PERSON_ID: PERSON_ID1, 'role': PersonRoles.SENIOR_EDITOR}],
+      'person_keyword': [{PERSON_ID: PERSON_ID1, 'keyword': KEYWORD1}]
+    }
+    result = recommend_for_dataset(
+      dataset, keywords=KEYWORD1, manuscript_no=None,
+      role=PersonRoles.SENIOR_EDITOR
+    )
+    person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+    assert person_ids == [PERSON_ID1]
+    assert (
+      [r['scores']['keyword'] for r in result['potential_reviewers']] ==
+      [1.0]
+    )
+
+@pytest.mark.slow
+class TestAllKeywords:
+  def test_should_include_manuscript_keywords_in_all_keywords(self):
+    dataset = {
+      'manuscript_version': [MANUSCRIPT_VERSION1],
+      'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
+    }
+    with create_recommend_reviewers(dataset) as recommend_reviewers:
+      assert recommend_reviewers.get_all_keywords() == [KEYWORD1]
+
+  def test_should_include_person_keywords_in_all_keywords(self):
+    dataset = {
+      'person': [PERSON1],
+      'person_keyword': [{PERSON_ID: PERSON_ID1, 'keyword': KEYWORD1}]
+    }
+    with create_recommend_reviewers(dataset) as recommend_reviewers:
+      assert recommend_reviewers.get_all_keywords() == [KEYWORD1]

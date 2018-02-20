@@ -25,7 +25,7 @@ from .auth.EmailValidator import (
   read_valid_emails
 )
 
-from ..shared.database import connect_managed_configured_database
+from ..shared.database import connect_configured_database
 from ..shared.app_config import get_app_config
 from ..shared.logging_config import configure_logging
 
@@ -59,7 +59,9 @@ published_manuscript_types = parse_list(config.get(
 filter_by_subject_area_enabled = config.getboolean(
   'model', 'filter_by_subject_area_enabled', fallback=False
 )
-
+filter_by_role = config.get(
+  'model', 'filter_by_role', fallback=None
+)
 client_config = dict(config['client']) if 'client' in config else {}
 
 auth0_domain = client_config.get('auth0_domain', '')
@@ -80,8 +82,10 @@ memory = Memory(cachedir=cache_dir, verbose=0)
 logger.debug("cache directory: %s", cache_dir)
 memory.clear(warn=False)
 
+db = connect_configured_database(autocommit=True)
+
 def load_recommender():
-  with connect_managed_configured_database() as db:
+  with db.session.begin():
     manuscript_model = ManuscriptModel(
       db,
       valid_decisions=valid_decisions,
@@ -152,14 +156,16 @@ def api_root():
   })
 
 @memory.cache
-def recommend_reviewers_as_json(manuscript_no, subject_area, keywords, abstract, limit):
-  return jsonify(recommend_reviewers.recommend(
-    manuscript_no,
-    subject_area,
-    keywords,
-    abstract,
-    limit=limit
-  ))
+def recommend_reviewers_as_json(manuscript_no, subject_area, keywords, abstract, role, limit):
+  with db.session.begin():
+    return jsonify(recommend_reviewers.recommend(
+      manuscript_no,
+      subject_area,
+      keywords,
+      abstract,
+      role=role,
+      limit=limit
+    ))
 
 @app.route("/api/recommend-reviewers")
 @wrap_with_auth
@@ -180,24 +186,23 @@ def recommend_reviewers_api():
     subject_area,
     keywords,
     abstract,
+    role=filter_by_role,
     limit=limit
   )
 
 @app.route("/api/subject-areas")
 def subject_areas_api():
-  return jsonify(list(recommend_reviewers.get_all_subject_areas()))
+  with db.session.begin():
+    return jsonify(list(recommend_reviewers.get_all_subject_areas()))
 
 @app.route("/api/keywords")
 def keywords_api():
-  return jsonify(list(recommend_reviewers.get_all_keywords()))
+  with db.session.begin():
+    return jsonify(list(recommend_reviewers.get_all_keywords()))
 
 @app.route("/api/config")
 def config_api():
   return jsonify(client_config)
-
-@app.route("/api/hello")
-def run():
-  return "Hello!"
 
 @app.route("/control/reload", methods=['POST'])
 def control_reload():
