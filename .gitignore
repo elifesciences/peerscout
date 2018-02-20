@@ -1,6 +1,8 @@
+/build
 /client/node_modules
 /client/dist
 /client/.inject-html
+/.coverage
 /.data
 /venv
 /.vscode
