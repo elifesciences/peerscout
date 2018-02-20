@@ -3,7 +3,7 @@ set -e # everything must succeed.
 
 source venv/bin/activate
 
-pytest --cov=peerscout --cov-report html:build/cov_html  --junitxml=build/pytest.xml
+pytest --cov=peerscout --cov-report html:build/cov_html --cov-report xml:build/cov.xml --junitxml=build/pytest.xml
 
 cd client
 npm test
