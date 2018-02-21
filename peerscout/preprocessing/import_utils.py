@@ -6,6 +6,8 @@ import pandas as pd
 
 from peerscout.utils.collection import force_list, applymap_dict
 
+from ..shared.database_schema import PersonMembership
+
 from .dataNormalisationUtils import normalise_subject_area
 from .convertUtils import filter_filenames_by_ext
 from .convertUtils import unescape_and_strip_tags_if_not_none
@@ -90,6 +92,14 @@ def update_person_roles(db, roles_by_person_id):
   LOGGER.debug('updating person roles (%d)', len(roles_by_person_id))
   update_one_to_many_map(
     db, db.person_role, roles_by_person_id, 'person_id', 'role'
+  )
+
+def update_person_orcids(db, orcid_by_person_id):
+  LOGGER.debug('updating person orcids (%d)', len(orcid_by_person_id))
+  df = one_to_many_map_to_dataframe(orcid_by_person_id, 'person_id', 'member_id')
+  df['member_type'] = PersonMembership.ORCID_MEMBER_TYPE
+  update_one_to_many_table_using_df(
+    db, db.person_membership, df, 'person_id', orcid_by_person_id.keys()
   )
 
 def find_last_csv_file_in_directory(root_dir, prefix):
