@@ -48,12 +48,7 @@ class ReloadableRecommendReviewers:
   def reload(self):
     self._recommend_reviewer = self._create_recommend_reviewer()
 
-def create_api_blueprint(config):
-  blueprint = Blueprint('api', __name__)
-
-  data_dir = os.path.abspath(config.get('data', 'data_root', fallback='.data'))
-  cache_dir = os.path.join(data_dir, 'server-cache')
-
+def get_recommend_reviewer_factory(db, config):
   valid_decisions = parse_list(config.get(
     'model', 'valid_decisions', fallback=''))
   valid_manuscript_types = parse_list(config.get(
@@ -65,22 +60,6 @@ def create_api_blueprint(config):
   filter_by_subject_area_enabled = config.getboolean(
     'model', 'filter_by_subject_area_enabled', fallback=False
   )
-  filter_by_role = config.get(
-    'model', 'filter_by_role', fallback=None
-  )
-  client_config = dict(config['client']) if 'client' in config else {}
-
-  auth0_domain = client_config.get('auth0_domain', '')
-
-  valid_emails_filename = config.get('auth', 'valid_emails', fallback=None)
-  valid_email_domains = parse_valid_domains(config.get('auth', 'valid_email_domains', fallback=''))
-  allowed_ips = parse_allowed_ips(config.get('auth', 'allowed_ips', fallback='127.0.0.1'))
-
-  memory = Memory(cachedir=cache_dir, verbose=0)
-  LOGGER.debug("cache directory: %s", cache_dir)
-  memory.clear(warn=False)
-
-  db = connect_configured_database(autocommit=True)
 
   def load_recommender():
     with db.session.begin():
@@ -98,6 +77,32 @@ def create_api_blueprint(config):
         db, manuscript_model=manuscript_model, similarity_model=similarity_model,
         filter_by_subject_area_enabled=filter_by_subject_area_enabled
       )
+  return load_recommender
+
+def create_api_blueprint(config):
+  blueprint = Blueprint('api', __name__)
+
+  data_dir = os.path.abspath(config.get('data', 'data_root', fallback='.data'))
+  cache_dir = os.path.join(data_dir, 'server-cache')
+
+  filter_by_role = config.get(
+    'model', 'filter_by_role', fallback=None
+  )
+  client_config = dict(config['client']) if 'client' in config else {}
+
+  auth0_domain = client_config.get('auth0_domain', '')
+
+  valid_emails_filename = config.get('auth', 'valid_emails', fallback=None)
+  valid_email_domains = parse_valid_domains(config.get('auth', 'valid_email_domains', fallback=''))
+  allowed_ips = parse_allowed_ips(config.get('auth', 'allowed_ips', fallback='127.0.0.1'))
+
+  memory = Memory(cachedir=cache_dir, verbose=0)
+  LOGGER.debug("cache directory: %s", cache_dir)
+  memory.clear(warn=False)
+
+  db = connect_configured_database(autocommit=True)
+
+  load_recommender = get_recommend_reviewer_factory(db, config)
 
   recommend_reviewers = ReloadableRecommendReviewers(load_recommender)
 
