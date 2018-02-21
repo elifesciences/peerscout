@@ -79,6 +79,48 @@ def get_recommend_reviewer_factory(db, config):
       )
   return load_recommender
 
+class ApiAuth:
+  def __init__(self, config, client_config):
+    auth0_domain = client_config.get('auth0_domain', '')
+
+    self._valid_emails_filename = config.get('auth', 'valid_emails', fallback=None)
+    self._valid_email_domains = parse_valid_domains(
+      config.get('auth', 'valid_email_domains', fallback='')
+    )
+    allowed_ips = parse_allowed_ips(config.get('auth', 'allowed_ips', fallback='127.0.0.1'))
+    if auth0_domain:
+      LOGGER.info('using Auth0 domain %s', auth0_domain)
+      LOGGER.info('allowed_ips: %s', allowed_ips)
+      self._flask_auth0 = FlaskAuth0(domain=auth0_domain, allowed_ips=allowed_ips)
+      self._wrap_with_auth = self._flask_auth0.wrap_request_handler
+    else:
+      LOGGER.info('not enabling authentication, no Auth0 domain configured')
+      self._flask_auth0 = None
+      self._wrap_with_auth = lambda f: f
+    self.reload()
+
+  def __call__(self, *args):
+    return self._wrap_with_auth(*args)
+
+  def reload(self):
+    if self._flask_auth0:
+      if self._valid_emails_filename or self._valid_email_domains:
+        try:
+          valid_emails = (
+            read_valid_emails(self._valid_emails_filename)
+            if self._valid_emails_filename
+            else set()
+          )
+        except Exception as e:
+          LOGGER.warning('failed to load emails from %s (%s)', self._valid_emails_filename, e)
+          valid_emails = set()
+        LOGGER.info('valid_emails: %d', len(valid_emails))
+        LOGGER.info('valid_email_domains: %s', self._valid_email_domains)
+        self._flask_auth0.auth0.is_valid_email = EmailValidator(
+          valid_emails=valid_emails,
+          valid_email_domains=self._valid_email_domains
+        )
+
 def create_api_blueprint(config):
   blueprint = Blueprint('api', __name__)
 
@@ -90,12 +132,6 @@ def create_api_blueprint(config):
   )
   client_config = dict(config['client']) if 'client' in config else {}
 
-  auth0_domain = client_config.get('auth0_domain', '')
-
-  valid_emails_filename = config.get('auth', 'valid_emails', fallback=None)
-  valid_email_domains = parse_valid_domains(config.get('auth', 'valid_email_domains', fallback=''))
-  allowed_ips = parse_allowed_ips(config.get('auth', 'allowed_ips', fallback='127.0.0.1'))
-
   memory = Memory(cachedir=cache_dir, verbose=0)
   LOGGER.debug("cache directory: %s", cache_dir)
   memory.clear(warn=False)
@@ -106,32 +142,7 @@ def create_api_blueprint(config):
 
   recommend_reviewers = ReloadableRecommendReviewers(load_recommender)
 
-  if auth0_domain:
-    logging.info('using Auth0 domain %s', auth0_domain)
-    LOGGER.info('allowed_ips: %s', allowed_ips)
-    flask_auth0 = FlaskAuth0(domain=auth0_domain, allowed_ips=allowed_ips)
-    wrap_with_auth = flask_auth0.wrap_request_handler
-  else:
-    logging.info('not enabling authentication, no Auth0 domain configured')
-    flask_auth0 = None
-    wrap_with_auth = lambda f: f
-
-  def update_auth():
-    if flask_auth0:
-      if valid_emails_filename or valid_email_domains:
-        try:
-          valid_emails = read_valid_emails(valid_emails_filename) if valid_emails_filename else set()
-        except Exception as e:
-          LOGGER.warning('failed to load emails from %s (%s)', valid_emails_filename, e)
-          valid_emails = set()
-        LOGGER.info('valid_emails: %d', len(valid_emails))
-        LOGGER.info('valid_email_domains: %s', valid_email_domains)
-        flask_auth0.auth0.is_valid_email = EmailValidator(
-          valid_emails=valid_emails,
-          valid_email_domains=valid_email_domains
-        )
-
-  update_auth()
+  api_auth = ApiAuth(config, client_config)
 
   @blueprint.route("/")
   def _api_root() -> Response:
@@ -158,7 +169,7 @@ def create_api_blueprint(config):
       ))
 
   @blueprint.route("/recommend-reviewers")
-  @wrap_with_auth
+  @api_auth
   def _recommend_reviewers_api() -> Response:
     manuscript_no = request.args.get('manuscript_no')
     subject_area = request.args.get('subject_area')
@@ -197,6 +208,6 @@ def create_api_blueprint(config):
   def reload_api():
     recommend_reviewers.reload()
     recommend_reviewers_as_json.clear()
-    update_auth()
+    api_auth.reload()
 
   return blueprint, reload_api
