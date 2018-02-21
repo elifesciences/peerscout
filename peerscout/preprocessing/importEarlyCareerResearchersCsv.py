@@ -44,11 +44,13 @@ def read_editors_csv(stream):
   return pd.read_csv(stream, skiprows=3, dtype=str)[ALL_CSV_COLUMNS].fillna('')
 
 def to_persons_df(df):
-  return (
+  df = (
     df[sorted(PERSON_CSV_COLUMN_MAPPING.keys())]
     .rename(columns=PERSON_CSV_COLUMN_MAPPING)
     .set_index('person_id')
   )
+  df['is_early_career_researcher'] = True
+  return df
 
 def to_subject_areas_by_person_id_map(df):
   return {
@@ -63,6 +65,26 @@ def to_subject_areas_by_person_id_map(df):
 def to_orcid_by_person_id_map(df):
   return comma_separated_column_to_map(df[CsvColumns.PERSON_ID], df[CsvColumns.ORCID])
 
+def update_early_career_researcher_status(db, person_ids):
+  LOGGER.debug("updating early career researcher status (%d)", len(person_ids))
+  db_table = db['person']
+
+  db.commit()
+
+  db_table.session.query(db_table.table).filter(
+    ~db_table.table.person_id.in_(person_ids)
+  ).update({
+    'is_early_career_researcher': False
+  }, synchronize_session=False)
+
+  db_table.session.query(db_table.table).filter(
+    db_table.table.person_id.in_(person_ids)
+  ).update({
+    'is_early_career_researcher': True
+  }, synchronize_session=False)
+
+  db.commit()
+
 def import_csv_file_to_database(filename, stream, db):
   LOGGER.info("converting: %s", filename)
   df = read_editors_csv(stream)
@@ -75,6 +97,7 @@ def import_csv_file_to_database(filename, stream, db):
   update_person_orcids(
     db, to_orcid_by_person_id_map(df)
   )
+  update_early_career_researcher_status(db, set(df[CsvColumns.PERSON_ID]))
 
 def find_file_to_import():
   app_config = get_app_config()

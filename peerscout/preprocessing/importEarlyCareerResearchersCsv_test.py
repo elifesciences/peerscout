@@ -59,7 +59,40 @@ class TestImportCsvFileToDatabase:
     with import_csv(csv_content) as db:
       df = db.person.read_frame().reset_index()
       LOGGER.debug('df:\n%s', df)
-      assert set(df['person_id']) == set([PERSON_ID_1])
+      assert set(zip(df['person_id'], df['is_early_career_researcher'])) == {
+        (PERSON_ID_1, True)
+      }
+
+  def test_should_update_early_career_researcher_flag_for_existing_person(self):
+    csv_content = create_csv_content([{
+      **CSV_ITEM_1,
+      CsvColumns.PERSON_ID: PERSON_ID_1
+    }])
+    dataset = {
+      'person': [{'person_id': PERSON_ID_1, 'is_early_career_researcher': False}]
+    }
+    with import_csv(csv_content, dataset) as db:
+      df = db.person.read_frame().reset_index()
+      LOGGER.debug('df:\n%s', df)
+      assert set(zip(df['person_id'], df['is_early_career_researcher'])) == {
+        (PERSON_ID_1, True)
+      }
+
+  def test_should_clear_no_longer_early_career_researcher_flag(self):
+    csv_content = create_csv_content([{
+      **CSV_ITEM_1,
+      CsvColumns.PERSON_ID: PERSON_ID_1
+    }])
+    dataset = {
+      'person': [{'person_id': PERSON_ID_2, 'is_early_career_researcher': True}]
+    }
+    with import_csv(csv_content, dataset) as db:
+      df = db.person.read_frame().reset_index()
+      LOGGER.debug('df:\n%s', df)
+      assert set(zip(df['person_id'], df['is_early_career_researcher'])) == {
+        (PERSON_ID_1, True),
+        (PERSON_ID_2, False)
+      }
 
   def test_should_xml_decode_first_and_last_name(self):
     csv_content = create_csv_content([{
