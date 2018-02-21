@@ -1,3 +1,4 @@
-from .server import main
+from .server import main, initialize_logging
 
+initialize_logging()
 main()
