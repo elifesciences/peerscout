@@ -7,11 +7,14 @@ from .preprocessingUtils import get_downloads_csv_path
 from .import_utils import (
   add_or_update_persons_from_dataframe,
   update_person_subject_areas,
-  update_person_orcids,
+  update_person_keywords,
+  update_person_roles,
   comma_separated_column_to_map,
   normalise_subject_area_map,
+  dedup_map_values,
   xml_decode_person_names,
-  find_last_csv_file_in_directory
+  find_last_csv_file_in_directory,
+  hack_fix_double_quote_encoding_issue_in_stream
 )
 
 from ..shared.database import connect_managed_configured_database
@@ -21,69 +24,47 @@ from ..shared.app_config import get_app_config
 LOGGER = logging.getLogger(__name__)
 
 class CsvColumns:
-  PERSON_ID = 'p_id'
-  FIRST_NAME = 'first_nm'
-  LAST_NAME = 'last_nm'
-  ORCID = 'ORCID'
-  FIRST_SUBJECT_AREA = 'First subject area'
-  SECOND_SUBJECT_AREA = 'Second subject area'
-  KEYWORDS = 'Keywords' # keywords not used
+  PERSON_ID = 'Person ID'
+  FIRST_NAME = 'First Name'
+  LAST_NAME = 'Last Name'
+  EMAIL = 'Email'
+  INSTITUTION = 'Institution'
+  ROLE = 'Role'
+  SUBJECT_AREAS = 'Subject Areas'
+  KEYWORDS = 'Areas of Expertise'
 
 ALL_CSV_COLUMNS = [
-  CsvColumns.PERSON_ID, CsvColumns.FIRST_NAME, CsvColumns.LAST_NAME, CsvColumns.ORCID,
-  CsvColumns.FIRST_SUBJECT_AREA, CsvColumns.SECOND_SUBJECT_AREA
+  CsvColumns.PERSON_ID, CsvColumns.FIRST_NAME, CsvColumns.LAST_NAME, CsvColumns.EMAIL,
+  CsvColumns.INSTITUTION, CsvColumns.ROLE, CsvColumns.SUBJECT_AREAS, CsvColumns.KEYWORDS
 ]
 
 PERSON_CSV_COLUMN_MAPPING = {
   CsvColumns.PERSON_ID: 'person_id',
   CsvColumns.FIRST_NAME: 'first_name',
-  CsvColumns.LAST_NAME: 'last_name'
+  CsvColumns.LAST_NAME: 'last_name',
+  CsvColumns.EMAIL: 'email',
+  CsvColumns.INSTITUTION: 'institution'
 }
 
 def read_editors_csv(stream):
+  stream = hack_fix_double_quote_encoding_issue_in_stream(stream)
   return pd.read_csv(stream, skiprows=3, dtype=str)[ALL_CSV_COLUMNS].fillna('')
 
 def to_persons_df(df):
-  df = (
+  return (
     df[sorted(PERSON_CSV_COLUMN_MAPPING.keys())]
     .rename(columns=PERSON_CSV_COLUMN_MAPPING)
     .set_index('person_id')
   )
-  df['is_early_career_researcher'] = True
-  return df
 
 def to_subject_areas_by_person_id_map(df):
-  return {
-    person_id: sorted(set([first_subject_area, second_subject_area]) - {''})
-    for person_id, first_subject_area, second_subject_area in zip(
-      df[CsvColumns.PERSON_ID],
-      df[CsvColumns.FIRST_SUBJECT_AREA],
-      df[CsvColumns.SECOND_SUBJECT_AREA]
-    )
-  }
+  return comma_separated_column_to_map(df[CsvColumns.PERSON_ID], df[CsvColumns.SUBJECT_AREAS])
 
-def to_orcid_by_person_id_map(df):
-  return comma_separated_column_to_map(df[CsvColumns.PERSON_ID], df[CsvColumns.ORCID])
+def to_keywords_by_person_id_map(df):
+  return comma_separated_column_to_map(df[CsvColumns.PERSON_ID], df[CsvColumns.KEYWORDS])
 
-def update_early_career_researcher_status(db, person_ids):
-  LOGGER.debug("updating early career researcher status (%d)", len(person_ids))
-  db_table = db['person']
-
-  db.commit()
-
-  db_table.session.query(db_table.table).filter(
-    ~db_table.table.person_id.in_(person_ids)
-  ).update({
-    'is_early_career_researcher': False
-  }, synchronize_session=False)
-
-  db_table.session.query(db_table.table).filter(
-    db_table.table.person_id.in_(person_ids)
-  ).update({
-    'is_early_career_researcher': True
-  }, synchronize_session=False)
-
-  db.commit()
+def to_roles_by_person_id_map(df):
+  return comma_separated_column_to_map(df[CsvColumns.PERSON_ID], df[CsvColumns.ROLE])
 
 def import_csv_file_to_database(filename, stream, db):
   LOGGER.info("converting: %s", filename)
@@ -94,14 +75,15 @@ def import_csv_file_to_database(filename, stream, db):
   update_person_subject_areas(
     db, normalise_subject_area_map(to_subject_areas_by_person_id_map(df))
   )
-  update_person_orcids(
-    db, to_orcid_by_person_id_map(df)
+  update_person_keywords(
+    db, dedup_map_values(to_keywords_by_person_id_map(df))
   )
-  update_early_career_researcher_status(db, set(df[CsvColumns.PERSON_ID]))
+  db.person_role.delete_all()
+  update_person_roles(db, to_roles_by_person_id_map(df))
 
 def find_file_to_import():
   app_config = get_app_config()
-  prefix = app_config.get('storage', 'ecr_prefix', fallback='')
+  prefix = app_config.get('storage', 'editor_roles_and_keywords_prefix', fallback='')
   if not prefix:
     return None
   return find_last_csv_file_in_directory(get_downloads_csv_path(), prefix)

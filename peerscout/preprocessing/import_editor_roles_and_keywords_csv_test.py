@@ -10,8 +10,8 @@ from ..shared.database import populated_in_memory_database
 
 from .import_testing_utils import create_csv_content as _create_csv_content
 
-from . import importEarlyCareerResearchersCsv as import_early_career_researchers_csv_module
-from .importEarlyCareerResearchersCsv import (
+from . import import_editor_roles_and_keywords_csv as import_editor_roles_and_keywords_csv_module
+from .import_editor_roles_and_keywords_csv import (
   import_csv_file_to_database,
   CsvColumns,
   ALL_CSV_COLUMNS,
@@ -27,17 +27,23 @@ PERSON_ID_1 = 'person1'
 PERSON_ID_2 = 'person2'
 FIRST_NAME_1 = 'John'
 LAST_NAME_1 = 'Smith'
-ORCID_1 = 'O-12345'
+EMAIL_1 = 'john@smith.org'
+INSTITUTION_1 = 'Institute of Testing 1'
 SUBJECT_AREA_1 = 'Subject Area 1'
 SUBJECT_AREA_2 = 'Subject Area 2'
+KEYWORD_1 = 'keyword1'
+KEYWORD_2 = 'keyword2'
+ROLE_1 = 'role1'
+ROLE_2 = 'role2'
 
 CSV_ITEM_1 = {
   CsvColumns.PERSON_ID: PERSON_ID_1,
   CsvColumns.FIRST_NAME: FIRST_NAME_1,
   CsvColumns.LAST_NAME: LAST_NAME_1,
-  CsvColumns.ORCID: ORCID_1,
-  CsvColumns.FIRST_SUBJECT_AREA: SUBJECT_AREA_1,
-  CsvColumns.SECOND_SUBJECT_AREA: SUBJECT_AREA_2
+  CsvColumns.EMAIL: EMAIL_1,
+  CsvColumns.INSTITUTION: INSTITUTION_1,
+  CsvColumns.SUBJECT_AREAS: SUBJECT_AREA_1,
+  CsvColumns.KEYWORDS: KEYWORD_1
 }
 
 def setup_module():
@@ -59,40 +65,7 @@ class TestImportCsvFileToDatabase:
     with import_csv(csv_content) as db:
       df = db.person.read_frame().reset_index()
       LOGGER.debug('df:\n%s', df)
-      assert set(zip(df['person_id'], df['is_early_career_researcher'])) == {
-        (PERSON_ID_1, True)
-      }
-
-  def test_should_update_early_career_researcher_flag_for_existing_person(self):
-    csv_content = create_csv_content([{
-      **CSV_ITEM_1,
-      CsvColumns.PERSON_ID: PERSON_ID_1
-    }])
-    dataset = {
-      'person': [{'person_id': PERSON_ID_1, 'is_early_career_researcher': False}]
-    }
-    with import_csv(csv_content, dataset) as db:
-      df = db.person.read_frame().reset_index()
-      LOGGER.debug('df:\n%s', df)
-      assert set(zip(df['person_id'], df['is_early_career_researcher'])) == {
-        (PERSON_ID_1, True)
-      }
-
-  def test_should_clear_no_longer_early_career_researcher_flag(self):
-    csv_content = create_csv_content([{
-      **CSV_ITEM_1,
-      CsvColumns.PERSON_ID: PERSON_ID_1
-    }])
-    dataset = {
-      'person': [{'person_id': PERSON_ID_2, 'is_early_career_researcher': True}]
-    }
-    with import_csv(csv_content, dataset) as db:
-      df = db.person.read_frame().reset_index()
-      LOGGER.debug('df:\n%s', df)
-      assert set(zip(df['person_id'], df['is_early_career_researcher'])) == {
-        (PERSON_ID_1, True),
-        (PERSON_ID_2, False)
-      }
+      assert set(df['person_id']) == set([PERSON_ID_1])
 
   def test_should_xml_decode_first_and_last_name(self):
     csv_content = create_csv_content([{
@@ -110,8 +83,7 @@ class TestImportCsvFileToDatabase:
   def test_should_import_empty_subject_area(self):
     csv_content = create_csv_content([{
       **CSV_ITEM_1,
-      CsvColumns.FIRST_SUBJECT_AREA: '',
-      CsvColumns.SECOND_SUBJECT_AREA: ''
+      CsvColumns.SUBJECT_AREAS: ''
     }])
     with import_csv(csv_content) as db:
       df = db.person.read_frame().reset_index()
@@ -122,8 +94,7 @@ class TestImportCsvFileToDatabase:
   def test_should_import_multiple_subject_areas(self):
     csv_content = create_csv_content([{
       **CSV_ITEM_1,
-      CsvColumns.FIRST_SUBJECT_AREA: SUBJECT_AREA_1,
-      CsvColumns.SECOND_SUBJECT_AREA: SUBJECT_AREA_2
+      CsvColumns.SUBJECT_AREAS: ', '.join([SUBJECT_AREA_1, SUBJECT_AREA_2])
     }])
     with import_csv(csv_content) as db:
       df = db.person_subject_area.read_frame().reset_index()
@@ -136,8 +107,7 @@ class TestImportCsvFileToDatabase:
   def test_should_normalise_subject_area(self):
     csv_content = create_csv_content([{
       **CSV_ITEM_1,
-      CsvColumns.FIRST_SUBJECT_AREA: 'Science And Matters',
-      CsvColumns.SECOND_SUBJECT_AREA: ''
+      CsvColumns.SUBJECT_AREAS: 'Science And Matters'
     }])
     with import_csv(csv_content) as db:
       df = db.person_subject_area.read_frame().reset_index()
@@ -149,8 +119,7 @@ class TestImportCsvFileToDatabase:
   def test_should_clear_existing_subject_areas_but_keep_other_persons_subject_areas(self):
     csv_content = create_csv_content([{
       **CSV_ITEM_1,
-      CsvColumns.FIRST_SUBJECT_AREA: '',
-      CsvColumns.SECOND_SUBJECT_AREA: ''
+      CsvColumns.SUBJECT_AREAS: ''
     }])
     dataset = {
       'person': [{'person_id': PERSON_ID_1}, {'person_id': PERSON_ID_2}],
@@ -166,32 +135,99 @@ class TestImportCsvFileToDatabase:
         (PERSON_ID_2, SUBJECT_AREA_2)
       }
 
-  def test_should_import_empty_orcid(self):
+  def test_should_import_multiple_keywords(self):
     csv_content = create_csv_content([{
       **CSV_ITEM_1,
-      CsvColumns.ORCID: ''
+      CsvColumns.KEYWORDS: ', '.join([KEYWORD_1, KEYWORD_2])
     }])
     with import_csv(csv_content) as db:
-      df = db.person.read_frame().reset_index()
+      df = db.person_keyword.read_frame().reset_index()
       LOGGER.debug('df:\n%s', df)
-      assert set(df['person_id']) == set([PERSON_ID_1])
-      assert len(db.person_membership.read_frame()) == 0
+      assert set(zip(df['person_id'], df['keyword'])) == {
+        (PERSON_ID_1, KEYWORD_1),
+        (PERSON_ID_1, KEYWORD_2)
+      }
 
-  def test_should_import_orcid(self):
+  def test_should_import_same_keyword_only_once(self):
     csv_content = create_csv_content([{
       **CSV_ITEM_1,
-      CsvColumns.ORCID: ORCID_1
+      CsvColumns.KEYWORDS: ', '.join([KEYWORD_1, KEYWORD_1])
     }])
     with import_csv(csv_content) as db:
-      df = db.person_membership.read_frame().reset_index()
+      df = db.person_keyword.read_frame().reset_index()
       LOGGER.debug('df:\n%s', df)
-      assert set(zip(df['person_id'], df['member_type'], df['member_id'])) == {
-        (PERSON_ID_1, 'ORCID', ORCID_1)
+      assert set(zip(df['person_id'], df['keyword'])) == {
+        (PERSON_ID_1, KEYWORD_1)
+      }
+
+  def test_should_tolerate_double_quote_encoding_issues(self):
+    csv_content = create_csv_content([{
+      **CSV_ITEM_1,
+      CsvColumns.KEYWORDS: 'MARKER'
+    }]).replace('MARKER', '"some keyword, keyword with "double quotes", other keyword"')
+    print(csv_content)
+    with import_csv(csv_content) as db:
+      df = db.person_keyword.read_frame().reset_index()
+      LOGGER.debug('df:\n%s', df)
+      print(df)
+      assert set(zip(df['person_id'], df['keyword'])) == {
+        (PERSON_ID_1, 'some keyword'),
+        (PERSON_ID_1, 'keyword with "double quotes"'),
+        (PERSON_ID_1, 'other keyword')
+      }
+
+  def test_should_clear_existing_keywords_but_keep_other_persons_keywords(self):
+    csv_content = create_csv_content([{
+      **CSV_ITEM_1,
+      CsvColumns.KEYWORDS: ''
+    }])
+    dataset = {
+      'person': [{'person_id': PERSON_ID_1}, {'person_id': PERSON_ID_2}],
+      'person_keyword': [
+        {'person_id': PERSON_ID_1, 'keyword': KEYWORD_1},
+        {'person_id': PERSON_ID_2, 'keyword': KEYWORD_2}
+      ]
+    }
+    with import_csv(csv_content, dataset) as db:
+      df = db.person_keyword.read_frame().reset_index()
+      LOGGER.debug('df:\n%s', df)
+      assert set(zip(df['person_id'], df['keyword'])) == {
+        (PERSON_ID_2, KEYWORD_2)
+      }
+
+  def test_should_import_role(self):
+    csv_content = create_csv_content([{
+      **CSV_ITEM_1,
+      CsvColumns.ROLE: ROLE_1
+    }])
+    with import_csv(csv_content) as db:
+      df = db.person_role.read_frame().reset_index()
+      LOGGER.debug('df:\n%s', df)
+      assert set(zip(df['person_id'], df['role'])) == {
+        (PERSON_ID_1, ROLE_1)
+      }
+
+  def test_should_clear_roles_of_persons_not_in_csv(self):
+    csv_content = create_csv_content([{
+      **CSV_ITEM_1,
+      CsvColumns.ROLE: ROLE_1
+    }])
+    dataset = {
+      'person': [{'person_id': PERSON_ID_2}],
+      'person_role': [
+        {'person_id': PERSON_ID_2, 'role': ROLE_2}
+      ]
+    }
+    with import_csv(csv_content, dataset) as db:
+      df = db.person_role.read_frame().reset_index()
+      LOGGER.debug('df:\n%s', df)
+      assert set(zip(df['person_id'], df['role'])) == {
+        (PERSON_ID_1, ROLE_1)
       }
 
 class TestFindFileToImport:
   def test_should_return_none_if_prefix_configuration_is_missing(self):
-    m = import_early_career_researchers_csv_module
+    m = import_editor_roles_and_keywords_csv_module
     with patch.object(m, 'find_last_csv_file_in_directory'):
       with patch.object(m, 'get_downloads_csv_path'):
         with patch.object(m, 'get_app_config') as get_app_config_mock:
@@ -202,14 +238,14 @@ class TestFindFileToImport:
           assert find_file_to_import() is None
 
   def test_should_pass_prefix_to_find_last_csv_file_in_directory_mock_and_return_filename(self):
-    m = import_early_career_researchers_csv_module
+    m = import_editor_roles_and_keywords_csv_module
     with patch.object(m, 'find_last_csv_file_in_directory') as \
       find_last_csv_file_in_directory_mock:
       with patch.object(m, 'get_downloads_csv_path') as get_downloads_csv_path_mock:
         with patch.object(m, 'get_app_config') as get_app_config_mock:
 
           app_config = ConfigParser()
-          app_config['storage'] = {'ecr_prefix': FILE_PREFIX}
+          app_config['storage'] = {'editor_roles_and_keywords_prefix': FILE_PREFIX}
 
           get_app_config_mock.return_value = app_config
           assert find_file_to_import() == find_last_csv_file_in_directory_mock.return_value
@@ -219,7 +255,7 @@ class TestFindFileToImport:
 
 class TestMain:
   def test_should_pass_around_values(self):
-    m = import_early_career_researchers_csv_module
+    m = import_editor_roles_and_keywords_csv_module
     with patch.object(m, 'connect_managed_configured_database') as \
       connect_managed_configured_database_mock:
       with patch.object(m, 'find_file_to_import') as find_file_to_import_mock:
@@ -237,7 +273,7 @@ class TestMain:
             db.commit.assert_called()
 
   def test_should_skip_processing_if_no_file_to_process(self):
-    m = import_early_career_researchers_csv_module
+    m = import_editor_roles_and_keywords_csv_module
     with patch.object(m, 'connect_managed_configured_database'):
       with patch.object(m, 'find_file_to_import') as find_file_to_import_mock:
         with patch.object(m, 'import_csv_file_to_database'):
