@@ -41,7 +41,7 @@ def setup_module():
   logging.basicConfig(level='DEBUG')
 
 @contextmanager
-def _test_api_test_client(config, dataset):
+def _api_test_client(config, dataset):
   m = api_module
   with populated_in_memory_database(dataset, autocommit=True) as db:
     with patch.object(m, 'connect_configured_database') as connect_configured_database_mock:
@@ -69,7 +69,7 @@ class TestApiBlueprint:
     def test_should_return_keywords(self):
       config = ConfigParser()
       with patch.object(api_module, 'RecommendReviewers') as RecommendReviewers_mock:
-        with _test_api_test_client(config, {}) as test_client:
+        with _api_test_client(config, {}) as test_client:
           RecommendReviewers_mock.return_value.get_all_keywords.return_value = [VALUE_1, VALUE_2]
           response = test_client.get('/keywords')
           assert _get_ok_json(response) == [VALUE_1, VALUE_2]
@@ -78,7 +78,7 @@ class TestApiBlueprint:
     def test_should_return_subject_areas(self):
       config = ConfigParser()
       with patch.object(api_module, 'RecommendReviewers') as RecommendReviewers_mock:
-        with _test_api_test_client(config, {}) as test_client:
+        with _api_test_client(config, {}) as test_client:
           RecommendReviewers_mock.return_value.get_all_subject_areas.return_value = [VALUE_1, VALUE_2]
           response = test_client.get('/subject-areas')
           assert _get_ok_json(response) == [VALUE_1, VALUE_2]
@@ -92,7 +92,7 @@ class TestApiBlueprint:
         'client': client_config
       })
       with patch.object(api_module, 'RecommendReviewers') as RecommendReviewers_mock:
-        with _test_api_test_client(config, {}) as test_client:
+        with _api_test_client(config, {}) as test_client:
           RecommendReviewers_mock.return_value.get_all_subject_areas.return_value = [VALUE_1, VALUE_2]
           response = test_client.get('/config')
           assert _get_ok_json(response) == client_config
@@ -100,14 +100,14 @@ class TestApiBlueprint:
   class TestRecommendWithoutAuth:
     def test_should_return_400_without_args(self):
       config = ConfigParser()
-      with _test_api_test_client(config, {}) as test_client:
+      with _api_test_client(config, {}) as test_client:
         response = test_client.get('/recommend-reviewers')
         assert response.status_code == 400
 
     def test_should_return_results_by_manuscript_no(self):
       config = ConfigParser()
       with patch.object(api_module, 'RecommendReviewers') as RecommendReviewers_mock:
-        with _test_api_test_client(config, {}) as test_client:
+        with _api_test_client(config, {}) as test_client:
           RecommendReviewers_mock.return_value.recommend.return_value = SOME_RESPONSE
           response = test_client.get('/recommend-reviewers?' + urlencode({
             'manuscript_no': MANUSCRIPT_NO_1
@@ -121,7 +121,7 @@ class TestApiBlueprint:
     def test_should_return_results_by_keywords(self):
       config = ConfigParser()
       with patch.object(api_module, 'RecommendReviewers') as RecommendReviewers_mock:
-        with _test_api_test_client(config, {}) as test_client:
+        with _api_test_client(config, {}) as test_client:
           RecommendReviewers_mock.return_value.recommend.return_value = SOME_RESPONSE
           response = test_client.get('/recommend-reviewers?' + urlencode({
             'keywords': VALUE_1,
@@ -139,7 +139,7 @@ class TestApiBlueprint:
     def test_should_pass_limit_to_recommend_method(self):
       config = ConfigParser()
       with patch.object(api_module, 'RecommendReviewers') as RecommendReviewers_mock:
-        with _test_api_test_client(config, {}) as test_client:
+        with _api_test_client(config, {}) as test_client:
           RecommendReviewers_mock.return_value.recommend.return_value = SOME_RESPONSE
           test_client.get('/recommend-reviewers?' + urlencode({
             'limit': LIMIT_1,
@@ -153,7 +153,7 @@ class TestApiBlueprint:
     def test_should_default_to_none_role(self):
       config = dict_to_config({})
       with patch.object(api_module, 'RecommendReviewers') as RecommendReviewers_mock:
-        with _test_api_test_client(config, {}) as test_client:
+        with _api_test_client(config, {}) as test_client:
           RecommendReviewers_mock.return_value.recommend.return_value = SOME_RESPONSE
           test_client.get('/recommend-reviewers?' + urlencode({
             'manuscript_no': MANUSCRIPT_NO_1,
@@ -171,7 +171,7 @@ class TestApiBlueprint:
         }
       })
       with patch.object(api_module, 'RecommendReviewers') as RecommendReviewers_mock:
-        with _test_api_test_client(config, {}) as test_client:
+        with _api_test_client(config, {}) as test_client:
           RecommendReviewers_mock.return_value.recommend.return_value = SOME_RESPONSE
           test_client.get('/recommend-reviewers?' + urlencode({
             'manuscript_no': MANUSCRIPT_NO_1,
@@ -185,7 +185,7 @@ class TestApiBlueprint:
     def test_should_cache_with_same_parameters(self):
       config = ConfigParser()
       with patch.object(api_module, 'RecommendReviewers') as RecommendReviewers_mock:
-        with _test_api_test_client(config, {}) as test_client:
+        with _api_test_client(config, {}) as test_client:
           RecommendReviewers_mock.return_value.recommend.return_value = SOME_RESPONSE
           test_client.get('/recommend-reviewers?' + urlencode({
             'manuscript_no': MANUSCRIPT_NO_1
@@ -198,7 +198,7 @@ class TestApiBlueprint:
     def test_should_not_cache_with_different_parameters(self):
       config = ConfigParser()
       with patch.object(api_module, 'RecommendReviewers') as RecommendReviewers_mock:
-        with _test_api_test_client(config, {}) as test_client:
+        with _api_test_client(config, {}) as test_client:
           RecommendReviewers_mock.return_value.recommend.return_value = SOME_RESPONSE
           test_client.get('/recommend-reviewers?' + urlencode({
             'manuscript_no': MANUSCRIPT_NO_1
