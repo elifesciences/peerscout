@@ -7,6 +7,8 @@ from flask.json import JSONEncoder
 from flask_cors import CORS
 from joblib import Memory
 
+from ..config.search_config import parse_search_config
+
 from ..services import (
   ManuscriptModel,
   load_similarity_model_from_database,
@@ -127,9 +129,7 @@ def create_api_blueprint(config):
   data_dir = os.path.abspath(config.get('data', 'data_root', fallback='.data'))
   cache_dir = os.path.join(data_dir, 'server-cache')
 
-  filter_by_role = config.get(
-    'model', 'filter_by_role', fallback=None
-  )
+  search_config = parse_search_config(config)
   client_config = dict(config['client']) if 'client' in config else {}
 
   memory = Memory(cachedir=cache_dir, verbose=0)
@@ -176,6 +176,11 @@ def create_api_blueprint(config):
     keywords = request.args.get('keywords')
     abstract = request.args.get('abstract')
     limit = request.args.get('limit')
+
+    search_type = request.args.get('search_type')
+    search_params = search_config.get(search_type, {})
+    role = search_params.get('filter_by_role')
+
     if limit is None:
       limit = 100
     else:
@@ -187,7 +192,7 @@ def create_api_blueprint(config):
       subject_area,
       keywords,
       abstract,
-      role=filter_by_role,
+      role=role,
       limit=limit
     )
 

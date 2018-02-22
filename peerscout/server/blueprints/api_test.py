@@ -13,6 +13,7 @@ from flask import Flask
 from flask.testing import FlaskClient
 
 from ...utils.config import dict_to_config
+from ..config.search_config import SEARCH_SECTION_PREFIX
 
 from ...shared.database import populated_in_memory_database
 
@@ -28,6 +29,8 @@ VALUE_3 = 'value3'
 MANUSCRIPT_NO_1 = '12345'
 MANUSCRIPT_NO_2 = '22222'
 LIMIT_1 = 123
+
+SEARCH_TYPE_1 = 'search_type1'
 
 SOME_RESPONSE = {
   'some-response': VALUE_1
@@ -145,6 +148,38 @@ class TestApiBlueprint:
           _assert_partial_called_with(
             RecommendReviewers_mock.return_value.recommend,
             limit=LIMIT_1
+          )
+
+    def test_should_default_to_none_role(self):
+      config = dict_to_config({})
+      with patch.object(api_module, 'RecommendReviewers') as RecommendReviewers_mock:
+        with _test_api_test_client(config, {}) as test_client:
+          RecommendReviewers_mock.return_value.recommend.return_value = SOME_RESPONSE
+          test_client.get('/recommend-reviewers?' + urlencode({
+            'manuscript_no': MANUSCRIPT_NO_1,
+            'search_type': SEARCH_TYPE_1
+          }))
+          _assert_partial_called_with(
+            RecommendReviewers_mock.return_value.recommend,
+            role=None
+          )
+
+    def test_should_pass_role_from_search_config_to_recommend_method(self):
+      config = dict_to_config({
+        SEARCH_SECTION_PREFIX + SEARCH_TYPE_1: {
+          'filter_by_role': VALUE_1
+        }
+      })
+      with patch.object(api_module, 'RecommendReviewers') as RecommendReviewers_mock:
+        with _test_api_test_client(config, {}) as test_client:
+          RecommendReviewers_mock.return_value.recommend.return_value = SOME_RESPONSE
+          test_client.get('/recommend-reviewers?' + urlencode({
+            'manuscript_no': MANUSCRIPT_NO_1,
+            'search_type': SEARCH_TYPE_1
+          }))
+          _assert_partial_called_with(
+            RecommendReviewers_mock.return_value.recommend,
+            role=VALUE_1
           )
 
     def test_should_cache_with_same_parameters(self):
