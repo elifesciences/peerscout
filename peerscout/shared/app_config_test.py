@@ -4,6 +4,8 @@ import logging
 import os
 from unittest.mock import patch
 
+from ..utils.config import dict_to_config
+
 from . import app_config as app_config_module
 from .app_config import (
   get_app_config_filename,
@@ -35,11 +37,7 @@ class TestGetAppDefaultsConfigFilename:
     assert os.path.isfile(get_app_defaults_config_filename())
 
 def _dict_to_cfg_content(d):
-  config = ConfigParser()
-  for section in d.keys():
-    config.add_section(section)
-    for key, value in d[section].items():
-      config.set(section, key, value)
+  config = dict_to_config(d)
   fp = StringIO()
   config.write(fp)
   content = fp.getvalue()

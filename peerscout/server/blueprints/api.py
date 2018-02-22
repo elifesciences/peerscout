@@ -160,10 +160,10 @@ def create_api_blueprint(config):
     -> Response:
     with db.session.begin():
       return jsonify(recommend_reviewers.recommend(
-        manuscript_no,
-        subject_area,
-        keywords,
-        abstract,
+        manuscript_no=manuscript_no,
+        subject_area=subject_area,
+        keywords=keywords,
+        abstract=abstract,
         role=role,
         limit=limit
       ))
@@ -180,7 +180,7 @@ def create_api_blueprint(config):
       limit = 100
     else:
       limit = int(limit)
-    if keywords is None:
+    if not manuscript_no and keywords is None:
       return 'keywords parameter required', 400
     return recommend_reviewers_as_json(
       manuscript_no,
