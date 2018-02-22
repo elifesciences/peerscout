@@ -31,6 +31,7 @@ MANUSCRIPT_NO_2 = '22222'
 LIMIT_1 = 123
 
 SEARCH_TYPE_1 = 'search_type1'
+SEARCH_TYPE_2 = 'search_type2'
 
 SOME_RESPONSE = {
   'some-response': VALUE_1
@@ -156,8 +157,7 @@ class TestApiBlueprint:
         with _api_test_client(config, {}) as test_client:
           RecommendReviewers_mock.return_value.recommend.return_value = SOME_RESPONSE
           test_client.get('/recommend-reviewers?' + urlencode({
-            'manuscript_no': MANUSCRIPT_NO_1,
-            'search_type': SEARCH_TYPE_1
+            'manuscript_no': MANUSCRIPT_NO_1
           }))
           _assert_partial_called_with(
             RecommendReviewers_mock.return_value.recommend,
@@ -181,6 +181,21 @@ class TestApiBlueprint:
             RecommendReviewers_mock.return_value.recommend,
             role=VALUE_1
           )
+
+    def test_should_reject_unknown_search_type(self):
+      config = dict_to_config({
+        SEARCH_SECTION_PREFIX + SEARCH_TYPE_1: {
+          'filter_by_role': VALUE_1
+        }
+      })
+      with patch.object(api_module, 'RecommendReviewers') as RecommendReviewers_mock:
+        with _api_test_client(config, {}) as test_client:
+          RecommendReviewers_mock.return_value.recommend.return_value = SOME_RESPONSE
+          response = test_client.get('/recommend-reviewers?' + urlencode({
+            'manuscript_no': MANUSCRIPT_NO_1,
+            'search_type': SEARCH_TYPE_2
+          }))
+          assert response.status_code == 400
 
     def test_should_cache_with_same_parameters(self):
       config = ConfigParser()

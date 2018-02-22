@@ -6,8 +6,9 @@ from flask import Blueprint, request, jsonify, url_for, Response
 from flask.json import JSONEncoder
 from flask_cors import CORS
 from joblib import Memory
+from werkzeug.exceptions import BadRequest
 
-from ..config.search_config import parse_search_config
+from ..config.search_config import parse_search_config, DEFAULT_SEARCH_TYPE
 
 from ..services import (
   ManuscriptModel,
@@ -177,8 +178,10 @@ def create_api_blueprint(config):
     abstract = request.args.get('abstract')
     limit = request.args.get('limit')
 
-    search_type = request.args.get('search_type')
-    search_params = search_config.get(search_type, {})
+    search_type = request.args.get('search_type', DEFAULT_SEARCH_TYPE)
+    search_params = search_config.get(search_type)
+    if search_params is None:
+      raise BadRequest('unknown search type - %s' % search_type)
     role = search_params.get('filter_by_role')
 
     if limit is None:
@@ -186,7 +189,7 @@ def create_api_blueprint(config):
     else:
       limit = int(limit)
     if not manuscript_no and keywords is None:
-      return 'keywords parameter required', 400
+      raise BadRequest('keywords parameter required')
     return recommend_reviewers_as_json(
       manuscript_no,
       subject_area,
