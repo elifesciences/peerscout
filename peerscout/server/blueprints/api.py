@@ -168,7 +168,7 @@ def create_api_blueprint(config):
 
   def user_has_role_by_email(email, role) -> bool:
     with db.session.begin():
-      recommend_reviewers.user_has_role_by_email(email=email, role=role)
+      return recommend_reviewers.user_has_role_by_email(email=email, role=role)
 
   api_auth = ApiAuth(
     config, client_config, search_config=search_config,
