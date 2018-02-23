@@ -15,6 +15,7 @@ from .person_roles import (
   PersonRoleService
 )
 
+EMAIL_1 = 'email1'
 ROLE_1 = 'role1'
 ROLE_2 = 'role2'
 
@@ -91,3 +92,14 @@ class TestPersonRoleService:
           person_role_service.filter_person_ids_by_role({PERSON_ID1}, ROLE_1) ==
           set()
         )
+
+  class TestUserHasRoleByEmail:
+    def test_should_return_wether_user_has_role(self):
+      dataset = {
+        'person': [{**PERSON1, 'email': EMAIL_1}],
+        'person_role': [{PERSON_ID: PERSON_ID1, 'role': ROLE_1}]
+      }
+      with create_person_role_service(dataset) as person_role_service:
+        assert person_role_service.user_has_role_by_email(email=EMAIL_1, role=ROLE_1) == True
+        assert person_role_service.user_has_role_by_email(email=EMAIL_1, role='other') == False
+        assert person_role_service.user_has_role_by_email(email='other', role=ROLE_1) == False

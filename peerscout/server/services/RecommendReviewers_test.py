@@ -38,6 +38,9 @@ PERSON_ID_COLUMNS = [PERSON_ID]
 
 LDA_DOCVEC_COLUMN = 'lda_docvec'
 
+EMAIL_1 = 'email1'
+ROLE_1 = 'role1'
+
 PERSON1_RESULT = {
   **PERSON1,
   'memberships': [],
@@ -935,3 +938,14 @@ class TestAllKeywords:
     }
     with create_recommend_reviewers(dataset) as recommend_reviewers:
       assert recommend_reviewers.get_all_keywords() == [KEYWORD1]
+
+class TestUserHasRoleByEmail:
+  def test_should_return_wether_user_has_role(self):
+    dataset = {
+      'person': [{**PERSON1, 'email': EMAIL_1}],
+      'person_role': [{PERSON_ID: PERSON_ID1, 'role': ROLE_1}]
+    }
+    with create_recommend_reviewers(dataset) as recommend_reviewers:
+      assert recommend_reviewers.user_has_role_by_email(email=EMAIL_1, role=ROLE_1) == True
+      assert recommend_reviewers.user_has_role_by_email(email=EMAIL_1, role='other') == False
+      assert recommend_reviewers.user_has_role_by_email(email='other', role=ROLE_1) == False

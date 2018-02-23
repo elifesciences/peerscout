@@ -1,12 +1,13 @@
 import os
 import datetime
 import logging
+from functools import partial
 
 from flask import Blueprint, request, jsonify, url_for, Response
 from flask.json import JSONEncoder
 from flask_cors import CORS
 from joblib import Memory
-from werkzeug.exceptions import BadRequest
+from werkzeug.exceptions import BadRequest, Forbidden
 
 from ..config.search_config import parse_search_config, DEFAULT_SEARCH_TYPE
 
@@ -83,9 +84,15 @@ def get_recommend_reviewer_factory(db, config):
   return load_recommender
 
 class ApiAuth:
-  def __init__(self, config, client_config):
+  def __init__(
+    self, config, client_config, search_config=None, user_has_role_by_email=None,
+    get_search_type=None):
+
     auth0_domain = client_config.get('auth0_domain', '')
 
+    self._search_config = search_config
+    self._user_has_role_by_email = user_has_role_by_email
+    self._get_search_type = get_search_type
     self._valid_emails_filename = config.get('auth', 'valid_emails', fallback=None)
     self._valid_email_domains = parse_valid_domains(
       config.get('auth', 'valid_email_domains', fallback='')
@@ -95,15 +102,29 @@ class ApiAuth:
       LOGGER.info('using Auth0 domain %s', auth0_domain)
       LOGGER.info('allowed_ips: %s', allowed_ips)
       self._flask_auth0 = FlaskAuth0(domain=auth0_domain, allowed_ips=allowed_ips)
-      self._wrap_with_auth = self._flask_auth0.wrap_request_handler
     else:
       LOGGER.info('not enabling authentication, no Auth0 domain configured')
       self._flask_auth0 = None
-      self._wrap_with_auth = lambda f: f
     self.reload()
 
-  def __call__(self, *args):
-    return self._wrap_with_auth(*args)
+  def __call__(self, f):
+    if self._flask_auth0:
+      validate_request_with_f = partial(self._validate_request, f=f)
+      validate_request_with_f.__name__ = f.__name__
+      return self._flask_auth0.wrap_request_handler(validate_request_with_f)
+    return f
+
+  def _validate_request(self, f, email=None):
+    if email is not None:
+      search_type = self._get_search_type()
+      search_params = self._search_config.get(search_type)
+      if (
+        search_params is None or
+        not self._user_has_role_by_email(email=email, role=search_params.get('required_role'))
+      ):
+        LOGGER.debug('forbidden, search_type=%s, email=%s', search_type, email)
+        raise Forbidden('invalid or forbidden search type: %s' % search_type)
+    return f()
 
   def reload(self):
     if self._flask_auth0:
@@ -143,7 +164,18 @@ def create_api_blueprint(config):
 
   recommend_reviewers = ReloadableRecommendReviewers(load_recommender)
 
-  api_auth = ApiAuth(config, client_config)
+  get_search_type = lambda: request.args.get('search_type', DEFAULT_SEARCH_TYPE)
+
+  user_has_role_by_email = lambda email, role: (
+    # using lambda to look up method reference at runtime (which will change after reload)
+    recommend_reviewers.user_has_role_by_email(email=email, role=role)
+  )
+
+  api_auth = ApiAuth(
+    config, client_config, search_config=search_config,
+    user_has_role_by_email=user_has_role_by_email,
+    get_search_type=get_search_type
+  )
 
   @blueprint.route("/")
   def _api_root() -> Response:
@@ -178,7 +210,7 @@ def create_api_blueprint(config):
     abstract = request.args.get('abstract')
     limit = request.args.get('limit')
 
-    search_type = request.args.get('search_type', DEFAULT_SEARCH_TYPE)
+    search_type = get_search_type()
     search_params = search_config.get(search_type)
     if search_params is None:
       raise BadRequest('unknown search type - %s' % search_type)
