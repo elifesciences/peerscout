@@ -129,13 +129,17 @@ class Main extends React.Component {
         ) {
           return Promise.resolve();
         }
-        return this.props.reviewerRecommendationApi.recommendReviewers({
+        const params = {
           manuscript_no: searchOptions.manuscriptNumber || '',
           subject_area: searchOptions.subjectArea || '',
           keywords: searchOptions.keywords || '',
           abstract: searchOptions.abstract || '',
-          limit: searchOptions.limit || '50',
-        }, {
+          limit: searchOptions.limit || '50'
+        }
+        if (searchOptions.search_type) {
+          params.search_type = searchOptions.search_type;
+        }
+        return this.props.reviewerRecommendationApi.recommendReviewers(params, {
           headers: {
             'X-Access-Token': authenticationState && authenticationState.access_token
           }
