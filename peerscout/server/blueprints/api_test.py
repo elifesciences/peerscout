@@ -277,7 +277,7 @@ class TestApiBlueprint:
         )
         assert response.status_code == 200
 
-    def test_should_not_allow_search_type_for_person_with_matching_role(
+    def test_should_not_allow_search_type_for_person_without_matching_role(
       self, MockRecommendReviewers, MockFlaskAuth0WithEmail1):
 
       config = dict_to_config({
@@ -298,6 +298,25 @@ class TestApiBlueprint:
           email=EMAIL_1, role=ROLE_1
         )
         assert response.status_code == 403
+
+    def test_should_allow_search_type_and_not_check_person_role_if_no_role_is_required(
+      self, MockRecommendReviewers, MockFlaskAuth0WithEmail1):
+
+      config = dict_to_config({
+        'auth': {'allowed_ips': ''},
+        'client': {'auth0_domain': DOMAIN_1},
+        SEARCH_SECTION_PREFIX + SEARCH_TYPE_1: {
+          'required_role': ''
+        }
+      })
+      with _api_test_client(config, {}) as test_client:
+        user_has_role_by_email = MockRecommendReviewers.return_value.user_has_role_by_email
+        response = test_client.get('/recommend-reviewers?' + urlencode({
+          'manuscript_no': MANUSCRIPT_NO_1,
+          'search_type': SEARCH_TYPE_1
+        }))
+        user_has_role_by_email.assert_not_called()
+        assert response.status_code == 200
 
 class TestApiAuth:
   def test_should_not_wrap_with_auth_if_no_auth0_domain_is_present(self):

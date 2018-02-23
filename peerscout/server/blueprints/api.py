@@ -118,11 +118,16 @@ class ApiAuth:
     if email is not None:
       search_type = self._get_search_type()
       search_params = self._search_config.get(search_type)
-      if (
-        search_params is None or
-        not self._user_has_role_by_email(email=email, role=search_params.get('required_role'))
-      ):
-        LOGGER.debug('forbidden, search_type=%s, email=%s', search_type, email)
+      required_role = search_params and search_params.get('required_role')
+      has_access = (
+        search_params is not None and
+        (not required_role or self._user_has_role_by_email(email=email, role=required_role))
+      )
+      LOGGER.debug(
+        'checking authorization, search_type=%s, email=%s, required_role=%s -> has_access=%s',
+        search_type, email, required_role, has_access
+      )
+      if not has_access:
         raise Forbidden('invalid or forbidden search type: %s' % search_type)
     return f()
 
