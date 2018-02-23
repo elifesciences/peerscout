@@ -166,10 +166,9 @@ def create_api_blueprint(config):
 
   get_search_type = lambda: request.args.get('search_type', DEFAULT_SEARCH_TYPE)
 
-  user_has_role_by_email = lambda email, role: (
-    # using lambda to look up method reference at runtime (which will change after reload)
-    recommend_reviewers.user_has_role_by_email(email=email, role=role)
-  )
+  def user_has_role_by_email(email, role) -> bool:
+    with db.session.begin():
+      recommend_reviewers.user_has_role_by_email(email=email, role=role)
 
   api_auth = ApiAuth(
     config, client_config, search_config=search_config,
