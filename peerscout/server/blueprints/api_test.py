@@ -80,10 +80,7 @@ def _named_mock(name, **kwargs):
   mock.__name__ = name
   return mock
 
-def _mock_flask_auth0(MockFlaskAuth0=None, **kwargs):
-  if MockFlaskAuth0 is None:
-    MockFlaskAuth0 = MagicMock()
-
+def _setup_flask_auth0_mock_email(MockFlaskAuth0, **kwargs):
   def wrapper(f):
     result = lambda: f(**kwargs)
     result.__name__ = f.__name__
@@ -99,16 +96,9 @@ def _mock_recommend_reviewers():
     MockRecommendReviewers.return_value.recommend.return_value = SOME_RESPONSE
     yield MockRecommendReviewers
 
-@pytest.fixture(name='MockFlaskAuth0WithoutEmail')
-def _mock_flask_auth_0_without_email():
-  MockFlaskAuth0 = _mock_flask_auth0(email=None)
-  with patch.object(api_module, 'FlaskAuth0', MockFlaskAuth0):
-    yield MockFlaskAuth0
-
-@pytest.fixture(name='MockFlaskAuth0WithEmail1')
-def _mock_flask_auth_0_with_email1():
-  MockFlaskAuth0 = _mock_flask_auth0(email=EMAIL_1)
-  with patch.object(api_module, 'FlaskAuth0', MockFlaskAuth0):
+@pytest.fixture(name='MockFlaskAuth0')
+def _mock_flask_auth_0():
+  with patch.object(api_module, 'FlaskAuth0') as MockFlaskAuth0:
     yield MockFlaskAuth0
 
 @pytest.mark.slow
@@ -256,7 +246,9 @@ class TestApiBlueprint:
 
   class TestRecommendWithAuth:
     def test_should_allow_search_type_for_person_with_matching_role(
-      self, MockRecommendReviewers, MockFlaskAuth0WithEmail1):
+      self, MockRecommendReviewers, MockFlaskAuth0):
+
+      _setup_flask_auth0_mock_email(MockFlaskAuth0, email=EMAIL_1)
 
       config = dict_to_config({
         'auth': {'allowed_ips': ''},
@@ -278,7 +270,9 @@ class TestApiBlueprint:
         assert response.status_code == 200
 
     def test_should_not_allow_search_type_for_person_without_matching_role(
-      self, MockRecommendReviewers, MockFlaskAuth0WithEmail1):
+      self, MockRecommendReviewers, MockFlaskAuth0):
+
+      _setup_flask_auth0_mock_email(MockFlaskAuth0, email=EMAIL_1)
 
       config = dict_to_config({
         'auth': {'allowed_ips': ''},
@@ -300,7 +294,9 @@ class TestApiBlueprint:
         assert response.status_code == 403
 
     def test_should_allow_search_type_and_not_check_person_role_if_no_role_is_required(
-      self, MockRecommendReviewers, MockFlaskAuth0WithEmail1):
+      self, MockRecommendReviewers, MockFlaskAuth0):
+
+      _setup_flask_auth0_mock_email(MockFlaskAuth0, email=EMAIL_1)
 
       config = dict_to_config({
         'auth': {'allowed_ips': ''},
@@ -326,20 +322,27 @@ class TestApiAuth:
     f = Mock()
     assert api_auth(f) == f
 
-  def test_should_wrap_with_auth_if_auth0_domain_is_present(self, MockFlaskAuth0WithoutEmail):
+  def test_should_wrap_with_auth_if_auth0_domain_is_present(self, MockFlaskAuth0):
+    _setup_flask_auth0_mock_email(MockFlaskAuth0, email=None)
+
     api_auth = ApiAuth(dict_to_config({}), {'auth0_domain': VALUE_1})
-    _assert_partial_called_with(MockFlaskAuth0WithoutEmail, domain=VALUE_1)
+    _assert_partial_called_with(MockFlaskAuth0, domain=VALUE_1)
 
     f = _named_mock(name='f')
     wrapped_f = api_auth(f)
     assert wrapped_f != f
     assert wrapped_f() == f.return_value
 
-  def test_should_reject_search_types_for_emails_not_associated_with_required_role(self, MockFlaskAuth0WithEmail1):
+  def test_should_reject_search_types_for_emails_not_associated_with_required_role(self, MockFlaskAuth0):
+    _setup_flask_auth0_mock_email(MockFlaskAuth0, email=EMAIL_1)
+
     user_has_role_by_email = Mock(name='user_has_role_by_email')
     user_has_role_by_email.return_value = False
     api_auth = ApiAuth(
-      dict_to_config({}), {'auth0_domain': DOMAIN_1},
+      dict_to_config({'auth': {
+        'valid_email_domains': 'other.org'
+      }}),
+      {'auth0_domain': DOMAIN_1},
       search_config={SEARCH_TYPE_1: {'required_role': ROLE_1}},
       user_has_role_by_email=user_has_role_by_email,
       get_search_type=lambda: SEARCH_TYPE_1
@@ -352,7 +355,26 @@ class TestApiAuth:
       wrapped_f()
     user_has_role_by_email.assert_called_with(email=EMAIL_1, role=ROLE_1)
 
-  def test_should_allow_local_ips_by_default(self):
-    with patch.object(api_module, 'FlaskAuth0') as MockFlaskAuth0:
-      ApiAuth(dict_to_config({}), {'auth0_domain': VALUE_1})
-      _assert_partial_called_with(MockFlaskAuth0, allowed_ips={'127.0.0.1'})
+  def test_should_allow_search_types_for_emails_part_of_configured_domain(self, MockFlaskAuth0):
+    _setup_flask_auth0_mock_email(MockFlaskAuth0, email='data@science.org')
+
+    user_has_role_by_email = Mock(name='user_has_role_by_email')
+    user_has_role_by_email.return_value = False
+    api_auth = ApiAuth(
+      dict_to_config({'auth': {
+        'valid_email_domains': 'science.org'
+      }}),
+      {'auth0_domain': DOMAIN_1},
+      search_config={SEARCH_TYPE_1: {'required_role': ROLE_1}},
+      user_has_role_by_email=user_has_role_by_email,
+      get_search_type=lambda: SEARCH_TYPE_1
+    )
+
+    f = _named_mock(name='f')
+    wrapped_f = api_auth(f)
+    assert wrapped_f != f
+    assert wrapped_f() == f.return_value
+
+  def test_should_allow_local_ips_by_default(self, MockFlaskAuth0):
+    ApiAuth(dict_to_config({}), {'auth0_domain': VALUE_1})
+    _assert_partial_called_with(MockFlaskAuth0, allowed_ips={'127.0.0.1'})

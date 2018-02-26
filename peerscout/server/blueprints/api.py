@@ -97,6 +97,9 @@ class ApiAuth:
     self._valid_email_domains = parse_valid_domains(
       config.get('auth', 'valid_email_domains', fallback='')
     )
+    self._staff_email_validator = EmailValidator(
+      valid_emails=[], valid_email_domains=self._valid_email_domains
+    )
     allowed_ips = parse_allowed_ips(config.get('auth', 'allowed_ips', fallback='127.0.0.1'))
     if auth0_domain:
       LOGGER.info('using Auth0 domain %s', auth0_domain)
@@ -121,7 +124,11 @@ class ApiAuth:
       required_role = search_params and search_params.get('required_role')
       has_access = (
         search_params is not None and
-        (not required_role or self._user_has_role_by_email(email=email, role=required_role))
+        (
+          not required_role or
+          self._staff_email_validator(email) or
+          self._user_has_role_by_email(email=email, role=required_role)
+        )
       )
       LOGGER.debug(
         'checking authorization, search_type=%s, email=%s, required_role=%s -> has_access=%s',
