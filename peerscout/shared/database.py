@@ -205,7 +205,7 @@ class Database(object):
       self.engine.execute('DROP VIEW IF EXISTS {}'.format(
         view.__tablename__
       ))
-    self.commit()
+    self.commit_if_not_auto_commit()
 
   def create_views(self):
     for view in self.views:
@@ -214,7 +214,7 @@ class Database(object):
         view.__tablename__,
         view.__query__
       ))
-    self.commit()
+    self.commit_if_not_auto_commit()
 
   def _shallow_migrate_schema(self):
     get_logger().info('shallow migrate schema (no data modification)')
@@ -225,7 +225,7 @@ class Database(object):
   def _full_migrate_schema(self):
     self.drop_views()
     # the commit is necessary to prevent freezing
-    self.commit()
+    self.commit_if_not_auto_commit()
     Base.metadata.drop_all(self.engine)
     Base.metadata.create_all(self.engine)
     self.create_views()
@@ -234,7 +234,7 @@ class Database(object):
       schema_version_id=DEFAULT_SCHEMA_VERSION_ID,
       version=SCHEMA_VERSION
     )
-    self.commit()
+    self.commit_if_not_auto_commit()
 
   def update_schema(self):
     version = self.get_current_schema_version()
@@ -259,6 +259,26 @@ class Database(object):
 
   def commit(self):
     self.session.commit()
+
+  def is_auto_commit(self):
+    return self.session.autocommit
+
+  def commit_if_not_auto_commit(self):
+    if not self.is_auto_commit():
+      self.commit()
+
+  @contextmanager
+  def semi_transaction(self):
+    if self.is_auto_commit():
+      with self.session.begin():
+        yield self.session
+    else:
+      try:
+        yield self.session
+        self.session.commit()
+      except:
+        self.session.rollback()
+        raise
 
   def close(self):
     self.session.close()
@@ -317,10 +337,10 @@ def insert_dataset(db, dataset):
     if table_name in dataset:
       get_logger().debug("data %s:\n%s", table_name, dataset[table_name])
       db[table_name].create_list(dataset[table_name])
-  db.commit()
+  db.commit_if_not_auto_commit()
 
 @contextmanager
-def populated_in_memory_database(dataset):
-  with empty_in_memory_database() as db:
+def populated_in_memory_database(dataset, **kwargs):
+  with empty_in_memory_database(**kwargs) as db:
     insert_dataset(db, dataset)
     yield db

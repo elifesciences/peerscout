@@ -37,7 +37,7 @@ class Auth0(object):
         get_logger().info('no access token provided')
       email = self.verify_access_token_and_get_email(access_token) if access_token else None
       if email and self.is_valid_email(email):
-        return request_handler()
+        return request_handler(email=email)
       else:
         get_logger().info('invalid email: %s', email)
         return not_authorized_handler()

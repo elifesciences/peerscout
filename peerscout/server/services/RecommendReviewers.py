@@ -551,6 +551,9 @@ class RecommendReviewers(object):
   def get_all_keywords(self):
     return self.all_keywords
 
+  def user_has_role_by_email(self, email, role):
+    return self.person_role_service.user_has_role_by_email(email=email, role=role)
+
   def recommend(
     self, manuscript_no=None, subject_area=None, keywords=None, abstract=None,
     role=None,

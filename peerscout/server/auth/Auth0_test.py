@@ -1,3 +1,5 @@
+from unittest.mock import Mock
+
 from .Auth0 import Auth0
 
 EMAIL = 'user1@domain.org'
@@ -12,7 +14,7 @@ NOT_AUTHORIZED_RESULT = 'not-authorized'
 ACCESS_TOKEN = 'access1'
 
 GET_USER_INFO = lambda _: USER_INFO
-REQUEST_HANDLER = lambda: AUTHORIZED_RESULT
+REQUEST_HANDLER = lambda email=None: AUTHORIZED_RESULT
 NOT_AUTHORIZED_HANDLER = lambda: NOT_AUTHORIZED_RESULT
 GET_ACCESS_TOKEN = lambda: ACCESS_TOKEN
 
@@ -32,6 +34,14 @@ def test_should_call_function_if_access_token_is_valid():
     REQUEST_HANDLER, GET_ACCESS_TOKEN, NOT_AUTHORIZED_HANDLER
   )()
   assert result == AUTHORIZED_RESULT
+
+def test_should_pass_valid_email_to_request_handler():
+  auth0 = _create_auth0(GET_USER_INFO)
+  request_handler = Mock()
+  auth0.wrap_request_handler(
+    request_handler, GET_ACCESS_TOKEN, NOT_AUTHORIZED_HANDLER
+  )()
+  request_handler.assert_called_with(email=EMAIL)
 
 def test_should_call_function_if_access_token_is_none():
   auth0 = _create_auth0(GET_USER_INFO)
