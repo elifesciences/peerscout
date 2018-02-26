@@ -51,3 +51,9 @@ def applymap_dict(d, f):
 
 def applymap_dict_list(dict_list, f):
   return [applymap_dict(row, f) for row in dict_list]
+
+def parse_list(s, sep=','):
+  s = s.strip()
+  if not s:
+    return []
+  return [item.strip() for item in s.split(sep)]

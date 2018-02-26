@@ -9,6 +9,7 @@ from ...shared.database import populated_in_memory_database
 
 from .ManuscriptModel import ManuscriptModel
 from .DocumentSimilarityModel import DocumentSimilarityModel
+from .manuscript_person_relationship_service import RelationshipTypes
 from .RecommendReviewers import RecommendReviewers, set_debugv_enabled
 
 from .test_data import (
@@ -217,6 +218,7 @@ PP = pprint.PrettyPrinter(indent=2, width=40)
 def setup_module():
   logging.basicConfig(level=logging.DEBUG)
   set_debugv_enabled(True)
+  logging.getLogger().setLevel(logging.DEBUG)
 
 @pytest.fixture(name='logger')
 def get_logger():
@@ -900,6 +902,59 @@ class TestRecommendReviewers:
       result = recommend_for_dataset(
         dataset, keywords=None, manuscript_no=MANUSCRIPT_ID2,
         role=PersonRoles.SENIOR_EDITOR
+      )
+      person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+      assert person_ids == [PERSON_ID1]
+
+    def test_should_recommend_previous_senior_editors(self):
+      dataset = {
+        'person': [PERSON1],
+        'person_role': [{PERSON_ID: PERSON_ID1, 'role': PersonRoles.SENIOR_EDITOR}],
+        'manuscript_version': [MANUSCRIPT_VERSION1, MANUSCRIPT_VERSION2],
+        'manuscript_senior_editor': [{**MANUSCRIPT_ID_FIELDS1, 'person_id': PERSON_ID1}],
+        'manuscript_keyword': [MANUSCRIPT_KEYWORD1, {
+          **MANUSCRIPT_KEYWORD1,
+          **MANUSCRIPT_ID_FIELDS2
+        }]
+      }
+      result = recommend_for_dataset(
+        dataset, keywords=None, manuscript_no=MANUSCRIPT_ID2,
+        role=PersonRoles.SENIOR_EDITOR,
+        recommend_relationship_types=[
+          RelationshipTypes.AUTHOR,
+          RelationshipTypes.EDITOR,
+          RelationshipTypes.SENIOR_EDITOR,
+          RelationshipTypes.REVIEWER
+        ]
+      )
+      person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+      assert person_ids == [PERSON_ID1]
+
+    def test_should_recommend_based_on_stage_name(self):
+      custom_stage = 'custom_stage'
+      dataset = {
+        'person': [PERSON1],
+        'person_role': [{PERSON_ID: PERSON_ID1, 'role': PersonRoles.SENIOR_EDITOR}],
+        'manuscript_version': [MANUSCRIPT_VERSION1, MANUSCRIPT_VERSION2],
+        'manuscript_stage': [
+          {
+            **MANUSCRIPT_ID_FIELDS1,
+            'person_id': PERSON_ID1,
+            'stage_timestamp': pd.Timestamp('2017-01-01'),
+            'stage_name': custom_stage
+          }
+        ],
+        'manuscript_keyword': [MANUSCRIPT_KEYWORD1, {
+          **MANUSCRIPT_KEYWORD1,
+          **MANUSCRIPT_ID_FIELDS2
+        }]
+      }
+      result = recommend_for_dataset(
+        dataset, keywords=None, manuscript_no=MANUSCRIPT_ID2,
+        role=PersonRoles.SENIOR_EDITOR,
+        recommend_stage_names=[
+          custom_stage
+        ]
       )
       person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
       assert person_ids == [PERSON_ID1]

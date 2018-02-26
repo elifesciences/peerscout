@@ -24,6 +24,30 @@ class TestParseSearchConfig:
     assert search_config.keys() == {SEARCH_TYPE_1}
     assert search_config[SEARCH_TYPE_1][PARAM_KEY_1] == PARAM_VALUE_1
 
+  def test_should_parse_recommend_relationship_types_as_list(self):
+    config = dict_to_config({
+      _search_section_name(SEARCH_TYPE_1): {
+        'recommend_relationship_types': ' %s , %s ' % (PARAM_VALUE_1, PARAM_VALUE_2)
+      }
+    })
+    search_config = parse_search_config(config)
+    assert search_config.keys() == {SEARCH_TYPE_1}
+    assert search_config[SEARCH_TYPE_1]['recommend_relationship_types'] == [
+      PARAM_VALUE_1, PARAM_VALUE_2
+    ]
+
+  def test_should_parse_recommend_stage_names_as_list(self):
+    config = dict_to_config({
+      _search_section_name(SEARCH_TYPE_1): {
+        'recommend_stage_names': ' %s , %s ' % (PARAM_VALUE_1, PARAM_VALUE_2)
+      }
+    })
+    search_config = parse_search_config(config)
+    assert search_config.keys() == {SEARCH_TYPE_1}
+    assert search_config[SEARCH_TYPE_1]['recommend_stage_names'] == [
+      PARAM_VALUE_1, PARAM_VALUE_2
+    ]
+
   def test_should_parse_multiple_search_configs(self):
     config = dict_to_config({
       _search_section_name(SEARCH_TYPE_1): {

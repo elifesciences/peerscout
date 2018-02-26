@@ -29,6 +29,16 @@ from .manuscript_utils import (
 from .manuscript_keywords import ManuscriptKeywordService
 from .manuscript_subject_areas import ManuscriptSubjectAreaService
 
+from .manuscript_person_relationship_service import (
+  ManuscriptPersonRelationshipService,
+  RelationshipTypes
+)
+
+from .manuscript_person_stage_service import (
+  ManuscriptPersonStageService,
+  StageNames
+)
+
 from .person_keywords import (
   PersonKeywordService,
   get_person_ids_of_person_keywords_scores
@@ -286,6 +296,12 @@ class RecommendReviewers(object):
     self.manuscript_subject_area_service = ManuscriptSubjectAreaService.from_database(
       db, valid_version_ids=valid_version_ids
     )
+
+    logger.debug('loading ManuscriptPersonRelationshipService')
+    self.manuscript_person_relationship_service = ManuscriptPersonRelationshipService(db)
+
+    logger.debug('loading ManuscriptPersonStageService')
+    self.manuscript_person_stage_service = ManuscriptPersonStageService(db)
 
     logger.debug('loading PersonKeywordService')
     self.person_keyword_service = PersonKeywordService.from_database(db)
@@ -559,18 +575,17 @@ class RecommendReviewers(object):
 
   def recommend(
     self, manuscript_no=None, subject_area=None, keywords=None, abstract=None,
-    role=None,
-    limit=None):
+    **kwargs):
 
     if manuscript_no:
       return self._recommend_using_manuscript_no(
-        manuscript_no=manuscript_no, role=role, limit=limit
+        manuscript_no=manuscript_no,
+        **kwargs
       )
     else:
       return self._recommend_using_user_search_criteria(
         subject_area=subject_area, keywords=keywords, abstract=abstract,
-        role=role,
-        limit=limit
+        **kwargs
       )
 
   def _no_manuscripts_found_response(self, manuscript_no):
@@ -580,7 +595,7 @@ class RecommendReviewers(object):
       'potential_reviewers': []
     }
 
-  def _recommend_using_manuscript_no(self, manuscript_no=None, role=None, limit=None):
+  def _recommend_using_manuscript_no(self, manuscript_no=None, **kwargs):
     matching_manuscripts = self.__find_manuscripts_by_key(manuscript_no)
     if len(matching_manuscripts) == 0:
       return self._no_manuscripts_found_response(manuscript_no)
@@ -628,8 +643,7 @@ class RecommendReviewers(object):
           exclude_person_ids=exclude_person_ids,
           ecr_subject_areas=ecr_subject_areas,
           manuscript_version_ids=matching_manuscripts[VERSION_ID].values,
-          role=role,
-          limit=limit
+          **kwargs
         ),
         'matching_manuscripts': clean_manuscripts(map_to_dict(
           matching_manuscripts[VERSION_ID],
@@ -638,9 +652,7 @@ class RecommendReviewers(object):
       }
 
   def _recommend_using_user_search_criteria(
-    self, subject_area=None, keywords=None, abstract=None,
-    role=None,
-    limit=None):
+    self, subject_area=None, keywords=None, abstract=None, **kwargs):
 
     subject_areas = (
       {subject_area}
@@ -651,8 +663,7 @@ class RecommendReviewers(object):
     return {
       **self._recommend_using_criteria(
         subject_areas=subject_areas, keyword_list=keyword_list, abstract=abstract,
-        role=role,
-        limit=limit
+        **kwargs
       ),
       'search': remove_none({
         'subject_areas': subject_areas,
@@ -790,31 +801,55 @@ class RecommendReviewers(object):
       similarity_by_manuscript_version_id
     )
 
-  def _potential_reviewer_ids_for_matching_manuscript_ids(
-    self, matching_manuscript_ids):
-    matching_manuscript_list = filter_none(
-      self.manuscripts_by_version_id_map.get(version_id)
-      for version_id in matching_manuscript_ids
-    )
-    debugv('matching_manuscript_list:\n%s', matching_manuscript_list)
+  def _filter_published_version_ids(self, version_ids):
+    return {
+      version_id for version_id in version_ids
+      if self.manuscripts_by_version_id_map.get(version_id, {}).get('is_published')
+    }
 
-    return set(
-      person[PERSON_ID] for person in
-      iter_flatten(
-        m['authors'] + m['reviewers']
-        if m['is_published']
-        else m['reviewers']
-        for m in matching_manuscript_list
+  def _potential_reviewer_ids_for_matching_manuscript_ids(
+    self, matching_manuscript_ids,
+    recommend_relationship_types, recommend_stage_names):
+
+    published_version_ids = self._filter_published_version_ids(matching_manuscript_ids)
+    person_ids_by_relationship_types = (
+      self.manuscript_person_relationship_service
+      .get_person_ids_for_version_ids_and_relationship_types(
+        published_version_ids, # recommend only published manuscripts by relationship type
+        recommend_relationship_types
       )
     )
+    person_ids_by_stage_names = (
+      self.manuscript_person_stage_service
+      .get_person_ids_for_version_ids_and_stage_names(
+        matching_manuscript_ids, # recommend also unpublished by stage name
+        recommend_stage_names
+      )
+    )
+    result = person_ids_by_relationship_types | person_ids_by_stage_names
+    self.logger.debug(
+      'person_ids for version ids=%d stage names=%d (%s),'
+      ' published version ids=%d by relationship types=%d (%s), total=%d',
+      len(matching_manuscript_ids),
+      len(person_ids_by_stage_names), recommend_stage_names,
+      len(published_version_ids),
+      len(person_ids_by_relationship_types), recommend_relationship_types,
+      len(result)
+    )
+    return result
 
   def _find_potential_reviewer_ids(
-    self, matching_manuscript_ids, include_person_ids, exclude_person_ids, ecr_subject_areas,
+    self, matching_manuscript_ids, recommend_relationship_types, recommend_stage_names,
+    include_person_ids, exclude_person_ids, ecr_subject_areas,
     person_keyword_scores, role):
 
     return self.person_role_service.filter_person_ids_by_role(
       (
-        self._potential_reviewer_ids_for_matching_manuscript_ids(matching_manuscript_ids) |
+        self._potential_reviewer_ids_for_matching_manuscript_ids(
+          matching_manuscript_ids,
+          recommend_relationship_types=recommend_relationship_types,
+          recommend_stage_names=recommend_stage_names
+        ) |
         get_person_ids_of_person_keywords_scores(person_keyword_scores) |
         self._get_early_career_reviewer_ids_by_subject_areas(ecr_subject_areas) |
         include_person_ids
@@ -827,7 +862,13 @@ class RecommendReviewers(object):
     include_person_ids=None, exclude_person_ids=None, ecr_subject_areas=None,
     manuscript_version_ids=None,
     role=None,
+    recommend_relationship_types=None, recommend_stage_names=None,
     limit=None):
+
+    if recommend_relationship_types is None:
+      recommend_relationship_types = [RelationshipTypes.AUTHOR]
+    if recommend_stage_names is None:
+      recommend_stage_names = [StageNames.REVIEW_RECEIVED]
 
     include_person_ids = include_person_ids or set()
     exclude_person_ids = exclude_person_ids or set()
@@ -846,6 +887,8 @@ class RecommendReviewers(object):
 
     potential_reviewers_ids = self._find_potential_reviewer_ids(
       matching_manuscript_ids=matching_manuscript_ids,
+      recommend_relationship_types=recommend_relationship_types,
+      recommend_stage_names=recommend_stage_names,
       include_person_ids=include_person_ids,
       exclude_person_ids=exclude_person_ids,
       ecr_subject_areas=ecr_subject_areas,

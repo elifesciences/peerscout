@@ -257,10 +257,12 @@ class TestApiBlueprint:
           role=None
         )
 
-    def test_should_pass_role_from_search_config_to_recommend_method(self, MockRecommendReviewers):
+    def test_should_pass_search_params_from_search_config_to_recommend_method(self, MockRecommendReviewers):
       config = dict_to_config({
         SEARCH_SECTION_PREFIX + SEARCH_TYPE_1: {
-          'filter_by_role': VALUE_1
+          'filter_by_role': VALUE_1,
+          'recommend_relationship_types': VALUE_2,
+          'recommend_stage_names': VALUE_3
         }
       })
       with _api_test_client(config, {}) as test_client:
@@ -271,7 +273,9 @@ class TestApiBlueprint:
         }))
         _assert_partial_called_with(
           MockRecommendReviewers.return_value.recommend,
-          role=VALUE_1
+          role=VALUE_1,
+          recommend_relationship_types=[VALUE_2],
+          recommend_stage_names=[VALUE_3]
         )
 
     def test_should_reject_unknown_search_type(self, MockRecommendReviewers):
