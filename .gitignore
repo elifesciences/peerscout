@@ -9,6 +9,7 @@
 /.pytest_cache
 /app.cfg
 /logs
+/*.egg-info
 
 .cache
 __pycache__
