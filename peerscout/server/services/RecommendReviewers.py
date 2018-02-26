@@ -181,11 +181,6 @@ def sort_manuscripts_by_date(manuscripts):
     m.get(VERSION_ID, None)
   ), reverse=True)
 
-def parse_list_if_str(x):
-  if isinstance(x, str):
-    return ast.literal_eval(x)
-  return x
-
 HIDDEN_MANUSCRIPT_PROPS = set(['editors', 'reviewers'])
 
 def is_visible_manuscript_prop(key):
