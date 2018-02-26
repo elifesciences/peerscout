@@ -136,8 +136,8 @@ class Main extends React.Component {
           abstract: searchOptions.abstract || '',
           limit: searchOptions.limit || '50'
         }
-        if (searchOptions.search_type) {
-          params.search_type = searchOptions.search_type;
+        if (searchOptions.searchType) {
+          params.search_type = searchOptions.searchType;
         }
         return this.props.reviewerRecommendationApi.recommendReviewers(params, {
           headers: {
@@ -309,6 +309,21 @@ class Main extends React.Component {
     })).catch(err => {
       reportError('failed to fetch keywords', err);
     });
+    this.props.reviewerRecommendationApi.getSearchTypes().then(searchTypes => {
+      console.log('searchTypes:', searchTypes);
+      this.setState(state => ({
+        searchTypes
+      }));
+      if (searchTypes.length > 0) {
+        this.defaultSearchOptions.searchType = searchTypes[0].search_type;
+        this.setSearchOptions({
+          ...this.defaultSearchOptions,
+          ...this.state.searchOptions
+        })
+      }
+    }).catch(err => {
+      reportError('failed to search types', err);
+    });
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -371,6 +386,7 @@ class Main extends React.Component {
       results,
       allSubjectAreas,
       allKeywords,
+      searchTypes,
       selectedNode,
       selectedReviewer,
       selectedManuscript,
@@ -448,6 +464,7 @@ class Main extends React.Component {
               onSearchOptionsChanged={ this.onSearchOptionsChanged }
               allSubjectAreas={ allSubjectAreas }
               allKeywords={ allKeywords }
+              searchTypes={ searchTypes }
             />
           )
         }

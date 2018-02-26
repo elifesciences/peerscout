@@ -554,6 +554,9 @@ class RecommendReviewers(object):
   def user_has_role_by_email(self, email, role):
     return self.person_role_service.user_has_role_by_email(email=email, role=role)
 
+  def get_user_roles_by_email(self, email):
+    return self.person_role_service.get_user_roles_by_email(email=email)
+
   def recommend(
     self, manuscript_no=None, subject_area=None, keywords=None, abstract=None,
     role=None,

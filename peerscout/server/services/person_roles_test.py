@@ -16,6 +16,7 @@ from .person_roles import (
 )
 
 EMAIL_1 = 'email1'
+EMAIL_2 = 'email2'
 ROLE_1 = 'role1'
 ROLE_2 = 'role2'
 
@@ -94,7 +95,7 @@ class TestPersonRoleService:
         )
 
   class TestUserHasRoleByEmail:
-    def test_should_return_wether_user_has_role(self):
+    def test_should_return_whether_user_has_role(self):
       dataset = {
         'person': [{**PERSON1, 'email': EMAIL_1}],
         'person_role': [{PERSON_ID: PERSON_ID1, 'role': ROLE_1}]
@@ -103,3 +104,26 @@ class TestPersonRoleService:
         assert person_role_service.user_has_role_by_email(email=EMAIL_1, role=ROLE_1) == True
         assert person_role_service.user_has_role_by_email(email=EMAIL_1, role='other') == False
         assert person_role_service.user_has_role_by_email(email='other', role=ROLE_1) == False
+
+  class TestGetUserRolesByEmail:
+    def test_should_return_roles_of_existing_user(self):
+      dataset = {
+        'person': [{**PERSON1, 'email': EMAIL_1}],
+        'person_role': [
+          {PERSON_ID: PERSON_ID1, 'role': ROLE_1},
+          {PERSON_ID: PERSON_ID1, 'role': ROLE_2}
+        ]
+      }
+      with create_person_role_service(dataset) as person_role_service:
+        assert person_role_service.get_user_roles_by_email(email=EMAIL_1) == {ROLE_1, ROLE_2}
+
+    def test_should_not_return_roles_of_not_matching_user(self):
+      dataset = {
+        'person': [{**PERSON1, 'email': EMAIL_1}],
+        'person_role': [
+          {PERSON_ID: PERSON_ID1, 'role': ROLE_1},
+          {PERSON_ID: PERSON_ID1, 'role': ROLE_2}
+        ]
+      }
+      with create_person_role_service(dataset) as person_role_service:
+        assert person_role_service.get_user_roles_by_email(email=EMAIL_2) == set()

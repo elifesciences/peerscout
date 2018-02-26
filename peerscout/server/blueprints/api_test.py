@@ -43,6 +43,10 @@ LIMIT_1 = 123
 
 SEARCH_TYPE_1 = 'search_type1'
 SEARCH_TYPE_2 = 'search_type2'
+SEARCH_TYPE_3 = 'search_type3'
+SEARCH_TYPE_TITLE_1 = 'Search Type 1'
+SEARCH_TYPE_TITLE_2 = 'Search Type 2'
+SEARCH_TYPE_TITLE_3 = 'Search Type 3'
 
 SOME_RESPONSE = {
   'some-response': VALUE_1
@@ -131,6 +135,67 @@ class TestApiBlueprint:
         MockRecommendReviewers.return_value.get_all_subject_areas.return_value = [VALUE_1, VALUE_2]
         response = test_client.get('/config')
         assert _get_ok_json(response) == client_config
+
+  class TestSearchTypes:
+    def test_should_return_all_search_types_if_authorisation_is_not_required(
+      self, MockRecommendReviewers, MockFlaskAuth0):
+
+      _setup_flask_auth0_mock_email(MockFlaskAuth0, email=None)
+
+      config = dict_to_config({
+        'auth': {'allowed_ips': ''},
+        'client': {'auth0_domain': DOMAIN_1},
+        SEARCH_SECTION_PREFIX + SEARCH_TYPE_1: {
+          'title': SEARCH_TYPE_TITLE_1
+        },
+        SEARCH_SECTION_PREFIX + SEARCH_TYPE_2: {
+          'title': SEARCH_TYPE_TITLE_2
+        }
+      })
+
+      with _api_test_client(config, {}) as test_client:
+        response = test_client.get('/search-types')
+        assert _get_ok_json(response) == [{
+          'search_type': SEARCH_TYPE_1,
+          'title': SEARCH_TYPE_TITLE_1
+        }, {
+          'search_type': SEARCH_TYPE_2,
+          'title': SEARCH_TYPE_TITLE_2
+        }]
+
+    def test_should_filter_search_types_by_required_role(
+      self, MockRecommendReviewers, MockFlaskAuth0):
+
+      _setup_flask_auth0_mock_email(MockFlaskAuth0, email=EMAIL_1)
+
+      config = dict_to_config({
+        'auth': {'allowed_ips': ''},
+        'client': {'auth0_domain': DOMAIN_1},
+        SEARCH_SECTION_PREFIX + SEARCH_TYPE_1: {
+          'required_role': ROLE_1,
+          'title': SEARCH_TYPE_TITLE_1
+        },
+        SEARCH_SECTION_PREFIX + SEARCH_TYPE_2: {
+          'required_role': ROLE_2,
+          'title': SEARCH_TYPE_TITLE_2
+        },
+        SEARCH_SECTION_PREFIX + SEARCH_TYPE_3: {
+          'required_role': '',
+          'title': SEARCH_TYPE_TITLE_3
+        }
+      })
+
+      with _api_test_client(config, {}) as test_client:
+        get_user_roles_by_email = MockRecommendReviewers.return_value.get_user_roles_by_email
+        get_user_roles_by_email.return_value = {ROLE_1}
+        response = test_client.get('/search-types')
+        assert _get_ok_json(response) == [{
+          'search_type': SEARCH_TYPE_1,
+          'title': SEARCH_TYPE_TITLE_1
+        }, {
+          'search_type': SEARCH_TYPE_3,
+          'title': SEARCH_TYPE_TITLE_3
+        }]
 
   class TestRecommendWithoutAuth:
     def test_should_return_400_without_args(self, MockRecommendReviewers):
@@ -315,66 +380,73 @@ class TestApiBlueprint:
         assert response.status_code == 200
 
 class TestApiAuth:
-  def test_should_not_wrap_with_auth_if_no_auth0_domain_is_present(self):
-    config = dict_to_config({})
-    client_config = {}
-    api_auth = ApiAuth(config, client_config)
-    f = Mock()
-    assert api_auth(f) == f
-
-  def test_should_wrap_with_auth_if_auth0_domain_is_present(self, MockFlaskAuth0):
-    _setup_flask_auth0_mock_email(MockFlaskAuth0, email=None)
-
-    api_auth = ApiAuth(dict_to_config({}), {'auth0_domain': VALUE_1})
-    _assert_partial_called_with(MockFlaskAuth0, domain=VALUE_1)
-
-    f = _named_mock(name='f')
-    wrapped_f = api_auth(f)
-    assert wrapped_f != f
-    assert wrapped_f() == f.return_value
-
-  def test_should_reject_search_types_for_emails_not_associated_with_required_role(self, MockFlaskAuth0):
-    _setup_flask_auth0_mock_email(MockFlaskAuth0, email=EMAIL_1)
-
-    user_has_role_by_email = Mock(name='user_has_role_by_email')
-    user_has_role_by_email.return_value = False
-    api_auth = ApiAuth(
-      dict_to_config({'auth': {
-        'valid_email_domains': 'other.org'
-      }}),
-      {'auth0_domain': DOMAIN_1},
-      search_config={SEARCH_TYPE_1: {'required_role': ROLE_1}},
-      user_has_role_by_email=user_has_role_by_email,
-      get_search_type=lambda: SEARCH_TYPE_1
-    )
-
-    f = _named_mock(name='f')
-    wrapped_f = api_auth(f)
-    assert wrapped_f != f
-    with pytest.raises(Forbidden):
-      wrapped_f()
-    user_has_role_by_email.assert_called_with(email=EMAIL_1, role=ROLE_1)
-
-  def test_should_allow_search_types_for_emails_part_of_configured_domain(self, MockFlaskAuth0):
-    _setup_flask_auth0_mock_email(MockFlaskAuth0, email='data@science.org')
-
-    user_has_role_by_email = Mock(name='user_has_role_by_email')
-    user_has_role_by_email.return_value = False
-    api_auth = ApiAuth(
-      dict_to_config({'auth': {
-        'valid_email_domains': 'science.org'
-      }}),
-      {'auth0_domain': DOMAIN_1},
-      search_config={SEARCH_TYPE_1: {'required_role': ROLE_1}},
-      user_has_role_by_email=user_has_role_by_email,
-      get_search_type=lambda: SEARCH_TYPE_1
-    )
-
-    f = _named_mock(name='f')
-    wrapped_f = api_auth(f)
-    assert wrapped_f != f
-    assert wrapped_f() == f.return_value
+  @pytest.fixture(name='DummyAppContext', autouse=True)
+  def _dummy_app_context(self):
+    app = Flask(__name__)
+    with app.app_context() as app_context:
+      yield app_context
 
   def test_should_allow_local_ips_by_default(self, MockFlaskAuth0):
     ApiAuth(dict_to_config({}), {'auth0_domain': VALUE_1})
     _assert_partial_called_with(MockFlaskAuth0, allowed_ips={'127.0.0.1'})
+
+  class TestWrapSearch:
+    def test_should_not_wrap_with_auth_if_no_auth0_domain_is_present(self):
+      config = dict_to_config({})
+      client_config = {}
+      api_auth = ApiAuth(config, client_config)
+      f = Mock()
+      assert api_auth.wrap_search(f) == f
+
+    def test_should_wrap_with_auth_if_auth0_domain_is_present(self, MockFlaskAuth0):
+      _setup_flask_auth0_mock_email(MockFlaskAuth0, email=None)
+
+      api_auth = ApiAuth(dict_to_config({}), {'auth0_domain': VALUE_1})
+      _assert_partial_called_with(MockFlaskAuth0, domain=VALUE_1)
+
+      f = _named_mock(name='f')
+      wrapped_f = api_auth.wrap_search(f)
+      assert wrapped_f != f
+      assert wrapped_f() == f.return_value
+
+    def test_should_reject_search_types_for_emails_not_associated_with_required_role(self, MockFlaskAuth0):
+      _setup_flask_auth0_mock_email(MockFlaskAuth0, email=EMAIL_1)
+
+      user_has_role_by_email = Mock(name='user_has_role_by_email')
+      user_has_role_by_email.return_value = False
+      api_auth = ApiAuth(
+        dict_to_config({'auth': {
+          'valid_email_domains': 'other.org'
+        }}),
+        {'auth0_domain': DOMAIN_1},
+        search_config={SEARCH_TYPE_1: {'required_role': ROLE_1}},
+        user_has_role_by_email=user_has_role_by_email,
+        get_search_type=lambda: SEARCH_TYPE_1
+      )
+
+      f = _named_mock(name='f')
+      wrapped_f = api_auth.wrap_search(f)
+      assert wrapped_f != f
+      with pytest.raises(Forbidden):
+        wrapped_f()
+      user_has_role_by_email.assert_called_with(email=EMAIL_1, role=ROLE_1)
+
+    def test_should_allow_search_types_for_emails_part_of_configured_domain(self, MockFlaskAuth0):
+      _setup_flask_auth0_mock_email(MockFlaskAuth0, email='data@science.org')
+
+      user_has_role_by_email = Mock(name='user_has_role_by_email')
+      user_has_role_by_email.return_value = False
+      api_auth = ApiAuth(
+        dict_to_config({'auth': {
+          'valid_email_domains': 'science.org'
+        }}),
+        {'auth0_domain': DOMAIN_1},
+        search_config={SEARCH_TYPE_1: {'required_role': ROLE_1}},
+        user_has_role_by_email=user_has_role_by_email,
+        get_search_type=lambda: SEARCH_TYPE_1
+      )
+
+      f = _named_mock(name='f')
+      wrapped_f = api_auth.wrap_search(f)
+      assert wrapped_f != f
+      assert wrapped_f() == f.return_value

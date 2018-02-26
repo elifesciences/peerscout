@@ -63,3 +63,20 @@ class PersonRoleService:
     ).scalar() > 0
     LOGGER.debug('user_has_role_by_email: email=%s, role=%s -> %s', email, role, result)
     return result
+
+  def get_user_roles_by_email(self, email):
+    db = self._db
+    roles = set(x[0] for x in db.session.query(
+      db.person_role.table.role
+    ).select_from(db.person.table).filter(
+      sqlalchemy.and_(
+        db.person.table.person_id == db.person_role.table.person_id,
+        db.person.table.status == Person.Status.ACTIVE,
+        db.person.table.email == email
+      )
+    ).join(
+      db.person_role.table,
+      db.person_role.table.person_id == db.person.table.person_id
+    ).all())
+    LOGGER.debug('get_user_roles_by_email: email=%s, roles=%s', email, roles)
+    return roles
