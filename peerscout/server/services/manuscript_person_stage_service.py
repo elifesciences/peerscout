@@ -1,14 +1,6 @@
 import logging
-from collections import Counter
 
 import sqlalchemy
-
-from peerscout.utils.collection import (
-  iter_flatten,
-  groupby_to_dict
-)
-
-from ...shared.database_schema import Person
 
 LOGGER = logging.getLogger(__name__)
 
