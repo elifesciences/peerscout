@@ -23,7 +23,7 @@ KEYWORD2 = 'keyword2'
 @contextmanager
 def create_manuscript_person_relationship_service(dataset) -> ManuscriptPersonRelationshipService:
   with populated_in_memory_database(dataset) as db:
-    yield ManuscriptPersonRelationshipService.from_database(db)
+    yield ManuscriptPersonRelationshipService(db)
 
 @pytest.mark.slow
 class TestManuscriptPersonRelationshipService:

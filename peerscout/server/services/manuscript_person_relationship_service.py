@@ -42,10 +42,6 @@ class ManuscriptPersonRelationshipService:
   def __init__(self, db):
     self._db = db
 
-  @staticmethod
-  def from_database(db) -> 'ManuscriptPersonRelationshipService':
-    return ManuscriptPersonRelationshipService(db)
-
   def get_person_ids_for_version_ids_and_relationship_type(self, version_ids, relationship_type):
     db = self._db
     relationship_table = _get_relationship_table(db, relationship_type)
