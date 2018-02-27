@@ -119,6 +119,9 @@ class ApiAuth:
       return self._flask_auth0.wrap_request_handler(validate_request_with_f)
     return f
 
+  def is_staff_email(self, email: str) -> bool:
+    return self._staff_email_validator(email)
+
   def _validate_request(self, f, email=None):
     if email is not None:
       search_type = self._get_search_type()
@@ -258,8 +261,8 @@ def create_api_blueprint(config):
   @api_auth
   def _search_types_api(email=None) -> Response:
     with db.session.begin():
-      if email is None:
-        LOGGER.debug('email is None, not filtering search types')
+      if email is None or api_auth.is_staff_email(email):
+        LOGGER.debug('email is None or staff email, not filtering search types')
         allowed_search_config = search_config
       else:
         roles = set(recommend_reviewers.get_user_roles_by_email(email)) | {''}
