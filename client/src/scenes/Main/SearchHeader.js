@@ -6,7 +6,9 @@ import {
   FlexColumn,
   FlexRow,
   FontAwesomeIcon,
+  MenuItem,
   Paper,
+  SelectField,
   Tabs,
   Text,
   TextField,
@@ -115,13 +117,18 @@ class SearchHeader extends React.Component {
   }
 
   getInitialiseState(searchOptions) {
+    const commonProps = {
+      searchType: searchOptions.searchType
+    }
     if (searchOptions.manuscriptNumber) {
       return {
+        ...commonProps,
         currentTab: BY_MANUSCRIPT,
         [BY_MANUSCRIPT]: searchOptions
       }
     } else if (searchOptions.subjectArea || searchOptions.keywords) {
       return {
+        ...commonProps,
         currentTab: BY_SEARCH,
         keywords: (
           searchOptions.keywords &&
@@ -132,6 +139,7 @@ class SearchHeader extends React.Component {
       }
     }
     return {
+      ...commonProps,
       currentTab: this.state.currentTab
     };
   }
@@ -159,6 +167,10 @@ class SearchHeader extends React.Component {
     if (nextProps.allKeywords !== this.props.allKeywords) {
       this.allKeywordsAliasMap = this.buildAliasMap(nextProps.allKeywords);
     }
+  }
+
+  updateSearchType(value) {
+    this.updateSearchOption('searchType', value);
   }
 
   updateManuscriptNumber(value) {
@@ -244,16 +256,36 @@ class SearchHeader extends React.Component {
   
   render() {
     const { state, updateSearchOption, props } = this;
-    const { allSubjectAreas=[], allKeywords=[] } = props;
+    const { allSubjectAreas=[], allKeywords=[], searchTypes=[] } = props;
     const {
       currentTab, abstractFocused,
       currentSubjectArea='', currentKeyword='', keywords=[],
-      errorSubjectArea, errorKeyword
+      errorSubjectArea, errorKeyword,
+      searchType
     } = state;
     const { manuscriptNumber } = (state[BY_MANUSCRIPT] || {});
     const { subjectArea, abstract } = (state[BY_SEARCH] || {});
     const subjectAreaOrKeywordsRequired = (!subjectArea) && (keywords.length == 0) && (
       abstract
+    );
+    const searchTypeDropDownField = searchTypes.length > 1 && (
+      <View style={ styles.field }>
+        <SelectField
+          value={ searchType }
+          floatingLabelText="Search Type"
+          onChange={ (event, index, newValue) => this.updateSearchType(newValue) }
+        >
+        {
+          searchTypes.map(searchParams => (
+            <MenuItem
+              key={ searchParams.search_type }
+              value={ searchParams.search_type }
+              primaryText={ searchParams.title }
+            />
+          ))
+        }
+        </SelectField>
+      </View>
     );
 
     return (
@@ -268,6 +300,7 @@ class SearchHeader extends React.Component {
                 <View style={ styles.inlineContainer }>
                   <FontAwesomeIcon style={{ paddingTop: 40 }} name="search"/>
                 </View>
+                { searchTypeDropDownField }
                 <View style={ styles.field }>
                   <TextField
                     floatingLabelText="Manuscript number (last 5 digits)"
@@ -286,6 +319,7 @@ class SearchHeader extends React.Component {
                 <View style={ styles.inlineContainer }>
                   <FontAwesomeIcon style={{ paddingTop: 40 }} name="search"/>
                 </View>
+                { searchTypeDropDownField }
                 <View style={ styles.field }>
                   <AutoComplete
                     floatingLabelText="Subject area"

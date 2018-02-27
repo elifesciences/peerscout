@@ -939,6 +939,7 @@ class TestAllKeywords:
     with create_recommend_reviewers(dataset) as recommend_reviewers:
       assert recommend_reviewers.get_all_keywords() == [KEYWORD1]
 
+@pytest.mark.slow
 class TestUserHasRoleByEmail:
   def test_should_return_wether_user_has_role(self):
     dataset = {
@@ -949,3 +950,13 @@ class TestUserHasRoleByEmail:
       assert recommend_reviewers.user_has_role_by_email(email=EMAIL_1, role=ROLE_1) == True
       assert recommend_reviewers.user_has_role_by_email(email=EMAIL_1, role='other') == False
       assert recommend_reviewers.user_has_role_by_email(email='other', role=ROLE_1) == False
+
+@pytest.mark.slow
+class TestGetUserRolesByEmail:
+  def test_should_return_roles_of_existing_user(self):
+    dataset = {
+      'person': [{**PERSON1, 'email': EMAIL_1}],
+      'person_role': [{PERSON_ID: PERSON_ID1, 'role': ROLE_1}]
+    }
+    with create_recommend_reviewers(dataset) as recommend_reviewers:
+      assert recommend_reviewers.get_user_roles_by_email(email=EMAIL_1) == {ROLE_1}

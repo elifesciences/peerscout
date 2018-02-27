@@ -3,6 +3,7 @@ import datetime
 import logging
 from functools import partial
 
+import flask
 from flask import Blueprint, request, jsonify, url_for, Response
 from flask.json import JSONEncoder
 from flask_cors import CORS
@@ -112,6 +113,11 @@ class ApiAuth:
 
   def __call__(self, f):
     if self._flask_auth0:
+      return self._flask_auth0.wrap_request_handler(f)
+    return f
+
+  def wrap_search(self, f):
+    if self._flask_auth0:
       validate_request_with_f = partial(self._validate_request, f=f)
       validate_request_with_f.__name__ = f.__name__
       return self._flask_auth0.wrap_request_handler(validate_request_with_f)
@@ -136,7 +142,7 @@ class ApiAuth:
       )
       if not has_access:
         raise Forbidden('invalid or forbidden search type: %s' % search_type)
-    return f()
+    return f(email=email)
 
   def reload(self):
     if self._flask_auth0:
@@ -213,8 +219,8 @@ def create_api_blueprint(config):
       ))
 
   @blueprint.route("/recommend-reviewers")
-  @api_auth
-  def _recommend_reviewers_api() -> Response:
+  @api_auth.wrap_search
+  def _recommend_reviewers_api(email=None) -> Response:
     manuscript_no = request.args.get('manuscript_no')
     subject_area = request.args.get('subject_area')
     keywords = request.args.get('keywords')
@@ -255,6 +261,33 @@ def create_api_blueprint(config):
   @blueprint.route("/config")
   def _config_api() -> Response:
     return jsonify(client_config)
+
+  @blueprint.route("/search-types")
+  @api_auth
+  def _search_types_api(email=None) -> Response:
+    with db.session.begin():
+      if email is None:
+        LOGGER.debug('email is None, not filtering search types')
+        allowed_search_config = search_config
+      else:
+        roles = set(recommend_reviewers.get_user_roles_by_email(email)) | {''}
+        allowed_search_config = {
+          search_type: search_params
+          for search_type, search_params in search_config.items()
+          if search_params.get('required_role', '') in roles
+        }
+        LOGGER.debug(
+          'roles, email=%s, roles=%s, filtered_search_types=%s',
+          email, roles, allowed_search_config.keys()
+        )
+      search_types_response = [
+        {
+          'search_type': search_type,
+          'title': search_config[search_type].get('title', search_type)
+        }
+        for search_type in sorted(allowed_search_config.keys())
+      ]
+      return jsonify(search_types_response)
 
   def reload_api():
     recommend_reviewers.reload()
