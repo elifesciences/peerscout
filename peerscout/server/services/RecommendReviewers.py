@@ -874,44 +874,6 @@ class RecommendReviewers(object):
     )
     return result
 
-  def _potential_reviewer_ids_for_matching_manuscript_ids(
-    self, matching_manuscript_ids,
-    recommend_relationship_types, recommend_stage_names):
-
-    return set(iter_flatten(
-      self._potential_reviewer_ids_by_matching_manuscript_ids(
-        matching_manuscript_ids,
-        recommend_relationship_types,
-        recommend_stage_names
-      ).values()
-    ))
-    # published_version_ids = self._filter_published_version_ids(matching_manuscript_ids)
-    # person_ids_by_relationship_types = (
-    #   self.manuscript_person_relationship_service
-    #   .get_person_ids_for_version_ids_and_relationship_types(
-    #     published_version_ids, # recommend only published manuscripts by relationship type
-    #     recommend_relationship_types
-    #   )
-    # )
-    # person_ids_by_stage_names = (
-    #   self.manuscript_person_stage_service
-    #   .get_person_ids_for_version_ids_and_stage_names(
-    #     matching_manuscript_ids, # recommend also unpublished by stage name
-    #     recommend_stage_names
-    #   )
-    # )
-    # result = person_ids_by_relationship_types | person_ids_by_stage_names
-    # self.logger.debug(
-    #   'person_ids for version ids=%d stage names=%d (%s),'
-    #   ' published version ids=%d by relationship types=%d (%s), total=%d',
-    #   len(matching_manuscript_ids),
-    #   len(person_ids_by_stage_names), recommend_stage_names,
-    #   len(published_version_ids),
-    #   len(person_ids_by_relationship_types), recommend_relationship_types,
-    #   len(result)
-    # )
-    # return result
-
   def _find_potential_reviewer_ids(
     self, person_ids_by_version_id,
     include_person_ids, exclude_person_ids, ecr_subject_areas,
