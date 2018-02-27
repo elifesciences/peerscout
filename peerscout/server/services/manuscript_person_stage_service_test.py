@@ -28,8 +28,8 @@ def create_manuscript_person_stage_service(dataset) -> ManuscriptPersonStageServ
 
 @pytest.mark.slow
 class TestManuscriptPersonStageService:
-  class TestGetPersonIdsForVersionIdsAndStageNames:
-    def test_should_return_empty_set_if_no_version_ids_are_specified(self):
+  class TestGetPersonIdsByVersionIdsForStageNames:
+    def test_should_return_empty_dict_if_no_version_ids_are_specified(self):
       dataset = {
         'manuscript_version': [MANUSCRIPT_VERSION1],
         'manuscript_stage': [{
@@ -40,9 +40,9 @@ class TestManuscriptPersonStageService:
       }
       with create_manuscript_person_stage_service(dataset) as service:
         assert (
-          service.get_person_ids_for_version_ids_and_stage_names(
+          service.get_person_ids_by_version_id_for_stage_names(
             [], [StageNames.REVIEW_RECEIVED]
-          ) == set()
+          ) == {}
         )
 
     def test_should_return_empty_set_if_stage_does_not_match(self):
@@ -56,12 +56,12 @@ class TestManuscriptPersonStageService:
       }
       with create_manuscript_person_stage_service(dataset) as service:
         assert (
-          service.get_person_ids_for_version_ids_and_stage_names(
+          service.get_person_ids_by_version_id_for_stage_names(
             [MANUSCRIPT_VERSION_ID1], [StageNames.REVIEW_RECEIVED]
-          ) == set()
+          ) == {}
         )
 
-    def test_should_return_person_ids_with_matching_stages(self):
+    def test_should_return_person_ids_with_matching_stages_by_version_id(self):
       dataset = {
         'manuscript_version': [MANUSCRIPT_VERSION1],
         'manuscript_stage': [{
@@ -72,7 +72,9 @@ class TestManuscriptPersonStageService:
       }
       with create_manuscript_person_stage_service(dataset) as service:
         assert (
-          service.get_person_ids_for_version_ids_and_stage_names(
+          service.get_person_ids_by_version_id_for_stage_names(
             [MANUSCRIPT_VERSION_ID1], [StageNames.REVIEW_RECEIVED]
-          ) == {PERSON_ID1}
+          ) == {
+            MANUSCRIPT_VERSION_ID1: {PERSON_ID1}
+          }
         )

@@ -1,3 +1,4 @@
+from collections import defaultdict
 from itertools import groupby
 
 flatten = lambda l: [item for sublist in l for item in sublist]
@@ -57,3 +58,18 @@ def parse_list(s, sep=','):
   if not s:
     return []
   return [item.strip() for item in s.split(sep)]
+
+def invert_set_dict(d: dict) -> dict:
+  """Inverts a dict like:
+
+    {'a': {1, 2}, 'b': {1, 3}}
+
+    to:
+
+    {1: {'a', 'b'}, 2: {'a'}, 3: {'b'}}
+  """
+  result = defaultdict(set)
+  for k, v in d.items():
+    for x in v:
+      result[x].add(k)
+  return result

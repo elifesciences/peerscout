@@ -6,6 +6,10 @@ import logging
 
 import pandas as pd
 
+from peerscout.utils.collection import (
+  invert_set_dict
+)
+
 from peerscout.utils.pandas import (
   groupby_agg_droplevel
 )
@@ -204,6 +208,7 @@ def score_by_manuscript(manuscript, keyword, similarity):
   }
 
 def sorted_potential_reviewers(potential_reviewers):
+  potential_reviewers = list(potential_reviewers)
   review_duration_mean_keys = ['person', 'stats', 'overall', 'review-duration', 'mean']
   available_potential_reviewer_mean_durations = filter_none(deep_get_list(
     potential_reviewers, review_duration_mean_keys
@@ -668,22 +673,16 @@ class RecommendReviewers(object):
     }
 
   def _populate_potential_reviewer(
-    self, person_id, keyword_score_by_person_id, keyword_score_by_version_id,
-    similarity_by_manuscript_version_id):
-
-    author_of_manuscripts = self.manuscripts_by_author_map.get(person_id, [])
-    reviewer_of_manuscripts = self.manuscripts_by_reviewer_map.get(person_id, [])
-    involved_manuscripts = author_of_manuscripts + reviewer_of_manuscripts
+    self, person_id,
+    version_ids,
+    keyword_score_by_person_id,
+    manuscript_score_by_id):
 
     scores_by_manuscript = sorted_manuscript_scores_descending(
-      score_by_manuscript(
-        manuscript,
-        keyword=keyword_score_by_version_id.get(
-          manuscript[VERSION_ID], 0),
-        similarity=similarity_by_manuscript_version_id.get(
-          manuscript[VERSION_ID], None)
-      )
-      for manuscript in involved_manuscripts
+      score for score in (
+        manuscript_score_by_id.get(version_id)
+        for version_id in version_ids
+      ) if score
     )
 
     best_score = get_first(scores_by_manuscript, {})
@@ -692,6 +691,7 @@ class RecommendReviewers(object):
       best_manuscript_score=best_score
     )
 
+    author_of_manuscripts = self.manuscripts_by_author_map.get(person_id, [])
     author_of_manuscript_ids = set(m[VERSION_ID] for m in author_of_manuscripts)
 
     potential_reviewer = {
@@ -710,6 +710,28 @@ class RecommendReviewers(object):
       self.logger.warning('person id not found: %s', person_id)
       debugv('valid persons: %s', self.persons_map.keys())
     return potential_reviewer
+
+  def _populate_potential_reviewers(
+    self, person_ids, person_ids_by_version_id,
+    keyword_score_by_person_id,
+    keyword_score_by_version_id, similarity_by_manuscript_version_id):
+
+    manuscript_score_by_id = self._combine_manuscript_scores_by_id(
+      keyword_score_by_version_id=keyword_score_by_version_id,
+      similarity_by_manuscript_version_id=similarity_by_manuscript_version_id
+    )
+
+    version_ids_by_person_id = invert_set_dict(person_ids_by_version_id)
+
+    return (
+      self._populate_potential_reviewer(
+        person_id,
+        version_ids=version_ids_by_person_id.get(person_id, set()),
+        keyword_score_by_person_id=keyword_score_by_person_id,
+        manuscript_score_by_id=manuscript_score_by_id
+      )
+      for person_id in person_ids
+    )
 
   def _find_manuscript_ids_by_subject_areas_and_keywords_with_keyword_scores(
     self, subject_areas, keyword_list):
@@ -796,55 +818,108 @@ class RecommendReviewers(object):
       similarity_by_manuscript_version_id
     )
 
+  def _combine_manuscript_scores_by_id(
+    self, keyword_score_by_version_id, similarity_by_manuscript_version_id):
+
+    return {
+      version_id: score_by_manuscript(
+        {VERSION_ID: version_id},
+        keyword=keyword_score_by_version_id.get(version_id, 0),
+        similarity=similarity_by_manuscript_version_id.get(version_id, None)
+      )
+      for version_id in keyword_score_by_version_id.keys() | similarity_by_manuscript_version_id.keys()
+    }
+
   def _filter_published_version_ids(self, version_ids):
     return {
       version_id for version_id in version_ids
       if self.manuscripts_by_version_id_map.get(version_id, {}).get('is_published')
     }
 
-  def _potential_reviewer_ids_for_matching_manuscript_ids(
-    self, matching_manuscript_ids,
+  def _potential_reviewer_ids_by_matching_manuscript_ids(
+    self, version_ids,
     recommend_relationship_types, recommend_stage_names):
 
-    published_version_ids = self._filter_published_version_ids(matching_manuscript_ids)
+    published_version_ids = self._filter_published_version_ids(version_ids)
     person_ids_by_relationship_types = (
       self.manuscript_person_relationship_service
-      .get_person_ids_for_version_ids_and_relationship_types(
+      .get_person_ids_by_version_id_for_relationship_types(
         published_version_ids, # recommend only published manuscripts by relationship type
         recommend_relationship_types
       )
     )
     person_ids_by_stage_names = (
       self.manuscript_person_stage_service
-      .get_person_ids_for_version_ids_and_stage_names(
-        matching_manuscript_ids, # recommend also unpublished by stage name
+      .get_person_ids_by_version_id_for_stage_names(
+        version_ids, # recommend also unpublished by stage name
         recommend_stage_names
       )
     )
-    result = person_ids_by_relationship_types | person_ids_by_stage_names
+    result = {
+      version_id: (
+        person_ids_by_relationship_types.get(version_id, set()) |
+        person_ids_by_stage_names.get(version_id, set())
+      )
+      for version_id in version_ids
+    }
+    count_values = lambda d: sum(len(x) for x in d.values())
     self.logger.debug(
       'person_ids for version ids=%d stage names=%d (%s),'
-      ' published version ids=%d by relationship types=%d (%s), total=%d',
-      len(matching_manuscript_ids),
-      len(person_ids_by_stage_names), recommend_stage_names,
+      ' published version ids=%d by relationship types=%d (%s), total=%d (counts overlap)',
+      len(version_ids),
+      count_values(person_ids_by_stage_names), recommend_stage_names,
       len(published_version_ids),
-      len(person_ids_by_relationship_types), recommend_relationship_types,
-      len(result)
+      count_values(person_ids_by_relationship_types), recommend_relationship_types,
+      count_values(result)
     )
     return result
 
+  def _potential_reviewer_ids_for_matching_manuscript_ids(
+    self, matching_manuscript_ids,
+    recommend_relationship_types, recommend_stage_names):
+
+    return set(iter_flatten(
+      self._potential_reviewer_ids_by_matching_manuscript_ids(
+        matching_manuscript_ids,
+        recommend_relationship_types,
+        recommend_stage_names
+      ).values()
+    ))
+    # published_version_ids = self._filter_published_version_ids(matching_manuscript_ids)
+    # person_ids_by_relationship_types = (
+    #   self.manuscript_person_relationship_service
+    #   .get_person_ids_for_version_ids_and_relationship_types(
+    #     published_version_ids, # recommend only published manuscripts by relationship type
+    #     recommend_relationship_types
+    #   )
+    # )
+    # person_ids_by_stage_names = (
+    #   self.manuscript_person_stage_service
+    #   .get_person_ids_for_version_ids_and_stage_names(
+    #     matching_manuscript_ids, # recommend also unpublished by stage name
+    #     recommend_stage_names
+    #   )
+    # )
+    # result = person_ids_by_relationship_types | person_ids_by_stage_names
+    # self.logger.debug(
+    #   'person_ids for version ids=%d stage names=%d (%s),'
+    #   ' published version ids=%d by relationship types=%d (%s), total=%d',
+    #   len(matching_manuscript_ids),
+    #   len(person_ids_by_stage_names), recommend_stage_names,
+    #   len(published_version_ids),
+    #   len(person_ids_by_relationship_types), recommend_relationship_types,
+    #   len(result)
+    # )
+    # return result
+
   def _find_potential_reviewer_ids(
-    self, matching_manuscript_ids, recommend_relationship_types, recommend_stage_names,
+    self, person_ids_by_version_id,
     include_person_ids, exclude_person_ids, ecr_subject_areas,
     person_keyword_scores, role):
 
     return self.person_role_service.filter_person_ids_by_role(
       (
-        self._potential_reviewer_ids_for_matching_manuscript_ids(
-          matching_manuscript_ids,
-          recommend_relationship_types=recommend_relationship_types,
-          recommend_stage_names=recommend_stage_names
-        ) |
+        set(iter_flatten(person_ids_by_version_id.values())) |
         get_person_ids_of_person_keywords_scores(person_keyword_scores) |
         self._get_early_career_reviewer_ids_by_subject_areas(ecr_subject_areas) |
         include_person_ids
@@ -878,12 +953,16 @@ class RecommendReviewers(object):
       )
     )
 
+    person_ids_by_version_id = self._potential_reviewer_ids_by_matching_manuscript_ids(
+      matching_manuscript_ids,
+      recommend_relationship_types=recommend_relationship_types,
+      recommend_stage_names=recommend_stage_names
+    )
+
     person_keyword_scores = self.person_keyword_service.get_keyword_scores(keyword_list)
 
     potential_reviewers_ids = self._find_potential_reviewer_ids(
-      matching_manuscript_ids=matching_manuscript_ids,
-      recommend_relationship_types=recommend_relationship_types,
-      recommend_stage_names=recommend_stage_names,
+      person_ids_by_version_id=person_ids_by_version_id,
       include_person_ids=include_person_ids,
       exclude_person_ids=exclude_person_ids,
       ecr_subject_areas=ecr_subject_areas,
@@ -891,15 +970,15 @@ class RecommendReviewers(object):
       role=role
     )
 
-    potential_reviewers = sorted_potential_reviewers([
-      self._populate_potential_reviewer(
-        person_id,
+    potential_reviewers = sorted_potential_reviewers(
+      self._populate_potential_reviewers(
+        potential_reviewers_ids,
+        person_ids_by_version_id=person_ids_by_version_id,
         keyword_score_by_person_id=person_keyword_scores,
         keyword_score_by_version_id=keyword_score_by_version_id,
         similarity_by_manuscript_version_id=similarity_by_manuscript_version_id
       )
-      for person_id in potential_reviewers_ids
-    ])
+    )
 
     if limit is not None and limit > 0:
       potential_reviewers = potential_reviewers[:limit]

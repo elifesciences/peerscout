@@ -261,6 +261,9 @@ def recommend_for_dataset(dataset, filter_by_subject_area_enabled=False, **kwarg
 def _potential_reviewers_person_ids(potential_reviewers):
   return [r['person'][PERSON_ID] for r in potential_reviewers]
 
+def _potential_reviewer_scores_by_person_id(potential_reviewers):
+  return {r['person'][PERSON_ID]: r['scores']['keyword'] for r in potential_reviewers}
+
 def _review_complete_stages(id_fields, contacted, accepted, reviewed):
   return [{
     **id_fields,
@@ -906,7 +909,7 @@ class TestRecommendReviewers:
       person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
       assert person_ids == [PERSON_ID1]
 
-    def test_should_recommend_previous_senior_editors(self):
+    def test_should_recommend_previous_senior_editors_and_reflect_in_score(self):
       dataset = {
         'person': [PERSON1],
         'person_role': [{PERSON_ID: PERSON_ID1, 'role': PersonRoles.SENIOR_EDITOR}],
@@ -927,8 +930,12 @@ class TestRecommendReviewers:
           RelationshipTypes.REVIEWER
         ]
       )
-      person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+      potential_reviewers = result['potential_reviewers']
+      person_ids = _potential_reviewers_person_ids(potential_reviewers)
       assert person_ids == [PERSON_ID1]
+      assert _potential_reviewer_scores_by_person_id(potential_reviewers) == {
+        PERSON_ID1: 1.0
+      }
 
     def test_should_recommend_based_on_stage_name(self):
       custom_stage = 'custom_stage'
@@ -956,7 +963,8 @@ class TestRecommendReviewers:
           custom_stage
         ]
       )
-      person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+      potential_reviewers = result['potential_reviewers']
+      person_ids = _potential_reviewers_person_ids(potential_reviewers)
       assert person_ids == [PERSON_ID1]
 
     def test_should_recommend_senior_editor_based_on_person_keyword_and_reflect_in_score(self):
@@ -969,12 +977,12 @@ class TestRecommendReviewers:
         dataset, keywords=KEYWORD1, manuscript_no=None,
         role=PersonRoles.SENIOR_EDITOR
       )
-      person_ids = _potential_reviewers_person_ids(result['potential_reviewers'])
+      potential_reviewers = result['potential_reviewers']
+      person_ids = _potential_reviewers_person_ids(potential_reviewers)
       assert person_ids == [PERSON_ID1]
-      assert (
-        [r['scores']['keyword'] for r in result['potential_reviewers']] ==
-        [1.0]
-      )
+      assert _potential_reviewer_scores_by_person_id(potential_reviewers) == {
+        PERSON_ID1: 1.0
+      }
 
   class TestAllKeywords:
     def test_should_include_manuscript_keywords_in_all_keywords(self):

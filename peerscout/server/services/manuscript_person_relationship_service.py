@@ -1,8 +1,8 @@
 import logging
 
-from peerscout.utils.collection import (
-  iter_flatten
-)
+import sqlalchemy
+
+from peerscout.utils.collection import groupby_to_dict, applymap_dict
 
 LOGGER = logging.getLogger(__name__)
 
@@ -36,22 +36,26 @@ class ManuscriptPersonRelationshipService:
   def __init__(self, db):
     self._db = db
 
-  def get_person_ids_for_version_ids_and_relationship_type(self, version_ids, relationship_type):
+  def get_person_ids_by_version_id_for_relationship_types(self, version_ids, relationship_types):
+    if not relationship_types or not version_ids:
+      return {}
     db = self._db
-    relationship_table = _get_relationship_table(db, relationship_type)
-    return set(
-      r[0] for r in
+    relationship_tables = [
+      _get_relationship_table(db, relationship_type)
+      for relationship_type in relationship_types
+    ]
+    queries = [
       db.session.query(
+        relationship_table.version_id,
         relationship_table.person_id
       ).filter(
         relationship_table.version_id.in_(version_ids)
-      ).all()
-    )
-
-  def get_person_ids_for_version_ids_and_relationship_types(self, version_ids, relationship_types):
-    return set(iter_flatten(
-      self.get_person_ids_for_version_ids_and_relationship_type(
-        version_ids, relationship_type
       )
-      for relationship_type in relationship_types
-    ))
+      for relationship_table in relationship_tables
+    ]
+    q = queries[0] if len(queries) == 1 else db.session.query(sqlalchemy.union(*queries))
+    return applymap_dict(groupby_to_dict(
+      q.all(),
+      lambda row: row[0],
+      lambda row: row[1]
+    ), set)
