@@ -1,3 +1,4 @@
+from functools import wraps
 import json
 import logging
 
@@ -29,6 +30,7 @@ class Auth0(object):
   def wrap_request_handler(
     self, request_handler, get_access_token, not_authorized_handler, requires_auth=None):
 
+    @wraps(request_handler)
     def wrapped_request_handler():
       if requires_auth is not None and not requires_auth():
         return request_handler()
