@@ -52,7 +52,7 @@ const api = baseUrl => {
     getConfig: () => fetchJson(urlWithParams(getConfigUrl, {})),
     getAllSubjectAreas: () => fetchJson(urlWithParams(getAllSubjectAreasUrl, {})),
     getAllKeywords: () => fetchJson(urlWithParams(getAllKeywordsUrl, {})),
-    getSearchTypes: () => fetchJson(urlWithParams(getSearchTypesUrl, {})),
+    getSearchTypes: options => fetchJson(urlWithParams(getSearchTypesUrl, {}), options),
     recommendReviewers: (params, options) => fetchJson(urlWithParams(recommendReviewersUrl, params), options),
     isNotAuthorizedError: error => error === NOT_AUTHORIZED_ERROR
   };
