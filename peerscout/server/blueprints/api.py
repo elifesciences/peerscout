@@ -10,6 +10,8 @@ from flask_cors import CORS
 from joblib import Memory
 from werkzeug.exceptions import BadRequest, Forbidden
 
+from peerscout.utils.collection import parse_list
+
 from ..config.search_config import parse_search_config, DEFAULT_SEARCH_TYPE
 
 from ..services import (
@@ -35,12 +37,6 @@ from ...shared.app_config import get_app_config
 from ...shared.logging_config import configure_logging
 
 LOGGER = logging.getLogger(__name__)
-
-def parse_list(s, sep=','):
-  s = s.strip()
-  if len(s) == 0:
-    return []
-  return [item.strip() for item in s.split(sep)]
 
 class ReloadableRecommendReviewers:
   def __init__(self, create_recommend_reviewer):
@@ -206,17 +202,9 @@ def create_api_blueprint(config):
     })
 
   @memory.cache
-  def recommend_reviewers_as_json(manuscript_no, subject_area, keywords, abstract, role, limit) \
-    -> Response:
+  def recommend_reviewers_as_json(**kwargs) -> Response:
     with db.session.begin():
-      return jsonify(recommend_reviewers.recommend(
-        manuscript_no=manuscript_no,
-        subject_area=subject_area,
-        keywords=keywords,
-        abstract=abstract,
-        role=role,
-        limit=limit
-      ))
+      return jsonify(recommend_reviewers.recommend(**kwargs))
 
   @blueprint.route("/recommend-reviewers")
   @api_auth.wrap_search
@@ -232,6 +220,8 @@ def create_api_blueprint(config):
     if search_params is None:
       raise BadRequest('unknown search type - %s' % search_type)
     role = search_params.get('filter_by_role')
+    recommend_relationship_types = search_params.get('recommend_relationship_types')
+    recommend_stage_names = search_params.get('recommend_stage_names')
 
     if limit is None:
       limit = 100
@@ -240,11 +230,13 @@ def create_api_blueprint(config):
     if not manuscript_no and keywords is None:
       raise BadRequest('keywords parameter required')
     return recommend_reviewers_as_json(
-      manuscript_no,
-      subject_area,
-      keywords,
-      abstract,
+      manuscript_no=manuscript_no,
+      subject_area=subject_area,
+      keywords=keywords,
+      abstract=abstract,
       role=role,
+      recommend_relationship_types=recommend_relationship_types,
+      recommend_stage_names=recommend_stage_names,
       limit=limit
     )
 
