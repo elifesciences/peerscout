@@ -114,6 +114,18 @@ class Main extends React.Component {
       legendOpen: getBooleanLocalStorageItem(LEGEND_OPEN_KEY, true)
     };
 
+    this.getSearchTypes = createSelector(
+      [() => this.state.authenticationState],
+      authenticationState => {
+        if (!authenticationState.authenticated) {
+          return Promise.resolve();
+        }
+        return this.props.reviewerRecommendationApi.getSearchTypes(
+          this.getAuhenticationHeaders(authenticationState)
+        );
+      }
+    );
+
     this.getResults = createSelector(
       [
         () => this.state.searchOptions,
@@ -139,11 +151,9 @@ class Main extends React.Component {
         if (searchOptions.searchType) {
           params.search_type = searchOptions.searchType;
         }
-        return this.props.reviewerRecommendationApi.recommendReviewers(params, {
-          headers: {
-            'X-Access-Token': authenticationState && authenticationState.access_token
-          }
-        });
+        return this.props.reviewerRecommendationApi.recommendReviewers(
+          params, this.getAuhenticationHeaders(authenticationState)
+        );
       }
     );
 
@@ -218,6 +228,14 @@ class Main extends React.Component {
     };
   }
 
+  getAuhenticationHeaders(authenticationState) {
+    return {
+      headers: {
+        'X-Access-Token': authenticationState && authenticationState.access_token
+      }
+    };
+  }
+
   locationToSearchOptions(location, defaultSearchOptions) {
     const params = parseSearch(location.search || '');
     return {
@@ -286,6 +304,9 @@ class Main extends React.Component {
       this.setState({
         authenticationState
       });
+      if (authenticationState.authenticated) {
+        this.onAuthenticated();
+      }
     });
     this.updateSearchOptionsFromLocation(this.history.location);
     this.unlisten = this.history.listen((location, action) => {
@@ -293,37 +314,60 @@ class Main extends React.Component {
     });
   }
 
-  componentDidMount() {
+  onAuthenticated() {
+    this.updateSearchTypes();
+  }
+
+  updateConfig() {
     this.props.reviewerRecommendationApi.getConfig().then(config => this.initConfig(
       this.translateConfig(config)
     )).catch(err => {
       reportError('failed to fetch config', err);
     });
+  }
+
+  updateSubjectAreas() {
     this.props.reviewerRecommendationApi.getAllSubjectAreas().then(allSubjectAreas => this.setState({
       allSubjectAreas
     })).catch(err => {
       reportError('failed to fetch subject areas', err);
     });
+  }
+
+  updateKeywords() {
     this.props.reviewerRecommendationApi.getAllKeywords().then(allKeywords => this.setState({
       allKeywords
     })).catch(err => {
       reportError('failed to fetch keywords', err);
     });
-    this.props.reviewerRecommendationApi.getSearchTypes().then(searchTypes => {
+  }
+
+  setDefaultSearchType(searchType) {
+    this.defaultSearchOptions.searchType = searchType;
+    this.setSearchOptions({
+      ...this.defaultSearchOptions,
+      ...this.state.searchOptions
+    });
+  }
+
+  updateSearchTypes() {
+    this.getSearchTypes().then(searchTypes => {
       console.log('searchTypes:', searchTypes);
       this.setState(state => ({
         searchTypes
       }));
       if (searchTypes.length > 0) {
-        this.defaultSearchOptions.searchType = searchTypes[0].search_type;
-        this.setSearchOptions({
-          ...this.defaultSearchOptions,
-          ...this.state.searchOptions
-        })
+        this.setDefaultSearchType(searchTypes[0].search_type);
       }
     }).catch(err => {
       reportError('failed to search types', err);
     });
+  }
+
+  componentDidMount() {
+    this.updateConfig();
+    this.updateSubjectAreas();
+    this.updateKeywords();
   }
 
   componentDidUpdate(prevProps, prevState) {
