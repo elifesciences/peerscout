@@ -5,6 +5,20 @@ elifePipeline({
         commit = elifeGitRevision()
     }
 
+    elifeOnNode(
+        {
+            stage 'Build image', {
+                checkout scm
+                dockerBuild 'peerscout', commit
+            }
+
+            stage 'Project tests (container)', {
+                dockerProjectTests 'peerscout', commit
+            }
+        },
+        'elife-libraries--ci'
+    )
+
     stage 'Project tests', {
         lock('peerscout--ci') {
             builderDeployRevision 'peerscout--ci', commit
