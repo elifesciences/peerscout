@@ -16,7 +16,7 @@ elifePipeline({
                 dockerProjectTests 'peerscout', commit
             }
         },
-        'elife-libraries--ci'
+        'containers--medium'
     )
 
     stage 'Project tests', {
