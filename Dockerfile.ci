@@ -1,0 +1,2 @@
+ARG commit=latest
+FROM elifesciences/peerscout:${commit}

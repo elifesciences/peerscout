@@ -13,6 +13,7 @@ elifePipeline({
             }
 
             stage 'Project tests (container)', {
+                dockerBuildCi 'peerscout', commit
                 dockerProjectTests 'peerscout', commit
             }
         },
