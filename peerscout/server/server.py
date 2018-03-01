@@ -50,7 +50,7 @@ def main():
   port = config.get('server', 'port', fallback=8080)
   host = config.get('server', 'host', fallback=None)
   app = create_app(config)
-  app.run(port=port, host=host, threaded=False)
+  app.run(port=port, host=host, threaded=True)
 
 if __name__ == "__main__":
   main()

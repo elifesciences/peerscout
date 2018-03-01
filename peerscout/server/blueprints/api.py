@@ -32,7 +32,7 @@ from ..auth.EmailValidator import (
   read_valid_emails
 )
 
-from ...shared.database import connect_configured_database
+from ...shared.database import connect_configured_database, Database
 from ...shared.app_config import get_app_config
 from ...shared.logging_config import configure_logging
 
@@ -175,7 +175,7 @@ def create_api_blueprint(config):
   LOGGER.debug("cache directory: %s", cache_dir)
   memory.clear(warn=False)
 
-  db = connect_configured_database(autocommit=True)
+  db: Database = connect_configured_database(autocommit=True)
 
   load_recommender = get_recommend_reviewer_factory(db, config)
 
@@ -184,7 +184,7 @@ def create_api_blueprint(config):
   get_search_type = lambda: request.args.get('search_type', DEFAULT_SEARCH_TYPE)
 
   def user_has_role_by_email(email, role) -> bool:
-    with db.session.begin():
+    with db.begin():
       return recommend_reviewers.user_has_role_by_email(email=email, role=role)
 
   api_auth = ApiAuth(
@@ -206,7 +206,7 @@ def create_api_blueprint(config):
 
   @memory.cache
   def recommend_reviewers_as_json(**kwargs) -> Response:
-    with db.session.begin():
+    with db.begin():
       return jsonify(recommend_reviewers.recommend(**kwargs))
 
   @blueprint.route("/recommend-reviewers")
@@ -245,12 +245,12 @@ def create_api_blueprint(config):
 
   @blueprint.route("/subject-areas")
   def _subject_areas_api() -> Response:
-    with db.session.begin():
+    with db.begin():
       return jsonify(list(recommend_reviewers.get_all_subject_areas()))
 
   @blueprint.route("/keywords")
   def _keywords_api() -> Response:
-    with db.session.begin():
+    with db.begin():
       return jsonify(list(recommend_reviewers.get_all_keywords()))
 
   @blueprint.route("/config")
@@ -260,7 +260,7 @@ def create_api_blueprint(config):
   @blueprint.route("/search-types")
   @api_auth
   def _search_types_api(email=None) -> Response:
-    with db.session.begin():
+    with db.begin():
       if email is None or api_auth.is_staff_email(email):
         LOGGER.debug('email is None or staff email, not filtering search types')
         allowed_search_config = search_config
@@ -283,6 +283,13 @@ def create_api_blueprint(config):
         for search_type in sorted(allowed_search_config.keys())
       ]
       return jsonify(search_types_response)
+
+  @blueprint.teardown_request
+  def _remove_session(exc = None):
+    try:
+      db.remove_local()
+    except Exception as e:
+      LOGGER.warning('failed to remove session due to %s', e, exc_info=e)
 
   def reload_api():
     recommend_reviewers.reload()
