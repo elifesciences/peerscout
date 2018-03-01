@@ -15,6 +15,6 @@ pyLDAvis==2.1.1
 ratelimit==1.4.1
 scikit-learn==0.19.1
 scipy==1.0.0
-spacy==2.0.7
+spacy==2.0.9
 bhtsne==0.1.9
 newrelic==2.102.0.85
