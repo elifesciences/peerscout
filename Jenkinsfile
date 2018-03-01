@@ -14,7 +14,7 @@ elifePipeline({
 
             stage 'Project tests (container)', {
                 dockerBuildCi 'peerscout', commit
-                dockerProjectTests 'peerscout', commit
+                dockerProjectTests 'peerscout', commit, ['build/pytest.xml']
             }
         },
         'containers--medium'
