@@ -1,4 +1,4 @@
-FROM elifesciences/python:889f7fa7844074ed4791084624ee19b40db258a0
+FROM elifesciences/python:cacd250ec201feab491c0738f261561b5360997b
 
 USER elife
 ENV PROJECT_FOLDER=/srv/peerscout
