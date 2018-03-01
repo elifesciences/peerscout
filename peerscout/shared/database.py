@@ -3,10 +3,11 @@ from json import JSONEncoder
 import datetime
 import logging
 from contextlib import contextmanager
+from typing import Dict, ContextManager
 
 import pandas as pd
 import sqlalchemy
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session, Session
 from sqlalchemy.orm import load_only
 
 from .database_schema import (
@@ -184,7 +185,7 @@ class Entity(object):
 class Database(object):
   def __init__(self, engine, autocommit=False):
     self.engine = engine
-    self.session = sessionmaker(engine, autocommit=autocommit)()
+    self.session: Session = scoped_session(sessionmaker(engine, autocommit=autocommit))
     self.views = create_views(engine.dialect.name)
     self.tables = {
       t.__tablename__: Entity(self.session, t)
@@ -263,6 +264,9 @@ class Database(object):
   def is_auto_commit(self):
     return self.session.autocommit
 
+  def begin(self) -> ContextManager[Session]:
+    return self.session.begin()
+
   def commit_if_not_auto_commit(self):
     if not self.is_auto_commit():
       self.commit()
@@ -280,6 +284,9 @@ class Database(object):
         self.session.rollback()
         raise
 
+  def remove_local(self):
+    self.session.remove()
+
   def close(self):
     self.session.close()
 
@@ -289,11 +296,11 @@ class Database(object):
   def __getattr__(self, name):
     return self.tables[name]
 
-def connect_database(*args, autocommit=False, **kwargs):
+def connect_database(*args, autocommit: bool = False, **kwargs) -> Database:
   engine = db_connect(*args, **kwargs)
   return Database(engine, autocommit=autocommit)
 
-def connect_configured_database(autocommit=False):
+def connect_configured_database(autocommit: bool = False) -> Database:
   config = get_app_config()
   db_config = config['database']
   name = db_config['name']
@@ -313,13 +320,13 @@ def connect_configured_database(autocommit=False):
   )
 
 @contextmanager
-def connect_managed_configured_database(autocommit=False):
+def connect_managed_configured_database(autocommit: bool = False) -> ContextManager[Database]:
   db = connect_configured_database(autocommit=autocommit)
   yield db
   db.close()
 
 @contextmanager
-def empty_in_memory_database(autocommit=False):
+def empty_in_memory_database(autocommit: bool = False) -> ContextManager[Database]:
   engine = sqlalchemy.create_engine('sqlite://', echo=False)
   get_logger().debug("engine driver: %s", engine.driver)
   db = Database(engine, autocommit=autocommit)
@@ -327,7 +334,10 @@ def empty_in_memory_database(autocommit=False):
   yield db
   db.close()
 
-def insert_dataset(db, dataset):
+TableName = str
+Dataset = Dict[TableName, list]
+
+def insert_dataset(db: Database, dataset: Dataset):
   sorted_table_names = db.sorted_table_names()
   unknown_table_names = set(dataset.keys()) - set(sorted_table_names)
   if len(unknown_table_names) > 0:
@@ -340,7 +350,7 @@ def insert_dataset(db, dataset):
   db.commit_if_not_auto_commit()
 
 @contextmanager
-def populated_in_memory_database(dataset, **kwargs):
+def populated_in_memory_database(dataset: Dataset, **kwargs) -> ContextManager[Database]:
   with empty_in_memory_database(**kwargs) as db:
     insert_dataset(db, dataset)
     yield db
