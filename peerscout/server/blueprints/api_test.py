@@ -137,18 +137,25 @@ class TestApiBlueprint:
         assert _get_ok_json(response) == client_config
 
   class TestSearchTypes:
+    @pytest.mark.parametrize('email, required_role, auth0_domain', [
+      (None, None, None),
+      (None, None, DOMAIN_1),
+      ('data@science.org', ROLE_1, DOMAIN_1)
+    ])
     def test_should_return_all_search_types_if_authorisation_is_not_required(
-      self, MockRecommendReviewers, MockFlaskAuth0):
+      self, MockRecommendReviewers, MockFlaskAuth0, email, required_role, auth0_domain):
 
-      _setup_flask_auth0_mock_email(MockFlaskAuth0, email=None)
+      _setup_flask_auth0_mock_email(MockFlaskAuth0, email=email)
 
       config = dict_to_config({
-        'auth': {'allowed_ips': ''},
+        'auth': {'allowed_ips': '', 'valid_email_domains': 'science.org'},
         'client': {'auth0_domain': DOMAIN_1},
         SEARCH_SECTION_PREFIX + SEARCH_TYPE_1: {
+          'required_role': required_role or '',
           'title': SEARCH_TYPE_TITLE_1
         },
         SEARCH_SECTION_PREFIX + SEARCH_TYPE_2: {
+          'required_role': required_role or '',
           'title': SEARCH_TYPE_TITLE_2
         }
       })
