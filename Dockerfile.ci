@@ -1,2 +1,3 @@
 ARG commit=latest
 FROM elifesciences/peerscout:${commit}
+CMD ["./project_tests.sh"]
