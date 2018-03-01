@@ -53,7 +53,7 @@ class ManuscriptPersonRelationshipService:
       )
       for relationship_table in relationship_tables
     ]
-    q = queries[0] if len(queries) == 1 else db.session.query(sqlalchemy.union(*queries))
+    q = queries[0] if len(queries) == 1 else db.session.query(sqlalchemy.union(*queries).alias())
     return applymap_dict(groupby_to_dict(
       q.all(),
       lambda row: row[0],
