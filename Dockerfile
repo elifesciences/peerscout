@@ -16,7 +16,7 @@ WORKDIR ${PROJECT_FOLDER}
 COPY --chown=elife:elife install.sh requirements.txt requirements-debug.txt ${PROJECT_FOLDER}/
 RUN /bin/bash install.sh
 
-COPY --chown=elife:elife client/ ${PROJECT_FOLDER}/client/
+COPY --from=client --chown=elife:elife /home/node/client/ ${PROJECT_FOLDER}/client/
 COPY --chown=elife:elife docvec_model/ ${PROJECT_FOLDER}/docvec_model/
 COPY --chown=elife:elife peerscout/ ${PROJECT_FOLDER}/peerscout/
 COPY --chown=elife:elife server.sh ${PROJECT_FOLDER}/
