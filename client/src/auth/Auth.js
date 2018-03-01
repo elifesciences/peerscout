@@ -1,7 +1,8 @@
 import {
   WebAuth
 } from 'auth0-js';
-import Auth0LockPasswordless from 'auth0-lock-passwordless';
+
+import { Auth0LockPasswordless } from 'auth0-lock';
 
 const ACCESS_TOKEN_KEY = 'access_token';
 
@@ -9,26 +10,38 @@ export default class Auth {
   constructor(options) {
     this.options = options;
     this.lock = new Auth0LockPasswordless(
-      options.client_id, options.domain
+      options.client_id, options.domain, {
+        passwordlessMethod: "link"
+      }
     );
+    this.lock.on('authorization_error', error => {
+      console.log('authorization_error:', error);
+      this._setAuthorizationError(error.errorDescription || error.error)
+    });
+    this.lock.on('authenticated', authResult => {
+      console.log('authResult:', authResult)
+      this._setAccessToken(authResult.accessToken);
+    });
+    this.lock.on('hash_parsed', hash => {
+      console.log('hash_parsed, hash:', hash);
+      if (!hash) {
+        this._checkExistingToken()
+      }
+    });
     this.profile = null;
     this.listeners = [];
   }
 
-  initialise() {
-    console.log('initialise', window.location.hash);
-    const hash_auth_result = this.lock.parseHash(window.location.hash);
-    console.log('hash_auth_result', hash_auth_result);
-    if (hash_auth_result && hash_auth_result.error) {
-      this._setAuthorizationError(hash_auth_result.error_description || hash_auth_result.error)
-    } else if (hash_auth_result && hash_auth_result.access_token) {
-      this._setAccessToken(hash_auth_result.access_token);
-    } else {
-      const access_token = localStorage.getItem(ACCESS_TOKEN_KEY);
-      if (access_token) {
-        this._setAccessToken(access_token);
-      }
+  _checkExistingToken() {
+    const access_token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    console.log('_checkExistingToken, access_token:', access_token);
+    if (access_token) {
+      this._setAccessToken(access_token);
     }
+  }
+
+  initialise() {
+    // do nothing, it's now handled by Auth0 / after hash_parsed event
   }
 
   // The _doAuthentication function will get the user profile information if authentication is successful
@@ -121,7 +134,7 @@ export default class Auth {
   }
 
   loginUsingMagicLink() {
-    this.lock.magiclink();
+    this.lock.show();
   }
 
   logout() {
