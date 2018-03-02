@@ -48,7 +48,7 @@ module.exports = {
     historyApiFallback: true
   },
   module: {
-    loaders: [{
+    rules: [{
       test: /\.css$/,
       loader: "style-loader!css-loader"
     }, {
@@ -84,10 +84,11 @@ module.exports = {
     }])
   ],
   resolve: {
-    root: [
-      path.resolve(__dirname, 'src')
+    modules: [
+      path.join(__dirname, "src"),
+      "node_modules"
     ],
-    extensions: ['', '.js', '.jsx', '.json'],
+    extensions: ['.js', '.jsx', '.json'],
     alias: {
       'd3': 'd3/build/d3.js'
     }

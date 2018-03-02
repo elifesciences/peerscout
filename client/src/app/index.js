@@ -2,9 +2,9 @@ import ReactDOM from 'react-dom';
 import React from 'react';
 import injectTapEventPlugin from 'react-tap-event-plugin';
 
-import Root from './Root';
-
 import '../polyfills';
+
+import Root from './Root';
 
 import 'font-awesome/css/font-awesome.css';
 import 'react-more/styles.css';
