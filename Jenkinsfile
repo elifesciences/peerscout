@@ -9,10 +9,12 @@ elifePipeline({
         {
             stage 'Build image', {
                 checkout scm
+                sh "docker build -f Dockerfile.client -t elifesciences/peerscout_client:${commit} ."
                 dockerBuild 'peerscout', commit
             }
 
             stage 'Project tests (container)', {
+                sh "docker run elifesciences/client:${commit} ./project_tests.sh"
                 dockerBuildCi 'peerscout', commit
                 dockerProjectTests 'peerscout', commit, ['build/pytest.xml']
             }
