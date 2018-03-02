@@ -25,7 +25,6 @@ RUN mkdir logs && chown www-data:www-data logs
 
 # Test
 COPY --chown=elife:elife pytest.ini ${PROJECT_FOLDER}/
-RUN mkdir build && chown www-data:www-data build
 ENV COVERAGE_FILE=${PROJECT_FOLDER}/build/.coverage
 RUN touch app.cfg && chown www-data:www-data app.cfg
 

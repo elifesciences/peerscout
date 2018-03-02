@@ -1,3 +1,8 @@
 ARG commit=latest
 FROM elifesciences/peerscout:${commit}
+
+USER root
+RUN mkdir build/ && chown www-data:www-data build/
+
+USER www-data
 CMD ["./project_tests.sh"]
