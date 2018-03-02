@@ -10,7 +10,7 @@ elifePipeline({
             stage 'Build image', {
                 checkout scm
                 sh "docker build -f Dockerfile.client -t elifesciences/peerscout_client:${commit} ."
-                dockerBuild 'peerscout', commit
+                sh "docker build -f Dockerfile -t elifesciences/peerscout:${commit} --build-arg commit=${commit} ."
             }
 
             stage 'Project tests (container)', {
