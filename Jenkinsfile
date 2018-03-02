@@ -16,7 +16,11 @@ elifePipeline({
             stage 'Project tests (container)', {
                 sh "docker run elifesciences/client:${commit} ./project_tests.sh"
                 dockerBuildCi 'peerscout', commit
-                dockerProjectTests 'peerscout', commit, ['build/pytest.xml']
+
+                // substitute with:
+                // dockerProjectTests 'peerscout', commit, ['build/pytest.xml']
+                // when correctly using `docker cp` on build/
+                sh "docker run elifesciences/peerscout_ci"
             }
         },
         'containers--medium'
