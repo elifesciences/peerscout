@@ -29,8 +29,7 @@ elifePipeline({
     stage 'Project tests', {
         lock('peerscout--ci') {
             builderDeployRevision 'peerscout--ci', commit
-
-            builderProjectTests 'peerscout--ci', '/srv/peerscout'
+            builderSmokeTests 'peerscout--ci', '/srv/peerscout'
         }
     }
 
