@@ -20,7 +20,7 @@ elifePipeline({
                 // substitute with:
                 // dockerProjectTests 'peerscout', commit, ['build/pytest.xml']
                 // when correctly using `docker cp` on build/
-                sh "docker run elifesciences/peerscout_ci"
+                sh "docker run elifesciences/peerscout_ci:${commit}"
             }
         },
         'containers--medium'
