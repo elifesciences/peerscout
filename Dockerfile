@@ -1,12 +1,5 @@
-FROM node:6.13.0-stretch AS client
-
-# we don't have a elife base image yet for node, so we use directly the official one
-USER node
-RUN mkdir /home/node/client
-WORKDIR /home/node/client
-COPY --chown=node:node client/package.json /home/node/client/
-RUN npm install
-
+ARG commit=develop
+FROM elifesciences/peerscout_client:${commit} AS client
 FROM elifesciences/python:cacd250ec201feab491c0738f261561b5360997b
 
 USER elife
