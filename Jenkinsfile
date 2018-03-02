@@ -14,7 +14,7 @@ elifePipeline({
             }
 
             stage 'Project tests (container)', {
-                sh "docker run elifesciences/client:${commit} ./project_tests.sh"
+                sh "docker run elifesciences/peerscout_client:${commit} ./project_tests.sh"
                 dockerBuildCi 'peerscout', commit
 
                 // substitute with:
