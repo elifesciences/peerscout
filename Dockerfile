@@ -10,7 +10,6 @@ COPY --chown=elife:elife install.sh requirements.txt ${PROJECT_FOLDER}/
 RUN DEBUG=0 /bin/bash install.sh
 
 COPY --from=client --chown=elife:elife /home/node/client/ ${PROJECT_FOLDER}/client/
-COPY --chown=elife:elife docvec_model/ ${PROJECT_FOLDER}/docvec_model/
 COPY --chown=elife:elife peerscout/ ${PROJECT_FOLDER}/peerscout/
 COPY --chown=elife:elife server.sh ${PROJECT_FOLDER}/
 COPY --chown=elife:elife project_tests.sh ${PROJECT_FOLDER}/
