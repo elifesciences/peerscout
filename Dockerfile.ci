@@ -1,4 +1,4 @@
-ARG commit=latest
+ARG commit=develop
 FROM elifesciences/peerscout:${commit}
 ENV DEBUG=1
 
