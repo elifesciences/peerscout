@@ -5,11 +5,31 @@ elifePipeline({
         commit = elifeGitRevision()
     }
 
+    elifeOnNode(
+        {
+            stage 'Build image', {
+                checkout scm
+                sh "docker build -f Dockerfile.client -t elifesciences/peerscout_client:${commit} ."
+                sh "docker build -f Dockerfile -t elifesciences/peerscout:${commit} --build-arg commit=${commit} ."
+            }
+
+            stage 'Project tests (container)', {
+                sh "docker run elifesciences/peerscout_client:${commit} ./project_tests.sh"
+                dockerBuildCi 'peerscout', commit
+
+                // substitute with:
+                // dockerProjectTests 'peerscout', commit, ['build/pytest.xml']
+                // when correctly using `docker cp` on build/
+                sh "docker run elifesciences/peerscout_ci:${commit}"
+            }
+        },
+        'containers--medium'
+    )
+
     stage 'Project tests', {
         lock('peerscout--ci') {
             builderDeployRevision 'peerscout--ci', commit
-
-            builderProjectTests 'peerscout--ci', '/srv/peerscout'
+            builderSmokeTests 'peerscout--ci', '/srv/peerscout'
         }
     }
 
