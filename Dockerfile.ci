@@ -4,7 +4,7 @@ ENV DEBUG=1
 
 USER elife
 COPY --chown=elife:elife requirements-debug.txt ${PROJECT_FOLDER}/
-RUN venv/pip/install -r requirements-debug.txt
+RUN venv/bin/pip install -r requirements-debug.txt
 
 USER root
 RUN mkdir build/ && chown www-data:www-data build/
