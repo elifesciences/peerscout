@@ -2,12 +2,16 @@ ARG commit=latest
 FROM elifesciences/peerscout:${commit}
 ENV DEBUG=1
 
+USER root
+RUN mkdir build/ && chown www-data:www-data build/
+
 USER elife
 COPY --chown=elife:elife requirements-debug.txt ${PROJECT_FOLDER}/
 RUN venv/bin/pip install -r requirements-debug.txt
 
-USER root
-RUN mkdir build/ && chown www-data:www-data build/
+ENV COVERAGE_FILE=${PROJECT_FOLDER}/build/.coverage
+COPY --chown=elife:elife project_tests.sh pytest.ini ${PROJECT_FOLDER}/
+RUN touch app.cfg && chown www-data:www-data app.cfg
 
 USER www-data
 CMD ["./project_tests.sh"]
