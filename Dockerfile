@@ -6,8 +6,8 @@ USER elife
 ENV PROJECT_FOLDER=/srv/peerscout
 RUN mkdir ${PROJECT_FOLDER}
 WORKDIR ${PROJECT_FOLDER}
-COPY --chown=elife:elife install.sh requirements.txt requirements-debug.txt ${PROJECT_FOLDER}/
-RUN /bin/bash install.sh
+COPY --chown=elife:elife install.sh requirements.txt ${PROJECT_FOLDER}/
+RUN DEBUG=0 /bin/bash install.sh
 
 COPY --from=client --chown=elife:elife /home/node/client/ ${PROJECT_FOLDER}/client/
 COPY --chown=elife:elife docvec_model/ ${PROJECT_FOLDER}/docvec_model/
