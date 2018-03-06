@@ -296,9 +296,10 @@ class Main extends React.Component {
     } else {
       this.auth = new NullAuth();
     }
+    const initialAuthenticationState = this.auth.getAuthenticationState();
     this.setState({
       config,
-      authenticationState: this.auth.getAuthenticationState()
+      authenticationState: initialAuthenticationState
     });
     this.auth.onStateChange(authenticationState => {
       this.setState({
@@ -312,6 +313,9 @@ class Main extends React.Component {
     this.unlisten = this.history.listen((location, action) => {
       this.updateSearchOptionsFromLocation(location);
     });
+    if (initialAuthenticationState.authenticated) {
+      this.onAuthenticated();
+    }
   }
 
   onAuthenticated() {
