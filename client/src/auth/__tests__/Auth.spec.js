@@ -111,7 +111,7 @@ const createAuthTester = (t, config = AUTH0_CONFIG) => {
   return authTester;
 };
 
-test.only('Auth', g => {
+test('Auth', g => {
   g.test('.should be defined', t => {
     t.true(Auth);
     t.end();
