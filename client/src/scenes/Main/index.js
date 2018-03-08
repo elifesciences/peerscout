@@ -1,8 +1,6 @@
 import React from 'react';
 import { createSelector } from 'reselect';
 import debounce from 'debounce';
-import createHashHistory from 'history/createHashHistory';
-import equals from 'deep-equal';
 import SplitPane from 'react-split-pane';
 import Radium from 'radium';
 
@@ -10,18 +8,17 @@ import {
   FlexColumn,
   FlexRow,
   LoadingIndicator,
-  View
+  View,
+  withHashHistory,
+  withLocalStorage
 } from '../../components';
-
-import {
-  reportError
-} from '../../monitoring';
 
 import {
   Auth,
   NullAuth,
   LoggedInIndicator,
-  LoginForm
+  LoginForm,
+  withAuthenticatedAuthenticationState
 } from '../../auth';
 
 import AppLoading from './AppLoading';
@@ -30,13 +27,14 @@ import SearchResult from './SearchResult';
 import ChartResult from './ChartResult';
 import Help from './Help';
 
+import { withLoadedConfig } from './withConfig';
+import { withLoadedSearchTypes } from './withSearchTypes';
+import { withLoadedAllSubjectAreas } from './withAllSubjectAreas';
+import { withLoadedAllKeywords } from './withAllKeywords';
+import { withSearchOptions } from './withSearchOptions';
+import { withDebouncedSearchResults } from './withSearchResults';
+
 const styles = {
-  appLoading: {
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
   loggedInIndicator: {
     position: 'absolute',
     right: 0,
@@ -70,144 +68,34 @@ const styles = {
 
 const RadiumSplitPane = Radium(SplitPane);
 
-const parseSearch = search => {
-  const q = search[0] === '?' ? search.substring(1) : search;
-  const params = {};
-  q.split('&').forEach(s => {
-    const index = s.indexOf('=');
-    const name = index >= 0 ? s.substring(0, index) : s;
-    const value = index >= 0 ? decodeURIComponent(s.substring(index + 1)) : undefined;
-    params[name] = value;
-  });
-  return params;
-};
-
 const HELP_OPEN_KEY = 'helpOpen';
 const LEGEND_OPEN_KEY = 'legendOpen';
 
-const getBooleanLocalStorageItem = (key, defaultValue) => {
-  const value = localStorage.getItem(key);
+const getBooleanLocalStorageItem = (storage, key, defaultValue) => {
+  const value = storage.getItem(key);
   return value === 'true' ? true :
     (value === 'false' ? false : defaultValue);
 };
 
-const saveLocalStorageItem = (key, value) => {
-  window.setTimeout(() => localStorage.setItem(key, '' + value), 1);
+const saveLocalStorageItem = (storage, key, value) => {
+  window.setTimeout(() => storage.setItem(key, '' + value), 1);
 };
 
-class Main extends React.Component {
+export class MainView extends React.Component {
   constructor(props) {
     super(props);
-    this.history = createHashHistory({});
-    this.defaultSearchOptions = {
-      manuscriptNumber: '',
-      keywords: ''
-    };
+
+    const { config, searchTypes } = props;
+
     this.defaultConfig = {
       showAllRelatedManuscripts: true,
       maxRelatedManuscripts: 15
     };
     this.state = {
-      searchOptions: this.defaultSearchOptions,
+      config,
       reqId: 0,
-      helpOpen: getBooleanLocalStorageItem(HELP_OPEN_KEY, true),
-      legendOpen: getBooleanLocalStorageItem(LEGEND_OPEN_KEY, true)
-    };
-
-    this.getSearchTypes = createSelector(
-      [() => this.state.authenticationState],
-      authenticationState => {
-        if (!authenticationState.authenticated) {
-          return Promise.resolve();
-        }
-        return this.props.reviewerRecommendationApi.getSearchTypes(
-          this.getAuhenticationHeaders(authenticationState)
-        );
-      }
-    );
-
-    this.getResults = createSelector(
-      [
-        () => this.state.searchOptions,
-        () => this.state.authenticationState
-      ],
-      (searchOptions, authenticationState) => {
-        if (
-          !authenticationState.authenticated ||
-          (
-            !searchOptions.manuscriptNumber &&
-            !(searchOptions.subjectArea || searchOptions.keywords)
-          )
-        ) {
-          return Promise.resolve();
-        }
-        const params = {
-          manuscript_no: searchOptions.manuscriptNumber || '',
-          subject_area: searchOptions.subjectArea || '',
-          keywords: searchOptions.keywords || '',
-          abstract: searchOptions.abstract || '',
-          limit: searchOptions.limit || '50'
-        }
-        if (searchOptions.searchType) {
-          params.search_type = searchOptions.searchType;
-        }
-        return this.props.reviewerRecommendationApi.recommendReviewers(
-          params, this.getAuhenticationHeaders(authenticationState)
-        );
-      }
-    );
-
-    this.doUpdateResultsNow = () => {
-      this.actuallyLoading = true;
-      const resultsSearchOptions = this.state.searchOptions;
-      this.getResults().then(resultsResponse => {
-        console.log("resultsResponse:", resultsResponse);
-        this.actuallyLoading = false;
-        this.setState({
-          results: resultsResponse && {
-            potentialReviewers: resultsResponse['potential_reviewers'],
-            matchingManuscripts: resultsResponse['matching_manuscripts'],
-            manuscriptsNotFound: resultsResponse['manuscripts_not_found'],
-            search: resultsResponse['search']
-          },
-          resultsSearchOptions,
-          shouldLoad: false,
-          loading: false
-        });
-      }).catch(error => {
-        reportError("failed to fetch results", error);
-        const notAuthorized = this.props.reviewerRecommendationApi.isNotAuthorizedError(error);
-        this.actuallyLoading = false;
-        this.setState({
-          results: {
-            error,
-            notAuthorized
-          },
-          resultsSearchOptions,
-          shouldLoad: false,
-          loading: false
-        });
-        if (notAuthorized && this.auth) {
-          this.auth.revalidateToken();
-        }
-      });
-    };
-
-    this.updateResultsNow = () => {
-      this.setState(state => ({
-        ...state,
-        loading: true,
-        shouldLoad: true
-      }));
-    };
-
-    this.updateResultsDebounced = debounce(this.updateResultsNow, 500);
-
-    this.updateResults = () => {
-      this.setState({
-        loading: true
-      });
-      this.updateResultsDebounced();
+      helpOpen: getBooleanLocalStorageItem(this.props.localStorage, HELP_OPEN_KEY, true),
+      legendOpen: getBooleanLocalStorageItem(this.props.localStorage, LEGEND_OPEN_KEY, true),
     };
 
     this.onNodeClicked = node => {
@@ -228,173 +116,17 @@ class Main extends React.Component {
     };
   }
 
-  getAuhenticationHeaders(authenticationState) {
-    return {
-      headers: {
-        'X-Access-Token': authenticationState && authenticationState.access_token
-      }
-    };
-  }
-
-  locationToSearchOptions(location, defaultSearchOptions) {
-    const params = parseSearch(location.search || '');
-    return {
-      ...defaultSearchOptions,
-      ...params
-    };
-  }
-
-  pushSearchOptions(searchOptions) {
-    const path = ['/search',
-      Object.keys(searchOptions)
-      .filter(k => !!searchOptions[k])
-      .filter(k => typeof searchOptions[k] === 'string')
-      .map(k => `${k}=${encodeURIComponent(searchOptions[k])}`)
-      .join('&')].filter(s => !!s).join('?');
-    if (path !== (this.history.location.pathname + this.history.location.search)) {
-      this.history.push(path);
-    }
-  }
-
-  setSearchOptions(searchOptions) {
-    if (!equals(this.state.searchOptions, searchOptions)) {
-      this.setState({
-        searchOptions
-      });
-      this.updateResults();
-    }
-  }
-
-  updateSearchOptionsFromLocation(location) {
-    this.setSearchOptions(this.locationToSearchOptions(
-      location, this.defaultSearchOptions
-    ));
-  }
-
-  translateConfig(configResult) {
-    return {
-      showAllRelatedManuscripts:
-        configResult.chart_show_all_manuscripts != undefined ?
-        configResult.chart_show_all_manuscripts == 'true' :
-        this.defaultConfig.showAllRelatedManuscripts,
-      maxRelatedManuscripts:
-        configResult.max_related_manuscripts != undefined ?
-        configResult.max_related_manuscripts :
-        this.defaultConfig.maxRelatedManuscripts,
-      auth0_domain: configResult.auth0_domain,
-      auth0_client_id: configResult.auth0_client_id
-    }
-  }
-
-  initConfig(config) {
-    if (config.auth0_domain && config.auth0_client_id) {
-      this.auth = new Auth({
-        domain: config.auth0_domain,
-        client_id: config.auth0_client_id
-      });
-      this.auth.initialise();
-    } else {
-      this.auth = new NullAuth();
-    }
-    const initialAuthenticationState = this.auth.getAuthenticationState();
-    this.setState({
-      config,
-      authenticationState: initialAuthenticationState
-    });
-    this.auth.onStateChange(authenticationState => {
-      this.setState({
-        authenticationState
-      });
-      if (authenticationState.authenticated) {
-        this.onAuthenticated();
-      }
-    });
-    this.updateSearchOptionsFromLocation(this.history.location);
-    this.unlisten = this.history.listen((location, action) => {
-      this.updateSearchOptionsFromLocation(location);
-    });
-    if (initialAuthenticationState.authenticated) {
-      this.onAuthenticated();
-    }
-  }
-
-  onAuthenticated() {
-    this.updateSearchTypes();
-  }
-
-  updateConfig() {
-    this.props.reviewerRecommendationApi.getConfig().then(config => this.initConfig(
-      this.translateConfig(config)
-    )).catch(err => {
-      reportError('failed to fetch config', err);
-    });
-  }
-
-  updateSubjectAreas() {
-    this.props.reviewerRecommendationApi.getAllSubjectAreas().then(allSubjectAreas => this.setState({
-      allSubjectAreas
-    })).catch(err => {
-      reportError('failed to fetch subject areas', err);
-    });
-  }
-
-  updateKeywords() {
-    this.props.reviewerRecommendationApi.getAllKeywords().then(allKeywords => this.setState({
-      allKeywords
-    })).catch(err => {
-      reportError('failed to fetch keywords', err);
-    });
-  }
-
-  setDefaultSearchType(searchType) {
-    this.defaultSearchOptions.searchType = searchType;
-    this.setSearchOptions({
-      ...this.defaultSearchOptions,
-      ...this.state.searchOptions
-    });
-  }
-
-  updateSearchTypes() {
-    this.getSearchTypes().then(searchTypes => {
-      console.log('searchTypes:', searchTypes);
-      this.setState(state => ({
-        searchTypes
-      }));
-      if (searchTypes.length > 0) {
-        this.setDefaultSearchType(searchTypes[0].search_type);
-      }
-    }).catch(err => {
-      reportError('failed to search types', err);
-    });
-  }
-
-  componentDidMount() {
-    this.updateConfig();
-    this.updateSubjectAreas();
-    this.updateKeywords();
-  }
-
-  componentDidUpdate(prevProps, prevState) {
-    if (
-      (this.state.shouldLoad) &&
-      (!this.actuallyLoading)
-    ) {
-      this.pushSearchOptions(this.state.searchOptions);
-      this.doUpdateResultsNow();
-    }
-  }
-
   updateOption(state) {
     this.setState(state);
   }
 
   onSearchOptionsChanged = searchOptions => {
-    this.setSearchOptions(searchOptions);
+    this.props.setSearchOptions(searchOptions);
   }
 
   setHelpOpen(helpOpen) {
     this.setState({helpOpen});
-    saveLocalStorageItem(HELP_OPEN_KEY, helpOpen);
+    saveLocalStorageItem(this.props.localStorage, HELP_OPEN_KEY, helpOpen);
   }
 
   onCloseHelp = () => {
@@ -407,7 +139,7 @@ class Main extends React.Component {
 
   setLegendOpen(legendOpen) {
     this.setState({legendOpen});
-    saveLocalStorageItem(LEGEND_OPEN_KEY, legendOpen);
+    saveLocalStorageItem(this.props.localStorage, LEGEND_OPEN_KEY, legendOpen);
   }
 
   onCloseLegend = () => {
@@ -428,111 +160,119 @@ class Main extends React.Component {
 
   render() {
     const {
-      config,
-      loading,
-      searchOptions,
-      results,
       allSubjectAreas,
       allKeywords,
-      searchTypes,
+      authenticationState,
+      searchOptions,
+      searchResults,
+      searchTypes
+    } = this.props;
+    const {
+      config,
       selectedNode,
       selectedReviewer,
       selectedManuscript,
       helpOpen,
-      legendOpen,
-      authenticationState
+      legendOpen
     } = this.state;
-    if (!config) {
-      return (<AppLoading style={ styles.appLoading }/>);
-    }
     const {
       showAllRelatedManuscripts,
       maxRelatedManuscripts
     } = config;
+    const results = searchResults.value;
     const hasPotentialReviewers =
       results && (results.potentialReviewers) && (results.potentialReviewers.length > 0);
     let content;
     let loggedInIndicator = null;
-    if (!authenticationState.authenticated && !authenticationState.authenticating) {
-      content = (
-        <LoginForm auth={ this.auth } style={ styles.loginForm }/>
+    if (authenticationState.logged_in) {
+      loggedInIndicator = (
+        <LoggedInIndicator auth={ this.props.auth } style={ styles.loggedInIndicator }/>
       );
-    } else {
-      if (authenticationState.logged_in) {
-        loggedInIndicator = (
-          <LoggedInIndicator style={ styles.loggedInIndicator } auth={ this.auth }/>
-        );
-      }
-      content = (
-        <FlexRow style={ styles.resultsContainer } className="inner-results-container">
-          {
-            results && !hasPotentialReviewers && (
+    }
+    content = (
+      <FlexRow style={ styles.resultsContainer } className="inner-results-container">
+        {
+          (results || searchResults.error) && !hasPotentialReviewers && (
+            <SearchResult
+              searchResult={ results }
+              error={ searchResults.error }
+              selectedReviewer={ selectedReviewer }
+              selectedManuscript={ selectedManuscript }
+              onClearSelection={ this.onClearSelection }
+            />
+          )
+        }
+        {
+          results && hasPotentialReviewers && (
+            <SplitPane style={ styles.splitPane } split="vertical" defaultSize="50%">
+              <ChartResult
+                searchResult={ results }
+                onNodeClicked={ this.onNodeClicked }
+                selectedNode={ selectedNode }
+                selectedReviewer={ selectedReviewer }
+                showAllRelatedManuscripts={ showAllRelatedManuscripts }
+                maxRelatedManuscripts={ maxRelatedManuscripts }
+                legendOpen={ legendOpen }
+                onOpenLegend={ this.onOpenLegend }
+                onCloseLegend={ this.onCloseLegend }
+              />
               <SearchResult
                 searchResult={ results }
                 selectedReviewer={ selectedReviewer }
                 selectedManuscript={ selectedManuscript }
                 onClearSelection={ this.onClearSelection }
+                onSelectPotentialReviewer={ this.onSelectPotentialReviewer }
               />
-            )
-          }
-          {
-            results && hasPotentialReviewers && (
-              <SplitPane style={ styles.splitPane } split="vertical" defaultSize="50%">
-                <ChartResult
-                  searchResult={ results }
-                  onNodeClicked={ this.onNodeClicked }
-                  selectedNode={ selectedNode }
-                  selectedReviewer={ selectedReviewer }
-                  showAllRelatedManuscripts={ showAllRelatedManuscripts }
-                  maxRelatedManuscripts={ maxRelatedManuscripts }
-                  legendOpen={ legendOpen }
-                  onOpenLegend={ this.onOpenLegend }
-                  onCloseLegend={ this.onCloseLegend }
-                />
-                <SearchResult
-                  searchResult={ results }
-                  selectedReviewer={ selectedReviewer }
-                  selectedManuscript={ selectedManuscript }
-                  onClearSelection={ this.onClearSelection }
-                  onSelectPotentialReviewer={ this.onSelectPotentialReviewer }
-                />
-              </SplitPane>
-            )
-          }
-        </FlexRow>
-      );
-    }
+            </SplitPane>
+          )
+        }
+      </FlexRow>
+    );
     return (
       <FlexColumn>
         { loggedInIndicator }
         {
-          authenticationState.authenticated && (
-            <SearchHeader
-              searchOptions={ searchOptions }
-              onSearchOptionsChanged={ this.onSearchOptionsChanged }
-              allSubjectAreas={ allSubjectAreas }
-              allKeywords={ allKeywords }
-              searchTypes={ searchTypes }
-            />
-          )
+          <SearchHeader
+            searchOptions={ searchOptions }
+            onSearchOptionsChanged={ this.onSearchOptionsChanged }
+            allSubjectAreas={ allSubjectAreas }
+            allKeywords={ allKeywords }
+            searchTypes={ searchTypes }
+          />
         }
         <FlexRow style={ styles.outerResultsContainer } className="results-container">
-          <LoadingIndicator style={ styles.loadingIndicator } loading={ loading || authenticationState.authenticating }>
+          <LoadingIndicator style={ styles.loadingIndicator } loading={ searchResults.loading }>
             { content }
           </LoadingIndicator>
         </FlexRow>
         {
-          authenticationState.authenticated && (
-            <Help
-              open={ helpOpen }
-              onClose={ this.onCloseHelp }
-              onOpen={ this.onOpenHelp }
-            />
-          )
+          <Help
+            open={ helpOpen }
+            onClose={ this.onCloseHelp }
+            onOpen={ this.onOpenHelp }
+          />
         }
       </FlexColumn>
     );
   }
 }
+
+export const Main = withLocalStorage(withLoadedConfig(
+  withAuthenticatedAuthenticationState(
+    withLoadedAllSubjectAreas(
+      withLoadedAllKeywords(
+        withLoadedSearchTypes(
+          withHashHistory(
+            withSearchOptions(
+              withDebouncedSearchResults(
+                MainView
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+));
 
 export default Main;

@@ -1,6 +1,4 @@
-import {
-  WebAuth
-} from 'auth0-js';
+import { WebAuth } from 'auth0-js';
 
 import { Auth0LockPasswordless } from 'auth0-lock';
 
@@ -9,11 +7,15 @@ const ACCESS_TOKEN_KEY = 'access_token';
 export default class Auth {
   constructor(options) {
     this.options = options;
-    this.lock = new Auth0LockPasswordless(
+    this.storage = options.storage || global.localStorage;
+    this.WebAuth = options.WebAuth || WebAuth;
+    this.Auth0LockPasswordless = options.Auth0LockPasswordless || Auth0LockPasswordless;
+    this.lock = new this.Auth0LockPasswordless(
       options.client_id, options.domain, {
         passwordlessMethod: "link"
       }
     );
+    this.initialising = true;
     this.lock.on('authorization_error', error => {
       console.log('authorization_error:', error);
       this._setAuthorizationError(error.errorDescription || error.error)
@@ -25,7 +27,11 @@ export default class Auth {
     this.lock.on('hash_parsed', hash => {
       console.log('hash_parsed, hash:', hash);
       if (!hash) {
-        this._checkExistingToken()
+        this._checkExistingToken();
+      }
+      this.initialising = false;
+      if (!this.isAuthenticating()) {
+        this._triggerStateChange();
       }
     });
     this.profile = null;
@@ -33,7 +39,7 @@ export default class Auth {
   }
 
   _checkExistingToken() {
-    const access_token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    const access_token = this.storage.getItem(ACCESS_TOKEN_KEY);
     console.log('_checkExistingToken, access_token:', access_token);
     if (access_token) {
       this._setAccessToken(access_token);
@@ -51,7 +57,7 @@ export default class Auth {
       this.access_token = access_token;
       this.error_description = error_description;
       if (access_token) {
-        localStorage.setItem(ACCESS_TOKEN_KEY, access_token);
+        this.storage.setItem(ACCESS_TOKEN_KEY, access_token);
         this._userInfo(access_token, (err, user) => {
           if (err) {
             this._setAuthorizationError(err);
@@ -63,7 +69,7 @@ export default class Auth {
           }
         });
       } else {
-        localStorage.removeItem(ACCESS_TOKEN_KEY);
+        this.storage.removeItem(ACCESS_TOKEN_KEY);
         this.email = null;
       }
       this._triggerStateChange();
@@ -96,7 +102,7 @@ export default class Auth {
   }
 
   _userInfo(access_token, callback) {
-    const auth0 = new WebAuth({
+    const auth0 = new this.WebAuth({
       domain: this.options.domain,
       clientID: this.options.client_id
     });
@@ -104,9 +110,9 @@ export default class Auth {
   }
 
   revalidateToken() {
-    const access_token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    const access_token = this.storage.getItem(ACCESS_TOKEN_KEY);
     if (access_token) {
-      localStorage.setItem(ACCESS_TOKEN_KEY, access_token);
+      this.storage.setItem(ACCESS_TOKEN_KEY, access_token);
       this._userInfo(access_token, (err, user) => {
         if (err) {
           this._setAuthorizationError('Session expired');
@@ -126,7 +132,7 @@ export default class Auth {
   }
 
   isAuthenticating() {
-    return !!this.access_token && !this.email;
+    return (!!this.access_token || this.initialising) && !this.isAuthenticated();
   }
 
   isAuthenticated() {

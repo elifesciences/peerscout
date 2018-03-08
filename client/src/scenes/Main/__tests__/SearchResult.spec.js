@@ -5,9 +5,29 @@ import { shallow } from 'enzyme';
 
 import '../../../polyfills/react';
 
-import SearchResult from '../SearchResult';
+import SearchResult, {
+  getManuscriptsNotFoundMessage,
+  NOT_AUTHORIZED_ERROR_MESSAGE,
+  DEFAULT_ERROR_MESSAGE,
+  NO_POTENTIAL_REVIEWERS_ERROR_MESSAGE
+} from '../SearchResult';
 
 const SEARCH_RESULT = {};
+
+const MANUSCRIPTS_NOT_FOUND_RESULT = {
+  manuscriptsNotFound: ['manuscript1']
+};
+
+const NO_POTENTIAL_REVIEWERS_RESULT = {
+  potentialReviewers: []
+};
+
+const ERROR = 'bang!';
+
+const NOT_AUTHORIZED_ERROR = {
+  error: ERROR,
+  notAuthorized: true
+};
 
 const MANUSCRIPT_1 = {
   manuscript_id: '12345'
@@ -71,6 +91,32 @@ test('SearchResult', g => {
     t.equal(potentialReviewerComponent.length, 2);
     t.equal(potentialReviewerComponent.at(0).props()['potentialReviewer'], POTENTIAL_REVIEWER_1);
     t.equal(potentialReviewerComponent.at(1).props()['potentialReviewer'], POTENTIAL_REVIEWER_2);
+    t.end();
+  });
+
+  g.test('.should show error message if error property is populated', t => {
+    const component = shallow(<SearchResult error={ ERROR } />);
+    t.equal(component.find('ErrorMessage').props()['error'], DEFAULT_ERROR_MESSAGE);
+    t.end();
+  });
+
+  g.test('.should show not authorized error message if error has notAuthorized flag', t => {
+    const component = shallow(<SearchResult error={ NOT_AUTHORIZED_ERROR } />);
+    t.equal(component.find('ErrorMessage').props()['error'], NOT_AUTHORIZED_ERROR_MESSAGE);
+    t.end();
+  });
+
+  g.test('.should show manuscripts not found error message', t => {
+    const component = shallow(<SearchResult searchResult={ MANUSCRIPTS_NOT_FOUND_RESULT } />);
+    t.equal(component.find('ErrorMessage').props()['error'], getManuscriptsNotFoundMessage(
+      MANUSCRIPTS_NOT_FOUND_RESULT.manuscriptsNotFound
+    ));
+    t.end();
+  });
+
+  g.test('.should show no potential reviewers found error message', t => {
+    const component = shallow(<SearchResult searchResult={ NO_POTENTIAL_REVIEWERS_RESULT } />);
+    t.equal(component.find('ErrorMessage').props()['error'], NO_POTENTIAL_REVIEWERS_ERROR_MESSAGE);
     t.end();
   });
 });

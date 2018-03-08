@@ -187,6 +187,7 @@ const createChart = (parent, graph, options) => {
 
   const destroy = () => {
     window.removeEventListener('resize', windowResizeListener);
+    svg.remove();
   }
 
   window.addEventListener('resize', windowResizeListener);
