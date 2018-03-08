@@ -1,19 +1,23 @@
 import React from 'react';
 
-import debounce from 'debounce';
+import _debounce from 'debounce';
 
-export const withDebouncedProp = (WrappedComponent, source, target, delay = 500) => {
+export const withDebouncedProp = (WrappedComponent, source, target, {
+  delay = 500,
+  debounce = _debounce,
+  debouncingProps = null
+} = {}) => {
   class WithDebouncedProp extends React.Component {
     constructor(props) {
       super(props);
       this.state = {
+        debouncing: false,
         data: source(props)
       };
 
       this.updateDataNow = () => {
         const data = source(this.props);
-        console.log('debounce, updating:', data);
-        this.setState({ data });
+        this.setState({ debouncing: false, data });
       };
 
       this.updateDataDebounced = debounce(this.updateDataNow, delay);
@@ -21,17 +25,22 @@ export const withDebouncedProp = (WrappedComponent, source, target, delay = 500)
 
     componentDidUpdate(prevProps, prevState) {
       if (source(prevProps) != source(this.props)) {
+        this.setState({ debouncing: true });
         this.updateDataDebounced();
       }
     }
 
-
     render() {
-      const props = {
+      let props = {
         ...this.props,
         ...target(this.state.data)
       };
-      console.log('debounce, render:', props);
+      if (this.state.debouncing && debouncingProps) {
+        props = {
+          ...props,
+          ...debouncingProps(props)
+        }
+      };
       return <WrappedComponent {...props} />;
     }
   }

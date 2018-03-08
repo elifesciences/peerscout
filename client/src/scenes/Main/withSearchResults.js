@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { createSelector } from 'reselect';
-import { lifecycle } from 'recompose';
+import { branch, lifecycle, withProps, renderComponent } from 'recompose';
 import debounce from 'debounce';
 
 import { reportError } from '../../monitoring';
@@ -59,7 +59,7 @@ const handleErrorResponse = (error, props) => {
   };
 }
 
-export const withPushSearchOptions = (WrappedComponent, source) => lifecycle({
+export const withPushSearchOptions = source => lifecycle({
   componentDidUpdate(prevProps, prevState) {
     if (!prevProps) {
       return;
@@ -69,16 +69,22 @@ export const withPushSearchOptions = (WrappedComponent, source) => lifecycle({
       this.props.pushSearchOptions(current);
     }
   }
-})(WrappedComponent);
+});
 
 const defaultGetSearchOptions = props => props.searchOptions;
 
-export const withSearchResults = (WrappedComponent, getSearchOptions) => {
-  if (!getSearchOptions) {
-    getSearchOptions = defaultGetSearchOptions;
-  }
-  return withPromisedProp(
-    withPushSearchOptions(WrappedComponent, props => getSearchOptions(props)),
+export const withSearchResults = (
+  WrappedComponent,
+  getSearchOptions = defaultGetSearchOptions,
+  isDebouncing = null
+) => branch(
+  props => isDebouncing && isDebouncing(props),
+
+  // pretend loading while debouncing
+  withProps({searchResults: {loading: true}}),
+
+  renderComponent(withPromisedProp(
+    withPushSearchOptions(props => getSearchOptions(props))(WrappedComponent),
     props => loadResults(
       props.reviewerRecommendationApi,
       getSearchOptions(props),
@@ -86,14 +92,23 @@ export const withSearchResults = (WrappedComponent, getSearchOptions) => {
     ).then(convertResultsResponse).catch(error => handleErrorResponse(error, props)),
     'searchResults',
     getSearchOptions
-  );
-};
+  ))
+)(WrappedComponent);
 
-export const withDebouncedSearchResults = (WrappedComponent, getSearchOptions, delay = 500) => {
-  return withDebouncedProp(
-    withSearchResults(WrappedComponent, props => props.debouncedSearchOptions),
-    getSearchOptions || defaultGetSearchOptions,
-    debouncedSearchOptions => ({ debouncedSearchOptions  }),
-    delay
-  );
-};
+export const withDebouncedSearchResults = (
+  WrappedComponent,
+  getSearchOptions = defaultGetSearchOptions,
+  delay = 500
+) => withDebouncedProp(
+  withSearchResults(
+    WrappedComponent,
+    props => props.debouncedSearchOptions,
+    props => props.debouncingSearch
+  ),
+  getSearchOptions,
+  debouncedSearchOptions => ({ debouncedSearchOptions  }),
+  {
+    delay,
+    debouncingProps: () => ({debouncingSearch: true})
+  }
+);

@@ -154,4 +154,32 @@ test('withSearchResults', g => {
 
     t.end();
   }));
+
+  g.test('.should pass loading indicator while debouncing', withSandbox(t => {
+    const responseDeferred = deferred();
+    const responsePromise = responseDeferred.promise;
+    const props = createMockProps();
+    props.reviewerRecommendationApi.recommendReviewers.returns(responsePromise);
+
+    const Component = withSearchResults(WrappedComponent, undefined, props => props.debouncing);
+    const component = mount(<Component { ...props } searchOptions={ SEARCH_OPTIONS } />);
+
+    responseDeferred.resolve(SEARCH_RESULT);
+    component.update();
+
+    t.deepEqual(component.find('WrappedComponent').props()['searchResults'], {
+      loading: false,
+      value: convertResultsResponse(SEARCH_RESULT)
+    });
+
+    props.reviewerRecommendationApi.recommendReviewers.reset();
+
+    component.setProps({debouncing: true});
+    component.update();
+    t.deepEqual(component.find('WrappedComponent').props()['searchResults'], {
+      loading: true
+    });
+
+    t.end();
+  }));
 });
