@@ -1,12 +1,12 @@
 import React from 'react';
 
 import { createSelector } from 'reselect';
-import { branch, lifecycle, withProps, renderComponent } from 'recompose';
+import { lifecycle, withProps, renderComponent, compose } from 'recompose';
 import debounce from 'debounce';
 
 import { reportError } from '../../monitoring';
 
-import { withDebouncedProp, withPromisedProp } from '../../components';
+import { withDebouncedProp, withPromisedProp, withPromisedPropEnhancer } from '../../components';
 
 import { getAuhenticationHeaders } from '../../api'
 
@@ -32,6 +32,7 @@ export const convertSearchOptionsToParams = searchOptions => {
 
 export const convertResultsResponse = resultsResponse => resultsResponse && {
   potentialReviewers: resultsResponse['potential_reviewers'],
+  relatedManuscriptByVersionId: resultsResponse['related_manuscript_by_version_id'],
   matchingManuscripts: resultsResponse['matching_manuscripts'],
   manuscriptsNotFound: resultsResponse['manuscripts_not_found'],
   search: resultsResponse['search']
@@ -77,14 +78,8 @@ export const withSearchResults = (
   WrappedComponent,
   getSearchOptions = defaultGetSearchOptions,
   isDebouncing = null
-) => branch(
-  props => isDebouncing && isDebouncing(props),
-
-  // pretend loading while debouncing
-  withProps({searchResults: {loading: true}}),
-
-  renderComponent(withPromisedProp(
-    withPushSearchOptions(props => getSearchOptions(props))(WrappedComponent),
+) => compose(
+  withPromisedPropEnhancer(
     props => loadResults(
       props.reviewerRecommendationApi,
       getSearchOptions(props),
@@ -92,7 +87,19 @@ export const withSearchResults = (
     ).then(convertResultsResponse).catch(error => handleErrorResponse(error, props)),
     'searchResults',
     getSearchOptions
-  ))
+  ),
+
+  withPushSearchOptions(props => getSearchOptions(props)),
+
+  withProps(props => {
+    if (isDebouncing && isDebouncing(props)) {
+      return {
+        ...props,
+        searchResults: {loading: true}
+      }
+    }
+    return props;
+  })
 )(WrappedComponent);
 
 export const withDebouncedSearchResults = (

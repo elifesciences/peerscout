@@ -39,6 +39,7 @@ EMAIL_1 = 'email1'
 
 MANUSCRIPT_NO_1 = '12345'
 MANUSCRIPT_NO_2 = '22222'
+VERSION_ID_1 = '%s-1' % MANUSCRIPT_NO_1
 LIMIT_1 = 123
 
 SEARCH_TYPE_1 = 'search_type1'
@@ -203,6 +204,44 @@ class TestApiBlueprint:
           'search_type': SEARCH_TYPE_3,
           'title': SEARCH_TYPE_TITLE_3
         }]
+
+  class TestGetManuscriptDetails:
+    def test_should_return_404_if_manuscript_not_found(
+      self, MockRecommendReviewers):
+
+      config = dict_to_config({})
+
+      with _api_test_client(config, {}) as test_client:
+        get_manuscript_details = MockRecommendReviewers.return_value.get_manuscript_details
+        get_manuscript_details.return_value = None
+        MockRecommendReviewers.return_value.get_manuscript_details.return_value = None
+        response = test_client.get('/manuscript/version/%s' % VERSION_ID_1)
+        assert response.status_code == 404
+
+    def test_should_return_manuscript_details_if_manuscript_was_found(
+      self, MockRecommendReviewers):
+
+      config = dict_to_config({})
+
+      with _api_test_client(config, {}) as test_client:
+        get_manuscript_details = MockRecommendReviewers.return_value.get_manuscript_details
+        get_manuscript_details.return_value = SOME_RESPONSE
+        response = test_client.get('/manuscript/version/%s' % VERSION_ID_1)
+        assert _get_ok_json(response) == SOME_RESPONSE
+        get_manuscript_details.assert_called_with(VERSION_ID_1)
+
+    def test_should_handle_slash_in_version_id(
+      self, MockRecommendReviewers):
+
+      config = dict_to_config({})
+
+      with _api_test_client(config, {}) as test_client:
+        get_manuscript_details = MockRecommendReviewers.return_value.get_manuscript_details
+        get_manuscript_details.return_value = SOME_RESPONSE
+        version_id = 'v/123'
+        response = test_client.get('/manuscript/version/%s' % version_id)
+        assert _get_ok_json(response) == SOME_RESPONSE
+        get_manuscript_details.assert_called_with(version_id)
 
   class TestRecommendWithoutAuth:
     def test_should_return_400_without_args(self, MockRecommendReviewers):

@@ -4,7 +4,7 @@ import test from 'tape';
 import { shallow, mount } from 'enzyme';
 import sinon from 'sinon';
 
-import withPromisedProp from '../withPromisedProp';
+import { withPromisedProp, withPromisedPropEnhancer } from '../withPromisedProp';
 
 import deferred from 'deferred';
 
@@ -25,7 +25,7 @@ test('withPromisedProp', g => {
     const Component = withPromisedProp(
       WrappedComponent, () => Promise.resolve(null), DATA_PROP
     );
-    const component = shallow(<Component other="123" />);
+    const component = mount(<Component other="123" />);
     const wrappedComponent = component.find('WrappedComponent');
     t.equal(wrappedComponent.props()['other'], '123');
     t.end();
@@ -89,6 +89,23 @@ test('withPromisedProp', g => {
 
     t.equal(load.callCount, 2, 'load should be called twice');
 
+    t.end();
+  });
+});
+
+test('withPromisedProp.withPromisedPropEnhancer', g => {
+  g.test('.should be defined', t => {
+    t.true(withPromisedPropEnhancer);
+    t.end();
+  });
+
+  g.test('.should pass custom prop to wrapped component', t => {
+    const Component = withPromisedPropEnhancer(
+      () => Promise.resolve(null), DATA_PROP
+    )(WrappedComponent);
+    const component = mount(<Component other="123" />);
+    const wrappedComponent = component.find('WrappedComponent');
+    t.equal(wrappedComponent.props()['other'], '123');
     t.end();
   });
 });

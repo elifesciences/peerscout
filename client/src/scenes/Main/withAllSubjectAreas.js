@@ -2,7 +2,7 @@ import React from 'react';
 
 import { withPromisedProp } from '../../components';
 
-import withResolvedPromise from './withResolvedPromise';
+import withAppResolvedPromise from './withAppResolvedPromise';
 
 export const withAllSubjectAreas = WrapperComponent => withPromisedProp(
   WrapperComponent,
@@ -11,7 +11,7 @@ export const withAllSubjectAreas = WrapperComponent => withPromisedProp(
 );
 
 export const withLoadedAllSubjectAreas = WrappedComponent => withAllSubjectAreas(
-  withResolvedPromise(WrappedComponent, 'allSubjectAreas')
+  withAppResolvedPromise(WrappedComponent, 'allSubjectAreas')
 );
 
 export default withAllSubjectAreas;

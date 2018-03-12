@@ -16,7 +16,9 @@ import {
   createNode,
   updateNodePosition,
   createTooltip,
-  addNodeTooltipBehavior
+  addNodeTooltipBehavior,
+  selectManuscriptsOfCorrespondingAuthorsNode,
+  selectCorrespondingAuthorsOfManuscriptNode
 } from './chart';
 
 
@@ -100,50 +102,6 @@ const createChart = (parent, graph, options) => {
   const showSearch = !!graph.nodes[0].search;
   const legend = createLegend(svg, showSearch, options);
   const { setLegendOpen } = legend;
-
-  const selectCorrespondingAuthorsOfNode = selectedNode => {
-    const manuscript = selectedNode && selectedNode.manuscript;
-    const authors = (manuscript && manuscript.authors) || [];
-    const correspondingAuthors = authors.filter(author => author.is_corresponding_author);
-    const correspondingAuthorPersonIds = new Set(
-      correspondingAuthors.map(author => author.person_id)
-    );
-    console.log('correspondingAuthorPersonIds:', correspondingAuthorPersonIds);
-    const isCorrespondingAuthor = d => {
-      const person = d.potentialReviewer && d.potentialReviewer.person;
-      const personId = person && person.person_id;
-      return personId && correspondingAuthorPersonIds.has(personId);
-    };
-    node.classed('node-corresponding-author', isCorrespondingAuthor);
-  };
-
-  const manuscriptHasCorrespondingAuthor = (manuscript, personId) =>
-    manuscript.authors
-    .filter(author => author.person_id == personId && author.is_corresponding_author)
-    .length > 0;
-
-  const selectManuscriptsOfCorrespondingAuthorsReviewer = potentialReviewer => {
-    const person = potentialReviewer && potentialReviewer.person;
-    const personId = person && person.person_id;
-    const authorOf = (potentialReviewer && potentialReviewer.author_of_manuscripts) || [];
-    const correspondingAuthorOf = authorOf.filter(
-      m => manuscriptHasCorrespondingAuthor(m, personId)
-    );
-    const correspondingAuthorOfVersionIds = new Set(
-      correspondingAuthorOf.map(m => m.version_id)
-    );
-    console.log('correspondingAuthorOfVersionIds:', correspondingAuthorOfVersionIds);
-    const isManuscriptOfCorrespondingAuthor = d => {
-      const versionId = d.manuscript && d.manuscript.version_id;
-      return versionId && correspondingAuthorOfVersionIds.has(versionId);
-    };
-    node.classed('node-manuscript-of-corresponding-author', isManuscriptOfCorrespondingAuthor);
-  };
-
-  const selectManuscriptsOfCorrespondingAuthorsNode = selectedNode => {
-    const potentialReviewer = selectedNode && selectedNode.potentialReviewer;
-    selectManuscriptsOfCorrespondingAuthorsReviewer(potentialReviewer);
-  };
     
   const selectNodeId = selectedId => {
     console.log("select node id:", selectedId);
@@ -153,8 +111,8 @@ const createChart = (parent, graph, options) => {
   
   const selectNode = selectedNode => {
     selectNodeId(selectedNode && selectedNode.id);
-    selectCorrespondingAuthorsOfNode(selectedNode);
-    selectManuscriptsOfCorrespondingAuthorsNode(selectedNode);
+    selectCorrespondingAuthorsOfManuscriptNode(node, selectedNode, graph.nodes);
+    selectManuscriptsOfCorrespondingAuthorsNode(node, selectedNode);
   };
     
   const selectedReviewer = selectedReviewer => {

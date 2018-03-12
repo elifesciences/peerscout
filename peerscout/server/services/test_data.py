@@ -17,15 +17,15 @@ PERSON1 = {
 PERSON2 = {
   **PERSON1,
   PERSON_ID: PERSON_ID2,
-  'first-name': 'Laura',
-  'last-name': 'Laudson'
+  'first_name': 'Laura',
+  'last_name': 'Laudson'
 }
 
 PERSON3 = {
   **PERSON1,
   PERSON_ID: PERSON_ID3,
-  'first-name': 'Mike',
-  'last-name': 'Michelson'
+  'first_name': 'Mike',
+  'last_name': 'Michelson'
 }
 
 MANUSCRIPT_ID = 'manuscript_id'

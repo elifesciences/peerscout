@@ -26,6 +26,11 @@ import {
   formatPeriodNotAvailable
 } from '../formatUtils';
 
+import {
+  duplicateManuscriptTitlesAsAlternatives,
+  sortManuscriptsByPublishedTimestampDescending
+} from '../manuscriptUtils';
+
 import { commonStyles } from '../../../styles';
 
 const LABEL_WIDTH = 105;
@@ -50,7 +55,7 @@ const styles = {
     },
     label: {
       display: 'inline-block',
-      minWidth: LABEL_WIDTH,
+      width: LABEL_WIDTH,
       fontWeight: 'bold'
     },
     value: {
@@ -112,15 +117,38 @@ export const DatesNotAvailable = ({ datesNotAvailable, style = {} }) => (
   <Text style={ style }>{ datesNotAvailable.map(formatPeriodNotAvailable).join(', ') }</Text>
 );
 
+export const RelatedManuscripts = ({label, manuscripts, requestedSubjectAreas}) => (
+  <View
+    style={ styles.potentialReviewer.subSection }
+  >
+    <Text style={ styles.potentialReviewer.label }>{ `${label}  of:` }</Text>
+    <View style={ styles.potentialReviewer.value }>
+      <More lines={ 5 }>
+        <FlexColumn>
+          {
+            manuscripts.map((manuscript, index) => (
+              <ManuscriptInlineSummary
+                key={ index }
+                manuscript={ manuscript }
+                requestedSubjectAreas={ requestedSubjectAreas }
+              />
+            ))
+          }
+        </FlexColumn>
+      </More>
+    </View>
+  </View>
+);
+
 const PotentialReviewer = ({
   potentialReviewer,
+  relatedManuscriptByVersionId,
   requestedSubjectAreas,
   onSelectPotentialReviewer  
 }) => {
   const {
     person = {},
-    author_of_manuscripts: authorOfManuscripts = [],
-    reviewer_of_manuscripts: reviewerOfManuscripts = [],
+    related_manuscript_version_ids_by_relationship_type = [],
     assignment_status: assignmentStatus,
     scores = {}
   } = potentialReviewer;
@@ -129,7 +157,6 @@ const PotentialReviewer = ({
       onSelectPotentialReviewer(potentialReviewer);
     }
   };
-  const manuscriptScoresByManuscriptNo = groupBy(scores['by_manuscript'] || [], s => s['manuscript_id']);
   const memberships = person.memberships || [];
   const membershipComponents = memberships.map((membership, index) => (
     <Membership key={ index } membership={ membership }/>
@@ -162,14 +189,22 @@ const PotentialReviewer = ({
       }
     </View>
   );
-  const renderManuscripts = manuscripts => manuscripts && manuscripts.map((manuscript, index) => (
-    <ManuscriptInlineSummary
-      key={ index }
-      manuscript={ manuscript }
-      scores={ manuscriptScoresByManuscriptNo[manuscript['manuscript_id']] }
-      requestedSubjectAreas={ requestedSubjectAreas }
-    />
-  ));
+  const getRelatedManuscriptByVersionIds = versionIds => (
+    versionIds && versionIds.map(versionId => relatedManuscriptByVersionId[versionId])
+  );
+  const getRelatedManuscripts = relationshipType => duplicateManuscriptTitlesAsAlternatives(
+    sortManuscriptsByPublishedTimestampDescending(
+      relatedManuscriptByVersionId && related_manuscript_version_ids_by_relationship_type &&
+      getRelatedManuscriptByVersionIds(
+        related_manuscript_version_ids_by_relationship_type[relationshipType]
+      )
+    )
+  ) || [];
+  const relatedManuscriptsInfoList = [
+    {label: 'Author', manuscripts: getRelatedManuscripts('author')},
+    {label: 'Reviewing Editor', manuscripts: getRelatedManuscripts('editor')},
+    {label: 'Senior Editor', manuscripts: getRelatedManuscripts('senior_editor')}
+  ].filter(relatedManuscriptsInfo => relatedManuscriptsInfo.manuscripts.length > 0);
   const renderedStats = renderStats(person['stats']);
   const scoresNote = scores && scores.combined ?
     ' (max across manuscripts)' :
@@ -204,38 +239,14 @@ const PotentialReviewer = ({
           )
         }
         {
-          (authorOfManuscripts.length > 0) && (
-            <View
-              style={ styles.potentialReviewer.subSection }
-              className="potential_reviewer_author_of"
-            >
-              <Text style={ styles.potentialReviewer.label }>Author of: </Text>
-              <View style={ styles.potentialReviewer.value }>
-                <More lines={ 5 }>
-                  <FlexColumn>
-                    { renderManuscripts(authorOfManuscripts) }
-                  </FlexColumn>
-                </More>
-              </View>
-            </View>
-          )
-        }
-        {
-          (reviewerOfManuscripts.length > 0) && (
-            <View
-              style={ styles.potentialReviewer.subSection }
-              className="potential_reviewer_reviewer_of"
-            >
-              <Text style={ styles.potentialReviewer.label }>Reviewer of: </Text>
-              <View style={ styles.potentialReviewer.value }>
-                <More lines={ 5 }>
-                  <FlexColumn>
-                    { renderManuscripts(reviewerOfManuscripts) }
-                  </FlexColumn>
-                </More>
-              </View>
-            </View>
-          )
+          relatedManuscriptsInfoList.map(relatedManuscriptsInfoList => (
+            <RelatedManuscripts
+              key={ relatedManuscriptsInfoList.label }
+              label={ relatedManuscriptsInfoList.label }
+              manuscripts={ relatedManuscriptsInfoList.manuscripts }
+              requestedSubjectAreas={ requestedSubjectAreas }
+            />
+          ))
         }
         <View  style={ styles.potentialReviewer.subSection }>
           <Text style={ styles.potentialReviewer.label }>Scores: </Text>

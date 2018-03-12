@@ -5,6 +5,12 @@ import {
   formatScoreWithDetails
 } from '../formatUtils';
 
+import {
+  getPotentialReviewerCorrespondingAuthorVersionIdSet,
+  getNodeVersionIdFilter,
+  getManuscriptCorrespondingAuthorPersonIdSet,
+  getNodePersonIdFilter
+} from './graph';
 
 const nodeScore = d => (
   (d && d.score) ||
@@ -116,3 +122,35 @@ export const createNode = (parent, nodes) => {
 
 export const updateNodePosition = node => node
   .attr("transform", d => "translate(" + d.x + "," + d.y + ")");
+
+export const selectManuscriptsOfCorrespondingAuthorsReviewer = (node, potentialReviewer) => {
+  const correspondingAuthorOfVersionIds = getPotentialReviewerCorrespondingAuthorVersionIdSet(
+    potentialReviewer
+  );
+  console.log('correspondingAuthorOfVersionIds:', correspondingAuthorOfVersionIds);
+  node.classed(
+    'node-manuscript-of-corresponding-author',
+    getNodeVersionIdFilter(correspondingAuthorOfVersionIds)
+  );
+};
+
+export const selectManuscriptsOfCorrespondingAuthorsNode = (node, selectedNode) => {
+  const potentialReviewer = selectedNode && selectedNode.potentialReviewer;
+  selectManuscriptsOfCorrespondingAuthorsReviewer(node, potentialReviewer);
+};
+
+export const selectCorrespondingAuthorsOfManuscript = (node, manuscript, allNodes) => {
+  const correspondingAuthorPersonIds = getManuscriptCorrespondingAuthorPersonIdSet(
+    manuscript, allNodes
+  );
+  console.log('correspondingAuthorPersonIds:', correspondingAuthorPersonIds);
+  node.classed(
+    'node-corresponding-author',
+    getNodePersonIdFilter(correspondingAuthorPersonIds)
+  );
+};
+
+export const selectCorrespondingAuthorsOfManuscriptNode = (node, selectedNode, allNodes) => {
+  const manuscript = selectedNode && selectedNode.manuscript;
+  selectCorrespondingAuthorsOfManuscript(node, manuscript, allNodes);
+};

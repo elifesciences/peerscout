@@ -10,6 +10,8 @@ import sqlalchemy
 from sqlalchemy.orm import sessionmaker, scoped_session, Session
 from sqlalchemy.orm import load_only
 
+from peerscout.utils.json import CustomJSONEncoder
+
 from .database_schema import (
   Base,
   SCHEMA_VERSION,
@@ -22,15 +24,6 @@ from .app_config import get_app_config
 
 def get_logger():
   return logging.getLogger(__name__)
-
-class CustomJSONEncoder(JSONEncoder):
-  def default(self, obj): # pylint: disable=E0202
-    try:
-      if isinstance(obj, datetime.datetime) or isinstance(obj, datetime.date):
-        return obj.isoformat()
-    except TypeError:
-      pass
-    return JSONEncoder.default(self, obj)
 
 def json_serializer(d):
   return json.dumps(d, cls=CustomJSONEncoder)

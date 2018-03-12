@@ -3,6 +3,7 @@ import itertools
 from collections import Counter
 import ast
 import logging
+from typing import Collection, Dict, Iterable
 
 import pandas as pd
 
@@ -26,6 +27,8 @@ from  peerscout.utils.collection import (
   applymap_dict
 )
 
+from peerscout.shared.database_types import PersonId, VersionId
+
 from .manuscript_utils import (
   duplicate_manuscript_titles_as_alternatives
 )
@@ -35,7 +38,8 @@ from .manuscript_subject_areas import ManuscriptSubjectAreaService
 
 from .manuscript_person_relationship_service import (
   ManuscriptPersonRelationshipService,
-  RelationshipTypes
+  RelationshipTypes,
+  RelationshipType
 )
 
 from .manuscript_person_stage_service import (
@@ -48,11 +52,15 @@ from .person_keywords import (
   get_person_ids_of_person_keywords_scores
 )
 
-
 from .person_roles import PersonRoleService
 
+from .recommender_utils import (
+  sorted_manuscript_scores_descending
+)
 
 NAME = 'RecommendReviewers'
+
+Score = dict
 
 debugv_enabled = False
 
@@ -139,6 +147,10 @@ PERSON_COLUMNS = [
   'is_early_career_researcher'
 ]
 
+RELATED_MANUSCRIPT_FIELDS = {
+  'manuscript_id', 'version_id', 'doi', 'is_published', 'title', 'abstract', 'subject_areas'
+}
+
 def unescape_if_string(s):
   if isinstance(s, str):
     return unescape_and_strip_tags(s)
@@ -177,13 +189,6 @@ def select_dict_keys(d, keys):
 
 def manuscript_id_fields(manuscript):
   return select_dict_keys(manuscript, MANUSCRIPT_ID_COLUMNS)
-
-def sort_manuscripts_by_date(manuscripts):
-  return sorted(manuscripts, key=lambda m: (
-    m.get('published-date', None),
-    m.get('title', ''),
-    m.get(VERSION_ID, None)
-  ), reverse=True)
 
 HIDDEN_MANUSCRIPT_PROPS = set(['editors', 'reviewers'])
 
@@ -237,13 +242,6 @@ def sorted_potential_reviewers(potential_reviewers):
     (pr for pr in potential_reviewers if pr['person'].get('is_early_career_researcher'))
   )) if x]
   return potential_reviewers
-
-def sorted_manuscript_scores_descending(manuscript_scores_list):
-  return list(reversed(sorted(manuscript_scores_list, key=lambda score: (
-    score['combined'],
-    score['keyword'],
-    score['similarity']
-  ))))
 
 def get_reviewer_score(person_keyword_score, best_manuscript_score):
   keyword_score = max(
@@ -443,8 +441,11 @@ class RecommendReviewers(object):
       self.manuscript_versions_all_df[
         MANUSCRIPT_ID_COLUMNS +
         [MANUSCRIPT_ID] +
-        ['title', 'decision', 'manuscript_type', 'abstract', 'decision_timestamp']
-      ].rename(columns={'decision-date': 'published-date'})
+        [
+          'title', 'decision', 'manuscript_type', 'abstract',
+          'decision_timestamp', 'created_timestamp'
+        ]
+      ]
       .to_dict(orient='records')
     )
     manuscripts_all_list = [
@@ -467,38 +468,6 @@ class RecommendReviewers(object):
       m[VERSION_ID]: m for m in manuscripts_all_list
     }
     debugv("manuscripts_by_version_id_map: %s", self.manuscripts_by_version_id_map)
-
-    self.manuscripts_by_author_map = {}
-    self.manuscripts_by_reviewer_map = {}
-    for m in manuscripts_all_list:
-      if manuscript_model.is_manuscript_valid(m):
-        debugv("manuscript: %s", m)
-        # only consider published manuscripts for authors
-        if m['is_published']:
-          for author in m['authors']:
-            self.manuscripts_by_author_map.setdefault(author[PERSON_ID], [])\
-            .append(m)
-        # also consider not published manuscripts (but valid ones) for reviewers
-        for reviewer in m['reviewers']:
-          self.manuscripts_by_reviewer_map.setdefault(reviewer[PERSON_ID], [])\
-          .append(m)
-      else:
-        debugv("ignoring manuscript: %s", m)
-
-    remove_duplicate_titles_and_sort_by_date = lambda manuscripts: (
-      sort_manuscripts_by_date(duplicate_manuscript_titles_as_alternatives(manuscripts))
-    )
-
-    self.manuscripts_by_author_map = applymap_dict(
-      self.manuscripts_by_author_map, remove_duplicate_titles_and_sort_by_date
-    )
-
-    self.manuscripts_by_reviewer_map = applymap_dict(
-      self.manuscripts_by_reviewer_map, remove_duplicate_titles_and_sort_by_date
-    )
-
-    debugv("manuscripts_by_author_map: %s", self.manuscripts_by_author_map)
-    debugv("manuscripts_by_reviewer_map: %s", self.manuscripts_by_reviewer_map)
 
     early_career_researcher_person_id_query = db.session.query(
       db.person.table.person_id
@@ -672,16 +641,63 @@ class RecommendReviewers(object):
       })
     }
 
+  def _get_all_related_manuscript_version_ids_for_potential_reviewers(
+    self,
+    potential_reviewers: Iterable[dict]
+    ) -> Dict[VersionId, dict]:
+
+    return set(iter_flatten(iter_flatten(
+      potential_reviewer.get(
+        'related_manuscript_version_ids_by_relationship_type', {}
+      ).values()
+      for potential_reviewer in potential_reviewers
+    )))
+
+  def _populate_related_manuscript(
+    self, version_id: VersionId, manuscript_score_by_id: Dict[VersionId, Score]) -> dict:
+    manuscript = self.manuscripts_by_version_id_map[version_id]
+    d = {
+      k: v
+      for k, v in manuscript.items()
+      if k in RELATED_MANUSCRIPT_FIELDS
+    }
+    if manuscript['is_published']:
+      d['published_timestamp'] = (
+        manuscript.get('decision_timestamp') or
+        manuscript.get('created_timestamp')
+      )
+    score = manuscript_score_by_id.get(version_id)
+    if score:
+      d['score'] = {
+        k: v for k, v in score.items() if k != 'version_id'
+      }
+    return d
+
+  def _populate_related_manuscript_by_version_id(
+    self,
+    version_ids: Iterable[VersionId],
+    manuscript_score_by_id: Dict[VersionId, Score]
+    ) -> Dict[VersionId, dict]:
+
+    return {
+      version_id: self._populate_related_manuscript(
+        version_id, manuscript_score_by_id
+      )
+      for version_id in version_ids
+    }
+
   def _populate_potential_reviewer(
-    self, person_id,
-    version_ids,
-    keyword_score_by_person_id,
-    manuscript_score_by_id):
+    self,
+    person_id: PersonId,
+    recommended_by_version_ids: Collection[VersionId],
+    return_version_ids_by_relationship_type: Collection[RelationshipType],
+    keyword_score_by_person_id: Dict[PersonId, float],
+    manuscript_score_by_id: Dict[VersionId, dict]) -> dict:
 
     scores_by_manuscript = sorted_manuscript_scores_descending(
       score for score in (
         manuscript_score_by_id.get(version_id)
-        for version_id in version_ids
+        for version_id in recommended_by_version_ids
       ) if score
     )
 
@@ -691,19 +707,11 @@ class RecommendReviewers(object):
       best_manuscript_score=best_score
     )
 
-    author_of_manuscripts = self.manuscripts_by_author_map.get(person_id, [])
-    author_of_manuscript_ids = set(m[VERSION_ID] for m in author_of_manuscripts)
-
     potential_reviewer = {
       'person': self.persons_map.get(person_id, None),
-      'author_of_manuscripts': clean_manuscripts(author_of_manuscripts),
+      'related_manuscript_version_ids_by_relationship_type': return_version_ids_by_relationship_type,
       'scores': {
-        **reviewer_score,
-        'by_manuscript': [
-          m
-          for m in scores_by_manuscript
-          if m[VERSION_ID] in author_of_manuscript_ids
-        ]
+        **reviewer_score
       }
     }
     if potential_reviewer.get('person') is None:
@@ -712,21 +720,36 @@ class RecommendReviewers(object):
     return potential_reviewer
 
   def _populate_potential_reviewers(
-    self, person_ids, person_ids_by_version_id,
-    keyword_score_by_person_id,
-    keyword_score_by_version_id, similarity_by_manuscript_version_id):
+    self,
+    person_ids: Iterable[PersonId],
+    person_ids_by_version_id: Dict[VersionId, Collection[PersonId]],
+    keyword_score_by_person_id: Dict[PersonId, float],
+    manuscript_score_by_id: Dict[VersionId, Score],
+    return_relationship_types: Collection[RelationshipType]) -> Iterable[dict]:
 
-    manuscript_score_by_id = self._combine_manuscript_scores_by_id(
-      keyword_score_by_version_id=keyword_score_by_version_id,
-      similarity_by_manuscript_version_id=similarity_by_manuscript_version_id
-    )
+    person_ids = list(person_ids)
 
     version_ids_by_person_id = invert_set_dict(person_ids_by_version_id)
+  
+    version_ids_by_person_id_and_relationship_type = applymap_dict(
+      self.manuscript_person_relationship_service
+      .get_version_ids_by_person_id_and_relationship_type(
+        person_ids=person_ids,
+        relationship_types=return_relationship_types
+      ),
+      lambda version_ids_by_relationship_type: applymap_dict(
+        version_ids_by_relationship_type,
+        self._filter_published_version_ids
+      )
+    )
 
     return (
       self._populate_potential_reviewer(
         person_id,
-        version_ids=version_ids_by_person_id.get(person_id, set()),
+        recommended_by_version_ids=version_ids_by_person_id.get(person_id, set()),
+        return_version_ids_by_relationship_type=(
+          version_ids_by_person_id_and_relationship_type.get(person_id, {})
+        ),
         keyword_score_by_person_id=keyword_score_by_person_id,
         manuscript_score_by_id=manuscript_score_by_id
       )
@@ -890,17 +913,31 @@ class RecommendReviewers(object):
     )
 
   def _recommend_using_criteria(
-    self, subject_areas=None, keyword_list=None, abstract=None,
-    include_person_ids=None, exclude_person_ids=None, ecr_subject_areas=None,
-    manuscript_version_ids=None,
-    role=None,
-    recommend_relationship_types=None, recommend_stage_names=None,
-    limit=None):
+    self,
+    subject_areas: Collection[str] = None,
+    keyword_list: Collection[str] = None,
+    abstract: str = None,
+    include_person_ids: Collection[PersonId] = None,
+    exclude_person_ids: Collection[PersonId] = None,
+    ecr_subject_areas: Collection[str] = None,
+    manuscript_version_ids: Collection[VersionId] = None,
+    role: str = None,
+    recommend_relationship_types: Collection[RelationshipType] = None,
+    recommend_stage_names: Collection[str] = None,
+    return_relationship_types: Collection[RelationshipType] = None,
+    limit: int = None) -> dict:
 
     if recommend_relationship_types is None:
       recommend_relationship_types = [RelationshipTypes.AUTHOR]
     if recommend_stage_names is None:
       recommend_stage_names = [StageNames.REVIEW_RECEIVED]
+    if return_relationship_types is None:
+      return_relationship_types = recommend_relationship_types
+
+    if RelationshipTypes.AUTHOR in return_relationship_types:
+      return_relationship_types = (
+        return_relationship_types + [RelationshipTypes.CORRESPONDING_AUTHOR]
+      )
 
     include_person_ids = include_person_ids or set()
     exclude_person_ids = exclude_person_ids or set()
@@ -913,6 +950,11 @@ class RecommendReviewers(object):
         subject_areas=subject_areas, keyword_list=keyword_list, abstract=abstract,
         manuscript_version_ids=manuscript_version_ids
       )
+    )
+
+    manuscript_score_by_id = self._combine_manuscript_scores_by_id(
+      keyword_score_by_version_id=keyword_score_by_version_id,
+      similarity_by_manuscript_version_id=similarity_by_manuscript_version_id
     )
 
     person_ids_by_version_id = self._potential_reviewer_ids_by_matching_manuscript_ids(
@@ -937,15 +979,27 @@ class RecommendReviewers(object):
         potential_reviewers_ids,
         person_ids_by_version_id=person_ids_by_version_id,
         keyword_score_by_person_id=person_keyword_scores,
-        keyword_score_by_version_id=keyword_score_by_version_id,
-        similarity_by_manuscript_version_id=similarity_by_manuscript_version_id
+        manuscript_score_by_id=manuscript_score_by_id,
+        return_relationship_types=return_relationship_types
       )
     )
 
     if limit is not None and limit > 0:
       potential_reviewers = potential_reviewers[:limit]
 
+    related_manuscript_by_version_id = self._populate_related_manuscript_by_version_id(
+      self._get_all_related_manuscript_version_ids_for_potential_reviewers(
+        potential_reviewers
+      ),
+      manuscript_score_by_id=manuscript_score_by_id
+    )
+
     result = {
-      'potential_reviewers': potential_reviewers
+      'potential_reviewers': potential_reviewers,
+      'related_manuscript_by_version_id': related_manuscript_by_version_id
     }
     return result
+
+  def get_manuscript_details(self, version_id):
+    manuscript_details = self.manuscripts_by_version_id_map.get(version_id)
+    return clean_manuscript(manuscript_details) if manuscript_details else None

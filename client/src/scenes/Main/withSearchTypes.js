@@ -4,7 +4,7 @@ import { withPromisedProp } from '../../components';
 
 import { getAuhenticationHeaders } from '../../api'
 
-import withResolvedPromise from './withResolvedPromise';
+import withAppResolvedPromise from './withAppResolvedPromise';
 
 export const withSearchTypes = WrapperComponent => withPromisedProp(
   WrapperComponent,
@@ -15,7 +15,7 @@ export const withSearchTypes = WrapperComponent => withPromisedProp(
 );
 
 export const withLoadedSearchTypes = WrappedComponent => withSearchTypes(
-  withResolvedPromise(WrappedComponent, 'searchTypes')
+  withAppResolvedPromise(WrappedComponent, 'searchTypes')
 );
 
 export default withSearchTypes;

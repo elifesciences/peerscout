@@ -4,8 +4,10 @@ var webpack = require('webpack');
 var HtmlWebpackPlugin = require('html-webpack-plugin');
 var CopyWebpackPlugin = require('copy-webpack-plugin');
 
+const isDevelopmentMode = process.env.NODE_ENV == 'development';
+
 const API_URL = process.env.API_URL || (
-  process.env.NODE_ENV == 'development' && 'http://localhost:8080/api'
+  isDevelopmentMode && 'http://localhost:8080/api'
 ) || '';
 
 inject_html_head = []
@@ -40,7 +42,7 @@ module.exports = {
     path.resolve(__dirname, 'src', 'app', 'index.js')
   ],
   output: {
-    filename: 'bundle.js',
+    filename: isDevelopmentMode ? 'bundle.js' : 'bundle-[hash:6].js',
     path: path.resolve(__dirname, 'dist'),
     publicPath : ''
   },

@@ -8,7 +8,7 @@ from flask import Blueprint, request, jsonify, url_for, Response
 from flask.json import JSONEncoder
 from flask_cors import CORS
 from joblib import Memory
-from werkzeug.exceptions import BadRequest, Forbidden
+from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
 from peerscout.utils.collection import parse_list
 
@@ -48,6 +48,9 @@ class ReloadableRecommendReviewers:
 
   def reload(self):
     self._recommend_reviewer = self._create_recommend_reviewer()
+
+class _ReloadableRecommendReviewers(ReloadableRecommendReviewers, RecommendReviewers):
+  pass
 
 def get_recommend_reviewer_factory(db, config):
   valid_decisions = parse_list(config.get(
@@ -179,7 +182,9 @@ def create_api_blueprint(config):
 
   load_recommender = get_recommend_reviewer_factory(db, config)
 
-  recommend_reviewers = ReloadableRecommendReviewers(load_recommender)
+  recommend_reviewers: _ReloadableRecommendReviewers = (
+    ReloadableRecommendReviewers(load_recommender)
+  )
 
   get_search_type = lambda: request.args.get('search_type', DEFAULT_SEARCH_TYPE)
 
@@ -242,6 +247,14 @@ def create_api_blueprint(config):
       recommend_stage_names=recommend_stage_names,
       limit=limit
     )
+
+  @blueprint.route("/manuscript/version/<path:version_id>")
+  @api_auth.wrap_search
+  def _get_manuscript_details(version_id, email=None) -> Response:
+    manuscript_details = recommend_reviewers.get_manuscript_details(version_id)
+    if not manuscript_details:
+      raise NotFound()
+    return jsonify(manuscript_details)
 
   @blueprint.route("/subject-areas")
   def _subject_areas_api() -> Response:

@@ -47,12 +47,14 @@ const api = baseUrl => {
   const getAllSubjectAreasUrl = baseUrl + '/subject-areas';
   const getAllKeywordsUrl = baseUrl + '/keywords';
   const getSearchTypesUrl = baseUrl + '/search-types';
+  const getManuscriptVersionUrl = versionId => `${baseUrl}/manuscript/version/${versionId}`;
   const recommendReviewersUrl = baseUrl + '/recommend-reviewers';
   return {
     getConfig: () => fetchJson(urlWithParams(getConfigUrl, {})),
     getAllSubjectAreas: () => fetchJson(urlWithParams(getAllSubjectAreasUrl, {})),
     getAllKeywords: () => fetchJson(urlWithParams(getAllKeywordsUrl, {})),
     getSearchTypes: options => fetchJson(urlWithParams(getSearchTypesUrl, {}), options),
+    getManuscriptVersion: (versionId, options) => fetchJson(getManuscriptVersionUrl(versionId), options),
     recommendReviewers: (params, options) => fetchJson(urlWithParams(recommendReviewersUrl, params), options),
     isNotAuthorizedError: error => error === NOT_AUTHORIZED_ERROR
   };

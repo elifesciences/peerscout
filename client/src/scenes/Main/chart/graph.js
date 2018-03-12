@@ -1,20 +1,21 @@
 import sortOn from 'sort-on';
+import Set from 'es6-set';
+
+import { flatMap } from '../../../utils';
+
+import { duplicateManuscriptTitlesAsAlternatives } from '../manuscriptUtils';
 
 export const manuscriptToId = m => 'm' + m['manuscript_id'];
 export const personToId = p => 'p' + p['person_id'];
 
 const limit = (a, max) => a && max && a.length > max ? a.slice(0, max) : a;
 
-const sortManuscriptsByScoreDescending = (manuscripts, scores) => {
-  if (!manuscripts || (manuscripts.length < 2) || !scores || !scores.by_manuscript) {
+const sortManuscriptsByScoreDescending = manuscripts => {
+  if (!manuscripts || (manuscripts.length < 2)) {
     return manuscripts;
   }
-  const scoreByVersionId = {};
-  scores.by_manuscript.forEach(manuscript_scores => {
-    scoreByVersionId[manuscript_scores.version_id] = manuscript_scores.combined;
-  });
   const manuscriptsWithScores = manuscripts.map((manuscript, index) => ({
-    score: scoreByVersionId[manuscript.version_id],
+    score: manuscript.score && manuscript.score.combined,
     manuscript,
     index
   }));
@@ -52,16 +53,9 @@ export const recommendedReviewersToGraph = (recommendedReviewers, options={}) =>
     reviewerLinksMap[targetId] = link;
 
     const manuscript = sourceNode.manuscript;
-    const manuscriptNo = manuscript && manuscript['manuscript_id'];
     const r = reviewerNode.potentialReviewer;
-    if (manuscriptNo && r['scores'] && r['scores']['by_manuscript']) {
-      const score = r['scores']['by_manuscript'].filter(
-        s => s['manuscript_id'] === manuscriptNo
-      )[0];
-      link.score = score;
-      if (score) {
-        manuscript.score = score;
-      }
+    if (manuscript && manuscript.score) {
+      link.score = manuscript.score;
     }
   }
 
@@ -126,24 +120,28 @@ export const recommendedReviewersToGraph = (recommendedReviewers, options={}) =>
   }
 
   const addAllReviewerManuscript = (m, r) =>
-    addReviewerManuscriptWithMinimumConnections(m, r, 1);
+    addReviewerManuscriptWithMinimumConnections(m, r, 0);
 
   const addCommonReviewerManuscript = (m, r) =>
     addReviewerManuscriptWithMinimumConnections(m, r, 2);
 
-  const processReviewerLinks = linkProcessor => r => {
-    const relatedManuscripts = limit(sortManuscriptsByScoreDescending(
-      (r.author_of_manuscripts || []).concat(
-        r.reviewer_of_manuscripts || []
-      ),
-      r.scores
+  const processReviewerLinks = (linkProcessor, relatedManuscriptByVersionId) => r => {
+    const relatedManuscripts = limit(duplicateManuscriptTitlesAsAlternatives(
+      sortManuscriptsByScoreDescending(
+        flatMap(
+          Object.keys(r.related_manuscript_version_ids_by_relationship_type || {}),
+          key => r.related_manuscript_version_ids_by_relationship_type[key]
+        ).map(versionId => relatedManuscriptByVersionId[versionId])
+      )
     ), options.maxRelatedManuscripts);
+    console.log('relatedManuscripts:', relatedManuscripts);
     relatedManuscripts.forEach(m => linkProcessor(m, r));
   }
 
   const {
     matchingManuscripts,
     potentialReviewers,
+    relatedManuscriptByVersionId,
     search
   } = recommendedReviewers;
 
@@ -157,9 +155,8 @@ export const recommendedReviewersToGraph = (recommendedReviewers, options={}) =>
   if (potentialReviewers) {
     potentialReviewers.forEach(addReviewer);
     potentialReviewers.forEach(processReviewerLinks(
-      options.showAllRelatedManuscripts ?
-      addAllReviewerManuscript :
-      addCommonReviewerManuscript
+      options.showAllRelatedManuscripts ? addAllReviewerManuscript : addCommonReviewerManuscript,
+      relatedManuscriptByVersionId
     ));
   }
 
@@ -181,3 +178,45 @@ export const recommendedReviewersToGraph = (recommendedReviewers, options={}) =>
     links
   }
 }
+
+const getPotentialReviewerCorrespondingAuthorVersionIds = potentialReviewer => {
+  const related_manuscript_version_ids_by_relationship_type = (
+    potentialReviewer && potentialReviewer.related_manuscript_version_ids_by_relationship_type
+  );
+  return (
+    related_manuscript_version_ids_by_relationship_type &&
+    related_manuscript_version_ids_by_relationship_type.corresponding_author
+  );
+};
+
+export const getPotentialReviewerCorrespondingAuthorVersionIdSet = potentialReviewer => (
+  new Set(getPotentialReviewerCorrespondingAuthorVersionIds(potentialReviewer))
+);
+
+// Note: fairly slow implementation scanning all other nodes
+const potentialReviewerHasCorrespondingAuthorVersionIds = (potentialReviewer, versionId) => (
+  getPotentialReviewerCorrespondingAuthorVersionIdSet(potentialReviewer).has(versionId)
+);
+
+export const getManuscriptCorrespondingAuthorPersonIdSet = (manuscript, allNodes) => {
+  if (!manuscript || !manuscript.version_id || !allNodes.length) {
+    return new Set();
+  }
+  return new Set(
+    allNodes.filter(
+      node => potentialReviewerHasCorrespondingAuthorVersionIds(
+        node.potentialReviewer, manuscript.version_id
+      )
+    ).map(node => node.potentialReviewer.person.person_id)
+  );
+};
+
+export const getNodeVersionIdFilter = versionIdSet => d => {
+  const versionId = d.manuscript && d.manuscript.version_id;
+  return versionId && versionIdSet.has(versionId);
+};
+
+export const getNodePersonIdFilter = personIdSet => d => {
+  const personId = d.potentialReviewer && d.potentialReviewer.person.person_id;
+  return personId && personIdSet.has(personId);
+};

@@ -161,7 +161,19 @@ test('withSearchResults', g => {
     const props = createMockProps();
     props.reviewerRecommendationApi.recommendReviewers.returns(responsePromise);
 
-    const Component = withSearchResults(WrappedComponent, undefined, props => props.debouncing);
+    const wrappedComponentConstructor = sinon.spy();
+    class _WrappedComponent extends React.Component {
+      constructor(props) {
+        super(props);
+        wrappedComponentConstructor();
+      }
+
+      render() {
+        return <WrappedComponent { ...this.props } />;
+      }
+    }
+
+    const Component = withSearchResults(_WrappedComponent, undefined, props => props.debouncing);
     const component = mount(<Component { ...props } searchOptions={ SEARCH_OPTIONS } />);
 
     responseDeferred.resolve(SEARCH_RESULT);
@@ -179,7 +191,22 @@ test('withSearchResults', g => {
     t.deepEqual(component.find('WrappedComponent').props()['searchResults'], {
       loading: true
     });
+    t.equal(wrappedComponentConstructor.callCount, 1, 'component should not be re-created');
 
     t.end();
   }));
+});
+
+test('withSearchResults.convertResultsResponse', g => {
+  g.test('.should include relatedManuscriptByVersionId', t => {
+    const searchResults = {
+      ...SEARCH_RESULT,
+      related_manuscript_by_version_id: {'12345': 'manuscript1'}
+    };
+    t.equal(
+      convertResultsResponse(searchResults).relatedManuscriptByVersionId,
+      searchResults.related_manuscript_by_version_id
+    );
+    t.end();
+  });
 });

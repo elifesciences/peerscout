@@ -1,4 +1,5 @@
 export { default as CorrespondingAuthorIndicator } from './CorrespondingAuthorIndicator';
+export * from './LazyManuscriptSummary';
 export { default as ManuscriptInlineSummary } from './ManuscriptInlineSummary';
 export { default as ManuscriptRefLink } from './ManuscriptRefLink';
 export { default as ManuscriptRefLinkWithAlternatives } from './ManuscriptRefLinkWithAlternatives';

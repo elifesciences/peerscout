@@ -20,6 +20,7 @@ from .test_data import (
   MANUSCRIPT_ID1, MANUSCRIPT_ID2,
   MANUSCRIPT_ID_FIELDS1, MANUSCRIPT_ID_FIELDS2, MANUSCRIPT_ID_FIELDS3,
   MANUSCRIPT_ID_FIELDS4, MANUSCRIPT_ID_FIELDS5,
+  MANUSCRIPT_VERSION_ID1, MANUSCRIPT_VERSION_ID2, MANUSCRIPT_VERSION_ID3,
   MANUSCRIPT_TITLE1, MANUSCRIPT_TITLE2, MANUSCRIPT_TITLE3,
   MANUSCRIPT_KEYWORD1,
   MANUSCRIPT_ABSTRACT1,
@@ -168,26 +169,6 @@ MANUSCRIPT_HISTORY_REVIEW_COMPLETE1 = {
   PERSON_ID: PERSON_ID1
 }
 
-POTENTIAL_REVIEWER1 = {
-  'person': PERSON1_RESULT,
-  'scores': {
-    'combined': 1.0,
-    'keyword': 1.0,
-    'similarity': None,
-    'by_manuscript': [{
-      **MANUSCRIPT_ID_FIELDS1,
-      'combined': 1.0,
-      'keyword': 1.0,
-      'similarity': None
-    }]
-  }
-}
-
-POTENTIAL_REVIEWER2 = {
-  **POTENTIAL_REVIEWER1,
-  'person': PERSON2_RESULT
-}
-
 KEYWORD_SEARCH1 = {
   'keywords': [KEYWORD1]
 }
@@ -264,6 +245,15 @@ def _potential_reviewers_person_ids(potential_reviewers):
 def _potential_reviewer_scores_by_person_id(potential_reviewers):
   return {r['person'][PERSON_ID]: r['scores']['keyword'] for r in potential_reviewers}
 
+def _potential_reviewer_related_version_ids(potential_reviewers, relationship_type):
+  return {
+    r['person'][PERSON_ID]: set(
+      r.get('related_manuscript_version_ids_by_relationship_type', {})
+      .get(relationship_type, [])
+    )
+    for r in potential_reviewers
+  }
+
 def _review_complete_stages(id_fields, contacted, accepted, reviewed):
   return [{
     **id_fields,
@@ -330,6 +320,7 @@ class TestRecommendReviewers:
       result = recommend_for_dataset(dataset, keywords='', manuscript_no=MANUSCRIPT_ID1)
       assert result == {
         'potential_reviewers': [],
+        'related_manuscript_by_version_id': {},
         'matching_manuscripts': [{
           **MANUSCRIPT_VERSION1_RESULT
         }]
@@ -622,6 +613,58 @@ class TestRecommendReviewers:
       result = recommend_for_dataset(dataset, keywords=KEYWORD1, manuscript_no='')
       assert _potential_reviewers_person_ids(result['potential_reviewers']) == [PERSON_ID1]
 
+    def test_should_return_manuscript_scores_by_version_id(self):
+      dataset = {
+        'person': [PERSON1],
+        'manuscript_version': [MANUSCRIPT_VERSION1],
+        'manuscript_author': [AUTHOR1],
+        'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
+      }
+      result = recommend_for_dataset(dataset, keywords=KEYWORD1, manuscript_no='')
+      assert _potential_reviewers_person_ids(result['potential_reviewers']) == [PERSON_ID1]
+      related_manuscript_by_version_id = result['related_manuscript_by_version_id']
+      assert related_manuscript_by_version_id[MANUSCRIPT_VERSION_ID1].get('score') == {
+        'combined': 1.0,
+        'keyword': 1.0,
+        'similarity': None
+      }
+
+    def test_should_return_decision_timestamp_as_published_timestamp(self):
+      dataset = {
+        'person': [PERSON1],
+        'manuscript_version': [{
+          **MANUSCRIPT_VERSION1,
+          'decision_timestamp': pd.Timestamp('2017-01-01')
+        }],
+        'manuscript_author': [AUTHOR1],
+        'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
+      }
+      result = recommend_for_dataset(dataset, keywords=KEYWORD1, manuscript_no='')
+      assert _potential_reviewers_person_ids(result['potential_reviewers']) == [PERSON_ID1]
+      related_manuscript_by_version_id = result['related_manuscript_by_version_id']
+      assert (
+        related_manuscript_by_version_id[MANUSCRIPT_VERSION_ID1].get('published_timestamp') ==
+        pd.Timestamp('2017-01-01')
+      )
+
+    def test_should_return_created_timestamp_as_published_timestamp(self):
+      dataset = {
+        'person': [PERSON1],
+        'manuscript_version': [{
+          **MANUSCRIPT_VERSION1,
+          'created_timestamp': pd.Timestamp('2017-01-01')
+        }],
+        'manuscript_author': [AUTHOR1],
+        'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
+      }
+      result = recommend_for_dataset(dataset, keywords=KEYWORD1, manuscript_no='')
+      assert _potential_reviewers_person_ids(result['potential_reviewers']) == [PERSON_ID1]
+      related_manuscript_by_version_id = result['related_manuscript_by_version_id']
+      assert (
+        related_manuscript_by_version_id[MANUSCRIPT_VERSION_ID1].get('published_timestamp') ==
+        pd.Timestamp('2017-01-01')
+      )
+
     def test_matching_one_keyword_author_should_return_stats(self, logger):
       dataset = {
         'person': [PERSON1],
@@ -731,14 +774,20 @@ class TestRecommendReviewers:
         'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
       }
       result = recommend_for_dataset(dataset, keywords=KEYWORD1, manuscript_no='')
-      author_of_manuscripts = result['potential_reviewers'][0]['author_of_manuscripts']
-      author_of_manuscript_ids = [m[MANUSCRIPT_ID] for m in author_of_manuscripts]
-      logger.debug("author_of_manuscripts: %s", PP.pformat(author_of_manuscripts))
-      logger.debug("author_of_manuscript_ids: %s", author_of_manuscript_ids)
-      assert set(author_of_manuscript_ids) == set([
-        MANUSCRIPT_VERSION1_RESULT[MANUSCRIPT_ID],
-        MANUSCRIPT_VERSION2_RESULT[MANUSCRIPT_ID]
-      ])
+      potential_reviewers = result['potential_reviewers']
+      author_of_manuscript_ids_by_person_id = _potential_reviewer_related_version_ids(
+        potential_reviewers, RelationshipTypes.AUTHOR
+      )
+      logger.debug("author_of_manuscript_ids_by_person_id: %s", author_of_manuscript_ids_by_person_id)
+      assert author_of_manuscript_ids_by_person_id == {
+        PERSON_ID1: {
+          MANUSCRIPT_VERSION_ID1,
+          MANUSCRIPT_VERSION_ID2
+        }
+      }
+      assert result['related_manuscript_by_version_id'].keys() == {
+        MANUSCRIPT_VERSION_ID1, MANUSCRIPT_VERSION_ID2
+      }
 
     def test_matching_one_keyword_author_should_not_return_other_draft_papers(self, logger):
       dataset = {
@@ -758,43 +807,19 @@ class TestRecommendReviewers:
         'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
       }
       result = recommend_for_dataset(dataset, keywords=KEYWORD1, manuscript_no='')
-      assert (
-        [m[MANUSCRIPT_ID] for m in result['potential_reviewers'][0]['author_of_manuscripts']] ==
-        [MANUSCRIPT_ID1]
+      potential_reviewers = result['potential_reviewers']
+      author_of_manuscript_ids_by_person_id = _potential_reviewer_related_version_ids(
+        potential_reviewers, RelationshipTypes.AUTHOR
       )
-
-    def test_matching_one_keyword_author_should_return_papers_with_same_title_as_alternatives(
-      self, logger):
-
-      dataset = {
-        'person': [PERSON1],
-        'manuscript_version': [
-          {
-            **MANUSCRIPT_VERSION1,
-            'title': MANUSCRIPT_TITLE1,
-            'abstract': MANUSCRIPT_ABSTRACT1
-          }, {
-            **MANUSCRIPT_VERSION2,
-            'title': MANUSCRIPT_TITLE1,
-            'abstract': None
-          }
-        ],
-        'manuscript_author': [
-          AUTHOR1, {
-            **AUTHOR1,
-            **MANUSCRIPT_ID_FIELDS2
-          }
-        ],
-        'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
+      logger.debug("author_of_manuscript_ids_by_person_id: %s", author_of_manuscript_ids_by_person_id)
+      assert author_of_manuscript_ids_by_person_id == {
+        PERSON_ID1: {
+          MANUSCRIPT_VERSION_ID1
+        }
       }
-      result = recommend_for_dataset(dataset, keywords=KEYWORD1, manuscript_no='')
-      author_of_manuscripts = result['potential_reviewers'][0]['author_of_manuscripts']
-      author_of_manuscript_ids = [m[MANUSCRIPT_ID] for m in author_of_manuscripts]
-      logger.debug("author_of_manuscripts: %s", PP.pformat(author_of_manuscripts))
-      logger.debug("author_of_manuscript_ids: %s", author_of_manuscript_ids)
-      assert set(author_of_manuscript_ids) == set([
-        MANUSCRIPT_VERSION1_RESULT[MANUSCRIPT_ID]
-      ])
+      assert result['related_manuscript_by_version_id'].keys() == {
+        MANUSCRIPT_VERSION_ID1
+      }
 
     def test_should_consider_previous_reviewer_as_potential_reviewer(self):
       dataset = {
@@ -937,6 +962,47 @@ class TestRecommendReviewers:
         PERSON_ID1: 1.0
       }
 
+    def test_should_return_manuscript_ids_person_has_senior_editor_of(self):
+      dataset = {
+        'person': [PERSON1, PERSON2, PERSON3],
+        'person_role': [{PERSON_ID: PERSON_ID1, 'role': PersonRoles.SENIOR_EDITOR}],
+        'manuscript_version': [MANUSCRIPT_VERSION1, MANUSCRIPT_VERSION2, MANUSCRIPT_VERSION3],
+        'manuscript_author': [{**MANUSCRIPT_ID_FIELDS3, 'person_id': PERSON_ID1}],
+        'manuscript_editor': [{**MANUSCRIPT_ID_FIELDS2, 'person_id': PERSON_ID1}],
+        'manuscript_senior_editor': [{**MANUSCRIPT_ID_FIELDS1, 'person_id': PERSON_ID1}],
+        'manuscript_keyword': [MANUSCRIPT_KEYWORD1, {
+          **MANUSCRIPT_KEYWORD1,
+          **MANUSCRIPT_ID_FIELDS2
+        }]
+      }
+      result = recommend_for_dataset(
+        dataset, keywords=KEYWORD1, manuscript_no=None,
+        role=PersonRoles.SENIOR_EDITOR,
+        recommend_relationship_types=[
+          RelationshipTypes.SENIOR_EDITOR
+        ],
+        return_relationship_types=[
+          RelationshipTypes.SENIOR_EDITOR,
+          RelationshipTypes.EDITOR,
+          RelationshipTypes.AUTHOR
+        ]
+      )
+      potential_reviewers = result['potential_reviewers']
+      person_ids = _potential_reviewers_person_ids(potential_reviewers)
+      assert person_ids == [PERSON_ID1]
+      assert _potential_reviewer_related_version_ids(
+        potential_reviewers, RelationshipTypes.SENIOR_EDITOR
+      ) == {PERSON_ID1: {MANUSCRIPT_VERSION_ID1}}
+      assert _potential_reviewer_related_version_ids(
+        potential_reviewers, RelationshipTypes.EDITOR
+      ) == {PERSON_ID1: {MANUSCRIPT_VERSION_ID2}}
+      assert _potential_reviewer_related_version_ids(
+        potential_reviewers, RelationshipTypes.AUTHOR
+      ) == {PERSON_ID1: {MANUSCRIPT_VERSION_ID3}}
+      assert result['related_manuscript_by_version_id'].keys() == {
+        MANUSCRIPT_VERSION_ID1, MANUSCRIPT_VERSION_ID2, MANUSCRIPT_VERSION_ID3
+      }
+
     def test_should_recommend_based_on_stage_name(self):
       custom_stage = 'custom_stage'
       dataset = {
@@ -1020,3 +1086,22 @@ class TestRecommendReviewers:
       }
       with create_recommend_reviewers(dataset) as recommend_reviewers:
         assert recommend_reviewers.get_user_roles_by_email(email=EMAIL_1) == {ROLE_1}
+
+  class TestGetManuscriptDetails:
+    def test_should_return_none_if_version_id_is_invalid(self):
+      dataset = {
+        'manuscript_version': [MANUSCRIPT_VERSION2]
+      }
+      with create_recommend_reviewers(dataset) as recommend_reviewers:
+        assert recommend_reviewers.get_manuscript_details(MANUSCRIPT_VERSION_ID1) is None
+
+    def test_should_return_details_if_version_id_is_valid(self):
+      dataset = {
+        'manuscript_version': [MANUSCRIPT_VERSION1]
+      }
+      with create_recommend_reviewers(dataset) as recommend_reviewers:
+        manuscript_details = recommend_reviewers.get_manuscript_details(MANUSCRIPT_VERSION_ID1)
+        assert manuscript_details is not None
+        assert manuscript_details.get(VERSION_ID) == MANUSCRIPT_VERSION_ID1
+        assert manuscript_details.get('manuscript_id') == MANUSCRIPT_ID1
+        assert manuscript_details.get('title') == MANUSCRIPT_VERSION1['title']

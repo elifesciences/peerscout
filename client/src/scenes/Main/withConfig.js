@@ -2,7 +2,7 @@ import React from 'react';
 
 import { withPromisedProp } from '../../components';
 
-import withResolvedPromise from './withResolvedPromise';
+import withAppResolvedPromise from './withAppResolvedPromise';
 
 const DEFAULT_CONFIG = {
   showAllRelatedManuscripts: true,
@@ -33,7 +33,7 @@ export const withConfig = (WrapperComponent, defaultConfig = DEFAULT_CONFIG) => 
 );
 
 export const withLoadedConfig = WrappedComponent => withConfig(
-  withResolvedPromise(WrappedComponent, 'config')
+  withAppResolvedPromise(WrappedComponent, 'config')
 );
 
 export default withConfig;

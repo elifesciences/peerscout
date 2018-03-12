@@ -3,7 +3,7 @@ import React from 'react';
 import test from 'tape';
 import { shallow, render } from 'enzyme';
 
-import PotentialReviewer from '../PotentialReviewer';
+import PotentialReviewer, { RelatedManuscripts } from '../PotentialReviewer';
 import {
   formatAssignmentStatus,
   PersonAssignmentStatus,
@@ -14,9 +14,10 @@ import {
   formatPeriodNotAvailable
 } from '../../formatUtils';
 
-const MANUSCRIPT_1 = {manuscript_id: '12345'};
-
-const MANUSCRIPT_2 = {manuscript_id: '22222'};
+const VERSION_ID_1 = '11111-1';
+const VERSION_ID_2 = '22222-1';
+const MANUSCRIPT_1 = {title: `Manuscript ${VERSION_ID_1}`};
+const MANUSCRIPT_2 = {title: `Manuscript ${VERSION_ID_2}`};
 
 const MEMBERSHIP_1 = {member_type: 'ORCID', member_id: '12345'};
 
@@ -37,13 +38,125 @@ test('PotentialReviewer', g => {
   g.test('.should render author of manuscripts', t => {
     const potentialReviewer = {
       ...POTENTIAL_REVIEWER_1,
-      author_of_manuscripts: [MANUSCRIPT_1, MANUSCRIPT_2]
+      related_manuscript_version_ids_by_relationship_type: {
+        author: [VERSION_ID_1, VERSION_ID_2]
+      }
     };
-    const component = shallow(<PotentialReviewer potentialReviewer={ potentialReviewer } />);
-    const manuscriptComponent = component.find('ManuscriptInlineSummary');
-    t.equal(manuscriptComponent.length, 2);
-    t.equal(manuscriptComponent.at(0).props()['manuscript'], MANUSCRIPT_1);
-    t.equal(manuscriptComponent.at(1).props()['manuscript'], MANUSCRIPT_2);
+    const relatedManuscriptByVersionId = {
+      [VERSION_ID_1]: MANUSCRIPT_1,
+      [VERSION_ID_2]: MANUSCRIPT_2
+    };
+    const component = shallow(<PotentialReviewer
+      potentialReviewer={ potentialReviewer }
+      relatedManuscriptByVersionId={ relatedManuscriptByVersionId }
+    />);
+    const manuscriptComponent = component.find('RelatedManuscripts');
+    t.deepEqual(manuscriptComponent.length, 1);
+    t.deepEqual(manuscriptComponent.at(0).props()['label'], 'Author');
+    t.deepEqual(manuscriptComponent.at(0).props()['manuscripts'], [MANUSCRIPT_1, MANUSCRIPT_2]);
+    t.end();
+  });
+
+  g.test('.should render editor of manuscripts', t => {
+    const potentialReviewer = {
+      ...POTENTIAL_REVIEWER_1,
+      related_manuscript_version_ids_by_relationship_type: {
+        editor: [VERSION_ID_1, VERSION_ID_2]
+      }
+    };
+    const relatedManuscriptByVersionId = {
+      [VERSION_ID_1]: MANUSCRIPT_1,
+      [VERSION_ID_2]: MANUSCRIPT_2
+    };
+    const component = shallow(<PotentialReviewer
+      potentialReviewer={ potentialReviewer }
+      relatedManuscriptByVersionId={ relatedManuscriptByVersionId }
+    />);
+    const manuscriptComponent = component.find('RelatedManuscripts');
+    t.deepEqual(manuscriptComponent.length, 1);
+    t.deepEqual(manuscriptComponent.at(0).props()['label'], 'Reviewing Editor');
+    t.deepEqual(manuscriptComponent.at(0).props()['manuscripts'], [MANUSCRIPT_1, MANUSCRIPT_2]);
+    t.end();
+  });
+
+  g.test('.should render senior editor of manuscripts', t => {
+    const potentialReviewer = {
+      ...POTENTIAL_REVIEWER_1,
+      related_manuscript_version_ids_by_relationship_type: {
+        senior_editor: [VERSION_ID_1, VERSION_ID_2]
+      }
+    };
+    const relatedManuscriptByVersionId = {
+      [VERSION_ID_1]: MANUSCRIPT_1,
+      [VERSION_ID_2]: MANUSCRIPT_2
+    };
+    const component = shallow(<PotentialReviewer
+      potentialReviewer={ potentialReviewer }
+      relatedManuscriptByVersionId={ relatedManuscriptByVersionId }
+    />);
+    const manuscriptComponent = component.find('RelatedManuscripts');
+    t.deepEqual(manuscriptComponent.length, 1);
+    t.deepEqual(manuscriptComponent.at(0).props()['label'], 'Senior Editor');
+    t.deepEqual(manuscriptComponent.at(0).props()['manuscripts'], [MANUSCRIPT_1, MANUSCRIPT_2]);
+    t.end();
+  });
+
+  g.test('.should group manuscripts with same title', t => {
+    const potentialReviewer = {
+      ...POTENTIAL_REVIEWER_1,
+      related_manuscript_version_ids_by_relationship_type: {
+        author: [VERSION_ID_1, VERSION_ID_2]
+      }
+    };
+    const manuscriptWithSameTitle = {
+      ...MANUSCRIPT_2,
+      title: MANUSCRIPT_1.title
+    };
+    const relatedManuscriptByVersionId = {
+      [VERSION_ID_1]: MANUSCRIPT_1,
+      [VERSION_ID_2]: manuscriptWithSameTitle
+    };
+    const expectedManuscripts = [{
+      ...MANUSCRIPT_1,
+      alternatives: [manuscriptWithSameTitle]
+    }];
+    const component = shallow(<PotentialReviewer
+      potentialReviewer={ potentialReviewer }
+      relatedManuscriptByVersionId={ relatedManuscriptByVersionId }
+    />);
+    const manuscriptComponent = component.find('RelatedManuscripts');
+    t.deepEqual(manuscriptComponent.length, 1);
+    t.deepEqual(manuscriptComponent.at(0).props()['manuscripts'], expectedManuscripts);
+    t.end();
+  });
+
+  g.test('.should sort manuscripts by published timestamp descending', t => {
+    const potentialReviewer = {
+      ...POTENTIAL_REVIEWER_1,
+      related_manuscript_version_ids_by_relationship_type: {
+        author: [VERSION_ID_1, VERSION_ID_2]
+      }
+    };
+    const manuscript_1 = {
+      ...MANUSCRIPT_1,
+      published_timestamp: '2017-01-01T00:00:00'
+    };
+    const manuscript_2 = {
+      ...MANUSCRIPT_2,
+      published_timestamp: '2017-01-02T00:00:00'
+    };
+    const relatedManuscriptByVersionId = {
+      [VERSION_ID_1]: manuscript_1,
+      [VERSION_ID_2]: manuscript_2
+    };
+    const expectedManuscripts = [manuscript_2, manuscript_1];
+    const component = shallow(<PotentialReviewer
+      potentialReviewer={ potentialReviewer }
+      relatedManuscriptByVersionId={ relatedManuscriptByVersionId }
+    />);
+    const manuscriptComponent = component.find('RelatedManuscripts');
+    t.deepEqual(manuscriptComponent.length, 1);
+    t.deepEqual(manuscriptComponent.at(0).props()['manuscripts'], expectedManuscripts);
     t.end();
   });
 
@@ -142,6 +255,25 @@ test('PotentialReviewer.DatesNotAvailable', g => {
     const datesNotAvailable = [PERIOD_1];
     const component = render(<DatesNotAvailable datesNotAvailable={ datesNotAvailable } />);
     t.equal(component.text(), formatPeriodNotAvailable(datesNotAvailable[0]));
+    t.end();
+  });
+});
+
+test('PotentialReviewer.RelatedManuscripts', g => {
+  g.test('.should be defined', t => {
+    t.true(RelatedManuscripts);
+    t.end();
+  });
+
+  g.test('.should render manuscripts', t => {
+    const component = shallow(<RelatedManuscripts
+      label="Author"
+      manuscripts={ [MANUSCRIPT_1, MANUSCRIPT_2] }
+    />);
+    const manuscriptComponent = component.find('ManuscriptInlineSummary');
+    t.equal(manuscriptComponent.length, 2);
+    t.equal(manuscriptComponent.at(0).props()['manuscript'], MANUSCRIPT_1);
+    t.equal(manuscriptComponent.at(1).props()['manuscript'], MANUSCRIPT_2);
     t.end();
   });
 });

@@ -1,10 +1,10 @@
 import os
-import datetime
 import logging
 
 from flask import Flask
-from flask.json import JSONEncoder
 from flask_cors import CORS
+
+from peerscout.utils.json import CustomJSONEncoder
 
 from ..shared.app_config import get_app_config
 from ..shared.logging_config import configure_logging
@@ -14,15 +14,6 @@ from .blueprints.control import create_control_blueprint
 from .blueprints.client import create_client_blueprint
 
 LOGGER = logging.getLogger(__name__)
-
-class CustomJSONEncoder(JSONEncoder):
-  def default(self, obj): # pylint: disable=E0202
-    try:
-      if isinstance(obj, datetime.datetime) or isinstance(obj, datetime.date):
-        return obj.isoformat()
-    except TypeError:
-      pass
-    return JSONEncoder.default(self, obj)
 
 def create_app(config):
   app = Flask(__name__)

@@ -2,7 +2,7 @@ import React from 'react';
 
 import { withPromisedProp } from '../../components';
 
-import withResolvedPromise from './withResolvedPromise';
+import withAppResolvedPromise from './withAppResolvedPromise';
 
 export const withAllKeywords = WrapperComponent => withPromisedProp(
   WrapperComponent,
@@ -11,7 +11,7 @@ export const withAllKeywords = WrapperComponent => withPromisedProp(
 );
 
 export const withLoadedAllKeywords = WrappedComponent => withAllKeywords(
-  withResolvedPromise(WrappedComponent, 'allKeywords')
+  withAppResolvedPromise(WrappedComponent, 'allKeywords')
 );
 
 export default withAllKeywords;

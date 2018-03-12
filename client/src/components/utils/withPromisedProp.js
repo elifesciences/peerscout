@@ -1,25 +1,22 @@
 import React from 'react';
 
+import { lifecycle, defaultProps, compose } from 'recompose';
+
 const LOADING_RESULT = {
   loading: true
 };
 
-export const withPromisedProp = (WrappedComponent, load, propName, updateOn) => {
-  class WithPromisedProp extends React.Component {
-    constructor(props) {
-      super(props);
-      this.state = { result: LOADING_RESULT };
-      this._mounted = false;
-    }
+export const withPromisedPropEnhancer = (load, propName, updateOn) => compose(
+  defaultProps({
+    [propName]: LOADING_RESULT
+  }),
 
+  lifecycle({
     _setResult(result) {
-      if (this._mounted) {
-        super.setState({result});
-      } else {
-        // save the result, in case we're coming back
-        this.state = { ...this.state, result };
-      }
-    }
+      this.setState({
+        [propName]: result
+      });
+    },
 
     triggerLoad() {
       this._setResult(LOADING_RESULT);
@@ -30,33 +27,22 @@ export const withPromisedProp = (WrappedComponent, load, propName, updateOn) => 
         loading: false,
         error
       }));
-    }
+    },
 
     componentDidMount() {
-      this._mounted = true;
       this.triggerLoad();
-    }
-
-    componentWillUnmount() {
-      this._mounted = false;
-    }
+    },
 
     componentDidUpdate(prevProps, prevState) {
       if (updateOn && (updateOn(prevProps) != updateOn(this.props))) {
         this.triggerLoad();
       }
     }
+  })
+);
 
-    render() {
-      const props = {
-        ...this.props,
-        [propName]: this.state.result
-      };
-      return <WrappedComponent {...props} />;
-    }
-  }
-
-  return WithPromisedProp;
-};
+export const withPromisedProp = (WrappedComponent, load, propName, updateOn) => (
+  withPromisedPropEnhancer(load, propName, updateOn)(WrappedComponent)
+);
 
 export default withPromisedProp;

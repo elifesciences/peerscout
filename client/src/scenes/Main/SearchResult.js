@@ -8,6 +8,7 @@ import {
 } from '../../components';
 
 import {
+  LazyManuscriptSummary,
   ManuscriptSummary,
   PersonScore,
   PotentialReviewer,
@@ -62,10 +63,12 @@ const SearchResult = ({
   selectedReviewer,
   selectedManuscript,
   onClearSelection,
-  onSelectPotentialReviewer
+  onSelectPotentialReviewer,
+  ...otherProps
 }) => {
   const {
     potentialReviewers = [],
+    relatedManuscriptByVersionId,
     matchingManuscripts = [],
     manuscriptsNotFound,
   } = searchResult;
@@ -104,8 +107,9 @@ const SearchResult = ({
       }
       {
         selectedManuscript && (
-          <ManuscriptSummary
-            manuscript={ selectedManuscript }
+          <LazyManuscriptSummary
+            versionId={ selectedManuscript.version_id }
+            { ...otherProps }
           />
         )
       }
@@ -114,6 +118,7 @@ const SearchResult = ({
           <PotentialReviewer
             key={ index }
             potentialReviewer={ potentialReviewer }
+            relatedManuscriptByVersionId={ relatedManuscriptByVersionId }
             requestedSubjectAreas={ requestedSubjectAreas }
             onSelectPotentialReviewer={ onSelectPotentialReviewer }
           />

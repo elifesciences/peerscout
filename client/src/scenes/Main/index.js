@@ -165,7 +165,8 @@ export class MainView extends React.Component {
       authenticationState,
       searchOptions,
       searchResults,
-      searchTypes
+      searchTypes,
+      ...otherProps
     } = this.props;
     const {
       config,
@@ -179,6 +180,10 @@ export class MainView extends React.Component {
       showAllRelatedManuscripts,
       maxRelatedManuscripts
     } = config;
+    const context = {
+      ...otherProps,
+      authenticationState
+    };
     const results = searchResults.value;
     const hasPotentialReviewers =
       results && (results.potentialReviewers) && (results.potentialReviewers.length > 0);
@@ -194,6 +199,7 @@ export class MainView extends React.Component {
         {
           (results || searchResults.error) && !hasPotentialReviewers && (
             <SearchResult
+              { ...context }
               searchResult={ results }
               error={ searchResults.error }
               selectedReviewer={ selectedReviewer }
@@ -217,6 +223,7 @@ export class MainView extends React.Component {
                 onCloseLegend={ this.onCloseLegend }
               />
               <SearchResult
+                { ...context }
                 searchResult={ results }
                 selectedReviewer={ selectedReviewer }
                 selectedManuscript={ selectedManuscript }
