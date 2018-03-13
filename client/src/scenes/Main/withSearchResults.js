@@ -21,8 +21,10 @@ export const convertSearchOptionsToParams = searchOptions => {
     manuscript_no: searchOptions.manuscriptNumber || '',
     subject_area: searchOptions.subjectArea || '',
     keywords: searchOptions.keywords || '',
-    abstract: searchOptions.abstract || '',
-    limit: searchOptions.limit || '50'
+    abstract: searchOptions.abstract || ''
+  }
+  if (searchOptions.limit) {
+    params.limit = searchOptions.limit;
   }
   if (searchOptions.searchType) {
     params.search_type = searchOptions.searchType;

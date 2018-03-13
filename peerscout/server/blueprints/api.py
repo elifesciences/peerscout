@@ -1,12 +1,8 @@
 import os
-import datetime
 import logging
 from functools import partial
 
-import flask
 from flask import Blueprint, request, jsonify, url_for, Response
-from flask.json import JSONEncoder
-from flask_cors import CORS
 from joblib import Memory
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
@@ -22,8 +18,7 @@ from ..services import (
 
 from ..auth.FlaskAuth0 import (
   FlaskAuth0,
-  parse_allowed_ips,
-  get_remote_ip
+  parse_allowed_ips
 )
 
 from ..auth.EmailValidator import (
@@ -33,10 +28,10 @@ from ..auth.EmailValidator import (
 )
 
 from ...shared.database import connect_configured_database, Database
-from ...shared.app_config import get_app_config
-from ...shared.logging_config import configure_logging
 
 LOGGER = logging.getLogger(__name__)
+
+DEFAULT_LIMIT = 50
 
 class ReloadableRecommendReviewers:
   def __init__(self, create_recommend_reviewer):
@@ -155,7 +150,7 @@ class ApiAuth:
             if self._valid_emails_filename
             else set()
           )
-        except Exception as e:
+        except Exception as e: # pylint: disable=W0703
           LOGGER.warning('failed to load emails from %s (%s)', self._valid_emails_filename, e)
           valid_emails = set()
         LOGGER.info('valid_emails: %d', len(valid_emails))
@@ -216,7 +211,7 @@ def create_api_blueprint(config):
 
   @blueprint.route("/recommend-reviewers")
   @api_auth.wrap_search
-  def _recommend_reviewers_api(email=None) -> Response:
+  def _recommend_reviewers_api(**_) -> Response:
     manuscript_no = request.args.get('manuscript_no')
     subject_area = request.args.get('subject_area')
     keywords = request.args.get('keywords')
@@ -232,7 +227,7 @@ def create_api_blueprint(config):
     recommend_stage_names = search_params.get('recommend_stage_names')
 
     if limit is None:
-      limit = 100
+      limit = search_params.get('default_limit', DEFAULT_LIMIT)
     else:
       limit = int(limit)
     if not manuscript_no and keywords is None:
@@ -298,10 +293,11 @@ def create_api_blueprint(config):
       return jsonify(search_types_response)
 
   @blueprint.teardown_request
-  def _remove_session(exc = None):
+  def _remove_session(exc=None):
     try:
+      LOGGER.debug('teardown, exc=%s', exc)
       db.remove_local()
-    except Exception as e:
+    except Exception as e: # pylint: disable=W0703
       LOGGER.warning('failed to remove session due to %s', e, exc_info=e)
 
   def reload_api():

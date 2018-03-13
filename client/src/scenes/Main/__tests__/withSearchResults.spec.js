@@ -197,6 +197,32 @@ test('withSearchResults', g => {
   }));
 });
 
+test('withSearchResults.convertSearchOptionsToParams', g => {
+  g.test('.should not add limit by default', t => {
+    const searchOptions = {
+      ...SEARCH_OPTIONS,
+      limit: null
+    };
+    t.equal(
+      convertSearchOptionsToParams(searchOptions).limit,
+      undefined
+    );
+    t.end();
+  });
+
+  g.test('.should add limit if in options', t => {
+    const searchOptions = {
+      ...SEARCH_OPTIONS,
+      limit: '123'
+    };
+    t.equal(
+      convertSearchOptionsToParams(searchOptions).limit,
+      '123'
+    );
+    t.end();
+  });
+});
+
 test('withSearchResults.convertResultsResponse', g => {
   g.test('.should include relatedManuscriptByVersionId', t => {
     const searchResults = {

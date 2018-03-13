@@ -6,7 +6,11 @@ from peerscout.utils.collection import parse_list
 SEARCH_SECTION_PREFIX = 'search:'
 DEFAULT_SEARCH_TYPE = 'reviewer'
 
-LIST_KEYS = {'recommend_relationship_types', 'recommend_stage_names'}
+TYPE_BY_KEY = {
+  'recommend_relationship_types': parse_list,
+  'recommend_stage_names': parse_list,
+  'default_limit': int
+}
 
 def parse_search_config(app_config: ConfigParser) -> Dict[str, str]:
   search_config = {
@@ -19,7 +23,7 @@ def parse_search_config(app_config: ConfigParser) -> Dict[str, str]:
       DEFAULT_SEARCH_TYPE: dict(app_config['model']) if 'model' in app_config else {}
     }
   for search_type in search_config.keys():
-    for k in LIST_KEYS:
+    for k, t in TYPE_BY_KEY.items():
       if k in search_config[search_type]:
-        search_config[search_type][k] = parse_list(search_config[search_type][k])
+        search_config[search_type][k] = t(search_config[search_type][k])
   return search_config

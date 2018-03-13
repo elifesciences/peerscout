@@ -4,13 +4,12 @@ from configparser import ConfigParser
 import logging
 import json
 from contextlib import contextmanager
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch, Mock
 from urllib.parse import urlencode
 
 import pytest
 
 from flask import Flask
-from flask.testing import FlaskClient
 from werkzeug.exceptions import Forbidden
 
 from ...utils.config import dict_to_config
@@ -18,13 +17,8 @@ from ..config.search_config import SEARCH_SECTION_PREFIX
 
 from ...shared.database import populated_in_memory_database
 
-from peerscout.server.services.test_data import (
-  PERSON1,
-  PERSON_ID1
-)
-
 from . import api as api_module
-from .api import create_api_blueprint, ApiAuth
+from .api import create_api_blueprint, ApiAuth, DEFAULT_LIMIT
 
 LOGGER = logging.getLogger(__name__)
 
@@ -95,7 +89,7 @@ def _setup_flask_auth0_mock_email(MockFlaskAuth0, **kwargs):
   _wrap_request_handler.side_effect = wrapper
   return MockFlaskAuth0
 
-@pytest.fixture(name='MockRecommendReviewers')
+@pytest.fixture(name='MockRecommendReviewers', autouse=True)
 def _mock_recommend_reviewers():
   with patch.object(api_module, 'RecommendReviewers') as MockRecommendReviewers:
     MockRecommendReviewers.return_value.recommend.return_value = SOME_RESPONSE
@@ -144,13 +138,13 @@ class TestApiBlueprint:
       ('data@science.org', ROLE_1, DOMAIN_1)
     ])
     def test_should_return_all_search_types_if_authorisation_is_not_required(
-      self, MockRecommendReviewers, MockFlaskAuth0, email, required_role, auth0_domain):
+      self, MockFlaskAuth0, email, required_role, auth0_domain):
 
       _setup_flask_auth0_mock_email(MockFlaskAuth0, email=email)
 
       config = dict_to_config({
         'auth': {'allowed_ips': '', 'valid_email_domains': 'science.org'},
-        'client': {'auth0_domain': DOMAIN_1},
+        'client': {'auth0_domain': auth0_domain} if auth0_domain else {},
         SEARCH_SECTION_PREFIX + SEARCH_TYPE_1: {
           'required_role': required_role or '',
           'title': SEARCH_TYPE_TITLE_1
@@ -261,7 +255,7 @@ class TestApiBlueprint:
         get_manuscript_details.assert_called_with(VERSION_ID_1)
 
   class TestRecommendWithoutAuth:
-    def test_should_return_400_without_args(self, MockRecommendReviewers):
+    def test_should_return_400_without_args(self):
       config = ConfigParser()
       with _api_test_client(config, {}) as test_client:
         response = test_client.get('/recommend-reviewers')
@@ -297,6 +291,17 @@ class TestApiBlueprint:
           abstract=VALUE_3
         )
 
+    def test_should_pass_default_limit_to_recommend_method(self, MockRecommendReviewers):
+      config = ConfigParser()
+      with _api_test_client(config, {}) as test_client:
+        test_client.get('/recommend-reviewers?' + urlencode({
+          'manuscript_no': MANUSCRIPT_NO_1
+        }))
+        _assert_partial_called_with(
+          MockRecommendReviewers.return_value.recommend,
+          limit=DEFAULT_LIMIT
+        )
+
     def test_should_pass_limit_to_recommend_method(self, MockRecommendReviewers):
       config = ConfigParser()
       with _api_test_client(config, {}) as test_client:
@@ -320,12 +325,15 @@ class TestApiBlueprint:
           role=None
         )
 
-    def test_should_pass_search_params_from_search_config_to_recommend_method(self, MockRecommendReviewers):
+    def test_should_pass_search_params_from_search_config_to_recommend_method(
+      self, MockRecommendReviewers):
+
       config = dict_to_config({
         SEARCH_SECTION_PREFIX + SEARCH_TYPE_1: {
           'filter_by_role': VALUE_1,
           'recommend_relationship_types': VALUE_2,
-          'recommend_stage_names': VALUE_3
+          'recommend_stage_names': VALUE_3,
+          'default_limit': str(LIMIT_1)
         }
       })
       with _api_test_client(config, {}) as test_client:
@@ -338,10 +346,11 @@ class TestApiBlueprint:
           MockRecommendReviewers.return_value.recommend,
           role=VALUE_1,
           recommend_relationship_types=[VALUE_2],
-          recommend_stage_names=[VALUE_3]
+          recommend_stage_names=[VALUE_3],
+          limit=LIMIT_1
         )
 
-    def test_should_reject_unknown_search_type(self, MockRecommendReviewers):
+    def test_should_reject_unknown_search_type(self):
       config = dict_to_config({
         SEARCH_SECTION_PREFIX + SEARCH_TYPE_1: {
           'filter_by_role': VALUE_1
@@ -476,7 +485,9 @@ class TestApiAuth:
       assert wrapped_f != f
       assert wrapped_f() == f.return_value
 
-    def test_should_reject_search_types_for_emails_not_associated_with_required_role(self, MockFlaskAuth0):
+    def test_should_reject_search_types_for_emails_not_associated_with_required_role(
+      self, MockFlaskAuth0):
+
       _setup_flask_auth0_mock_email(MockFlaskAuth0, email=EMAIL_1)
 
       user_has_role_by_email = Mock(name='user_has_role_by_email')
