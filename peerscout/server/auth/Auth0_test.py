@@ -71,3 +71,20 @@ def test_should_call_function_if_access_token_is_none_but_authorization_is_not_r
     requires_auth=lambda: False
   )()
   assert result == AUTHORIZED_RESULT
+
+def test_should_pass_keyword_arguments_to_request_handler_if_authorizing():
+  auth0 = _create_auth0(GET_USER_INFO)
+  request_handler = Mock()
+  auth0.wrap_request_handler(
+    request_handler, GET_ACCESS_TOKEN, NOT_AUTHORIZED_HANDLER
+  )(other='123')
+  request_handler.assert_called_with(email=EMAIL, other='123')
+
+def test_should_pass_keyword_arguments_to_request_handler_if_not_authorizing():
+  auth0 = _create_auth0(GET_USER_INFO)
+  request_handler = Mock()
+  auth0.wrap_request_handler(
+    request_handler, GET_ACCESS_TOKEN, NOT_AUTHORIZED_HANDLER,
+    requires_auth=lambda: False
+  )(other='123')
+  request_handler.assert_called_with(other='123')

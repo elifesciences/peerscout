@@ -249,8 +249,8 @@ def create_api_blueprint(config):
     )
 
   @blueprint.route("/manuscript/version/<path:version_id>")
-  @api_auth.wrap_search
-  def _get_manuscript_details(version_id, email=None) -> Response:
+  @api_auth
+  def _get_manuscript_details(version_id, **_) -> Response:
     manuscript_details = recommend_reviewers.get_manuscript_details(version_id)
     if not manuscript_details:
       raise NotFound()

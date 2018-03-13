@@ -31,15 +31,15 @@ class Auth0(object):
     self, request_handler, get_access_token, not_authorized_handler, requires_auth=None):
 
     @wraps(request_handler)
-    def wrapped_request_handler():
+    def wrapped_request_handler(**kwargs):
       if requires_auth is not None and not requires_auth():
-        return request_handler()
+        return request_handler(**kwargs)
       access_token = get_access_token()
       if not access_token:
         get_logger().info('no access token provided')
       email = self.verify_access_token_and_get_email(access_token) if access_token else None
       if email and self.is_valid_email(email):
-        return request_handler(email=email)
+        return request_handler(**kwargs, email=email)
       else:
         get_logger().info('invalid email: %s', email)
         return not_authorized_handler()

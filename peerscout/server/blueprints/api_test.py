@@ -87,7 +87,7 @@ def _named_mock(name, **kwargs):
 
 def _setup_flask_auth0_mock_email(MockFlaskAuth0, **kwargs):
   def wrapper(f):
-    result = lambda: f(**kwargs)
+    result = lambda **fkwargs: f(**kwargs, **fkwargs)
     result.__name__ = f.__name__
     return result
 
@@ -242,6 +242,23 @@ class TestApiBlueprint:
         response = test_client.get('/manuscript/version/%s' % version_id)
         assert _get_ok_json(response) == SOME_RESPONSE
         get_manuscript_details.assert_called_with(version_id)
+
+    def test_should_return_manuscript_details_with_auth_enabled(
+      self, MockRecommendReviewers, MockFlaskAuth0):
+
+      _setup_flask_auth0_mock_email(MockFlaskAuth0, email=EMAIL_1)
+
+      config = dict_to_config({
+        'auth': {'allowed_ips': '', 'valid_email_domains': 'science.org'},
+        'client': {'auth0_domain': DOMAIN_1}
+      })
+
+      with _api_test_client(config, {}) as test_client:
+        get_manuscript_details = MockRecommendReviewers.return_value.get_manuscript_details
+        get_manuscript_details.return_value = SOME_RESPONSE
+        response = test_client.get('/manuscript/version/%s' % VERSION_ID_1)
+        assert _get_ok_json(response) == SOME_RESPONSE
+        get_manuscript_details.assert_called_with(VERSION_ID_1)
 
   class TestRecommendWithoutAuth:
     def test_should_return_400_without_args(self, MockRecommendReviewers):
