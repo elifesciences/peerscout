@@ -7,7 +7,8 @@ import {
   getPotentialReviewerCorrespondingAuthorVersionIdSet,
   getManuscriptCorrespondingAuthorPersonIdSet,
   getNodeVersionIdFilter,
-  getNodePersonIdFilter
+  getNodePersonIdFilter,
+  sortManuscriptsByScoreDescending
 } from '../graph';
 
 const MANUSCRIPT_NODE_PREFIX = 'm';
@@ -381,6 +382,43 @@ test('graph.getNodePersonIdFilter', g => {
         }
       }
     }));
+    t.end();
+  });
+});
+
+test('graph.sortManuscriptsByScoreDescending', g => {
+  g.test('.should sort by score decending', t => {
+    const manuscripts = [{
+      ...MANUSCRIPT_1,
+      score: { combined: 0.1 }
+    }, {
+      ...MANUSCRIPT_2,
+      score: { combined: 0.2 }
+    }];
+    t.deepEqual(sortManuscriptsByScoreDescending(manuscripts), [manuscripts[1], manuscripts[0]]);
+    t.end();
+  });
+
+  g.test('.should treat absence of score as low score', t => {
+    const manuscripts = [{
+      ...MANUSCRIPT_1
+    }, {
+      ...MANUSCRIPT_2,
+      score: { combined: 0.2 }
+    }];
+    t.deepEqual(sortManuscriptsByScoreDescending(manuscripts), [manuscripts[1], manuscripts[0]]);
+    t.end();
+  });
+
+  g.test('.should keep original order if score is the same', t => {
+    const manuscripts = [{
+      ...MANUSCRIPT_2,
+      score: { combined: 0.1 }
+    }, {
+      ...MANUSCRIPT_1,
+      score: { combined: 0.1 }
+    }];
+    t.deepEqual(sortManuscriptsByScoreDescending(manuscripts), manuscripts);
     t.end();
   });
 });

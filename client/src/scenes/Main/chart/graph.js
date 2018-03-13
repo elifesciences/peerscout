@@ -10,12 +10,12 @@ export const personToId = p => 'p' + p['person_id'];
 
 const limit = (a, max) => a && max && a.length > max ? a.slice(0, max) : a;
 
-const sortManuscriptsByScoreDescending = manuscripts => {
+export const sortManuscriptsByScoreDescending = manuscripts => {
   if (!manuscripts || (manuscripts.length < 2)) {
     return manuscripts;
   }
   const manuscriptsWithScores = manuscripts.map((manuscript, index) => ({
-    score: manuscript.score && manuscript.score.combined,
+    score: (manuscript.score && manuscript.score.combined) || 0,
     manuscript,
     index
   }));
