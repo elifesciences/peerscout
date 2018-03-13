@@ -1,9 +1,14 @@
 import React from 'react';
 
 import test from 'tape';
-import { shallow } from 'enzyme';
+import { shallow, render } from 'enzyme';
 
-import ManuscriptInlineSummary from '../ManuscriptInlineSummary';
+import { formatDate } from '../../formatUtils';
+
+import {
+  ManuscriptInlineSummary,
+  PublishedDate
+} from '../ManuscriptInlineSummary';
 
 const MANUSCRIPT = {
   manuscript_id: '12345'
@@ -30,6 +35,18 @@ test('ManuscriptInlineSummary', g => {
     t.end();
   });
 
+  g.test('.should pass manuscript published timestamp to PublishedDate', t => {
+    const manuscript = {
+      ...MANUSCRIPT,
+      published_timestamp: '2017-01-01T00:00:00'
+    };
+    const component = shallow(<ManuscriptInlineSummary
+      manuscript={ manuscript } requestedSubjectAreas={ [] }
+    />);
+    t.equal(component.find('PublishedDate').props()['value'], manuscript.published_timestamp);
+    t.end();
+  });
+
   g.test('.should pass score to Score', t => {
     const component = shallow(<ManuscriptInlineSummary
       manuscript={ MANUSCRIPT } requestedSubjectAreas={ [] } scores={ SCORE }
@@ -45,6 +62,20 @@ test('ManuscriptInlineSummary', g => {
     />);
     const scoreComponent = component.find('Score');
     t.equal(scoreComponent.length, 0);
+    t.end();
+  });
+});
+
+test('ManuscriptInlineSummary.PublishedDate', g => {
+  g.test('.should be defined', t => {
+    t.true(PublishedDate);
+    t.end();
+  });
+
+  g.test('.should pass manuscript to ManuscriptRefLinkWithAlternatives', t => {
+    const timestamp = '2017-01-01T00:00:00';
+    const component = render(<PublishedDate value={ timestamp } />);
+    t.equal(component.text(), formatDate(timestamp));
     t.end();
   });
 });

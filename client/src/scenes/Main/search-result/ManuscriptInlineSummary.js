@@ -38,6 +38,10 @@ export const hasMatchingSubjectAreas = (manuscript, requestedSubjectAreas) =>
     subjectArea => requestedSubjectAreas.has(subjectArea)
   )[0];
 
+export const PublishedDate = ({ value }) => (
+  <Text>{ formatDate(value) }</Text>
+);
+
 export const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectAreas }) => {
   return (
     <View
@@ -51,7 +55,7 @@ export const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubj
         <Text>{ quote(manuscript['title']) }</Text>
       </TooltipWrapper>
       <Text>{ ' ' }</Text>
-      <Text>{ formatDate(manuscript['published_date']) }</Text>
+      <PublishedDate value={ manuscript.published_timestamp } />
       <Text>{ ' (' }</Text>
       <ManuscriptRefLinkWithAlternatives manuscript={ manuscript }/>
       <Text>{ ') ' }</Text>
