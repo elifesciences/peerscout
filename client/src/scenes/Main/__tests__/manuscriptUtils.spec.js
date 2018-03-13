@@ -113,11 +113,46 @@ test('manuscriptUtils.sortManuscriptsByPublishedTimestampDescending', g => {
     t.end();
   });
 
+  g.test('.should move absent published_timestamp to the end', t => {
+    const manuscript_1 = {
+      ...MANUSCRIPT_1,
+      published_timestamp: undefined
+    };
+    const manuscript_2 = {
+      ...MANUSCRIPT_2,
+      published_timestamp: '2017-01-02T00:00:00'
+    };
+    t.deepEqual(
+      sortManuscriptsByPublishedTimestampDescending([manuscript_1, manuscript_2]),
+      [manuscript_2, manuscript_1]
+    )
+    t.end();
+  });
+
   g.test('.should sort manuscripts by title second', t => {
     const manuscript_1 = {
       ...MANUSCRIPT_1,
       published_timestamp: '2017-01-01T00:00:00',
       title: 'B'
+    };
+    const manuscript_2 = {
+      ...MANUSCRIPT_2,
+      published_timestamp: '2017-01-01T00:00:00',
+      title: 'A'
+    };
+    t.deepEqual(
+      sortManuscriptsByPublishedTimestampDescending([manuscript_1, manuscript_2]),
+      [manuscript_2, manuscript_1]
+    )
+    t.end();
+  });
+
+
+  g.test('.should move undefined title to the end', t => {
+    const manuscript_1 = {
+      ...MANUSCRIPT_1,
+      published_timestamp: '2017-01-01T00:00:00',
+      title: undefined
     };
     const manuscript_2 = {
       ...MANUSCRIPT_2,

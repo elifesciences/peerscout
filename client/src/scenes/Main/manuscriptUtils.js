@@ -55,6 +55,10 @@ export const duplicateManuscriptTitlesAsAlternatives = manuscripts => {
 };
 
 export const sortManuscriptsByPublishedTimestampDescending = manuscripts => manuscripts && sortOn(
-  manuscripts,
+  manuscripts.map(manuscript => ({
+    manuscript,
+    published_timestamp: manuscript.published_timestamp || '0',
+    title: manuscript.title || ''
+  })),
   ['-published_timestamp', 'title']
-);
+).map(item => item.manuscript);
