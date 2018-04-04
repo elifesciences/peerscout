@@ -162,6 +162,7 @@ export class MainView extends React.Component {
     const {
       allSubjectAreas,
       allKeywords,
+      auth,
       authenticationState,
       searchOptions,
       searchResults,
@@ -188,12 +189,6 @@ export class MainView extends React.Component {
     const hasPotentialReviewers =
       results && (results.potentialReviewers) && (results.potentialReviewers.length > 0);
     let content;
-    let loggedInIndicator = null;
-    if (authenticationState.logged_in) {
-      loggedInIndicator = (
-        <LoggedInIndicator auth={ this.props.auth } style={ styles.loggedInIndicator }/>
-      );
-    }
     content = (
       <FlexRow style={ styles.resultsContainer } className="inner-results-container">
         {
@@ -237,7 +232,7 @@ export class MainView extends React.Component {
     );
     return (
       <FlexColumn>
-        { loggedInIndicator }
+        <LoggedInIndicator auth={ auth } style={ styles.loggedInIndicator }/>
         {
           <SearchHeader
             searchOptions={ searchOptions }

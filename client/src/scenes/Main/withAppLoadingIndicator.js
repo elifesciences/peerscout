@@ -25,7 +25,7 @@ const withAppLoadingIndicator = (
   const error = getError && getError(props);
   if (error) {
     reportError(error, error);
-    return <AppError error={ error } />;
+    return <AppError {...props} error={ error } />;
   }
 return <WrappedComponent {...props} />;
 };

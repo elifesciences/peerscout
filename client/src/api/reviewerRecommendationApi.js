@@ -15,7 +15,7 @@ const datetimeReviver = (key, value) =>
 const logResponseTextEnabled = false;
 
 const NOT_AUTHORIZED_STATUS = 401;
-const NOT_AUTHORIZED_ERROR = 'NOT_AUTHORIZED_ERROR';
+export const NOT_AUTHORIZED_ERROR = 'NOT_AUTHORIZED_ERROR';
 
 const fetchJson = (url, options) => fetch(url, {
   ...options,
@@ -42,7 +42,7 @@ const fetchJson = (url, options) => fetch(url, {
   throw new TraceError('failed to fetch ' + url, err);
 });
 
-const api = baseUrl => {
+export const reviewerRecommendationApi = baseUrl => {
   const getConfigUrl = baseUrl + '/config';
   const getAllSubjectAreasUrl = baseUrl + '/subject-areas';
   const getAllKeywordsUrl = baseUrl + '/keywords';
@@ -60,4 +60,4 @@ const api = baseUrl => {
   };
 };
 
-export default api;
+export default reviewerRecommendationApi;
