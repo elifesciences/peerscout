@@ -8,9 +8,10 @@ import html
 from html.parser import HTMLParser
 import logging
 
-from tqdm import tqdm
 import numpy as np
 import pandas as pd
+
+from peerscout.utils.tqdm import tqdm
 
 NAME = 'convertUtils'
 

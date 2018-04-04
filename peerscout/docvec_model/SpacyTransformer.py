@@ -2,7 +2,8 @@ import re
 import logging
 
 import spacy
-from tqdm import tqdm
+
+from peerscout.utils.tqdm import tqdm
 
 NAME = 'SpacyTransformer'
 

@@ -8,10 +8,10 @@ from concurrent.futures import ThreadPoolExecutor
 import dateutil
 import requests
 import pandas as pd
-from tqdm import tqdm
 import sqlalchemy
 from ratelimit import rate_limited
 
+from peerscout.utils.tqdm import tqdm
 from peerscout.utils.requests import configure_session_retry
 from peerscout.utils.threading import lazy_thread_local
 

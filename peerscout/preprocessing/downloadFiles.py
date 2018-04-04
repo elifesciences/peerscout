@@ -4,7 +4,8 @@ from textwrap import shorten
 import logging
 
 import boto3
-from tqdm import tqdm
+
+from peerscout.utils.tqdm import tqdm
 
 from .preprocessingUtils import get_downloads_csv_path, get_downloads_xml_path
 

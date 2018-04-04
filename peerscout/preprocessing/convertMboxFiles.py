@@ -1,7 +1,7 @@
 import csv
 from os import SEEK_END
 
-from tqdm import tqdm
+from peerscout.utils.tqdm import tqdm
 
 from .mbox_parser import split_messages_skip_content, parse_header_properties
 

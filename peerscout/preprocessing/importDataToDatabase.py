@@ -4,7 +4,8 @@ import re
 import logging
 
 import pandas as pd
-from tqdm import tqdm
+
+from peerscout.utils.tqdm import tqdm
 
 from .convertUtils import (
   process_files_in_directory_or_zip,

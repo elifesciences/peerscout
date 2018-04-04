@@ -1,8 +1,9 @@
 import logging
 
 import pandas as pd
-from tqdm import tqdm
 import sqlalchemy
+
+from peerscout.utils.tqdm import tqdm
 
 from ..docvec_model import SpacyTransformer
 
