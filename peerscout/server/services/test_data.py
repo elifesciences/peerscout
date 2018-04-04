@@ -70,15 +70,16 @@ create_manuscript_id_fields = lambda i: ({
 MANUSCRIPT_ID_FIELDS4 = create_manuscript_id_fields(4)
 MANUSCRIPT_ID_FIELDS5 = create_manuscript_id_fields(5)
 
-DECISSION_ACCEPTED = 'Accept Full Submission'
-DECISSION_REJECTED = 'Reject Full Submission'
+class Decisions(object):
+  ACCEPTED = 'Accept Full Submission'
+  REJECTED = 'Reject Full Submission'
 
 TYPE_RESEARCH_ARTICLE = 'Research Article'
 
-PUBLISHED_DECISIONS = {DECISSION_ACCEPTED}
+PUBLISHED_DECISIONS = {Decisions.ACCEPTED}
 PUBLISHED_MANUSCRIPT_TYPES = {TYPE_RESEARCH_ARTICLE}
 
-VALID_DECISIONS = PUBLISHED_DECISIONS | {DECISSION_REJECTED}
+VALID_DECISIONS = PUBLISHED_DECISIONS | {Decisions.REJECTED}
 VALID_MANUSCRIPT_TYPES = PUBLISHED_MANUSCRIPT_TYPES
 
 MANUSCRIPT_VERSION1 = {
@@ -86,9 +87,8 @@ MANUSCRIPT_VERSION1 = {
   MANUSCRIPT_ID: MANUSCRIPT_ID1,
   'doi': None,
   'title': MANUSCRIPT_TITLE1,
-  'decision': DECISSION_ACCEPTED,
-  'manuscript_type': TYPE_RESEARCH_ARTICLE,
-  'is_published': True
+  'decision': Decisions.ACCEPTED,
+  'manuscript_type': TYPE_RESEARCH_ARTICLE
 }
 
 KEYWORD1 = 'keyword1'

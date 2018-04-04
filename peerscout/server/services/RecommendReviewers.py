@@ -443,7 +443,7 @@ class RecommendReviewers(object):
         [MANUSCRIPT_ID] +
         [
           'title', 'decision', 'manuscript_type', 'abstract',
-          'decision_timestamp', 'created_timestamp'
+          'decision_timestamp', 'created_timestamp', 'is_published'
         ]
       ]
       .to_dict(orient='records')

@@ -1,3 +1,5 @@
+from typing import Set
+
 import sqlalchemy
 
 NAME = 'ManuscriptModel'
@@ -19,17 +21,20 @@ class ManuscriptModel(object):
     )
 
   def _get_version_ids_by_decisions_and_types(self, decisions, manuscript_types):
+    # pylint: disable=C0121
     manuscript_version_table = self.db['manuscript_version']
 
     conditions = [
       sqlalchemy.or_(
+        manuscript_version_table.table.is_published == True,
+        # TODO we shouldn't include blank decisions but as this is currently also used 
+        #   when searching by manuscript number, it would have an undesired result
         manuscript_version_table.table.decision == None,
         manuscript_version_table.table.decision.in_(
           decisions
         )
       ) if decisions else None,
       sqlalchemy.or_(
-        manuscript_version_table.table.manuscript_type == None,
         manuscript_version_table.table.manuscript_type.in_(
           manuscript_types
         )
@@ -47,26 +52,22 @@ class ManuscriptModel(object):
 
     return set(x[0] for x in version_ids_query.all())
 
-  def _manuscript_matched_decisions_and_types(self, manuscript, decisions, manuscript_types):
+  def _manuscript_published_or_matches_decisions_and_types(
+    self, manuscript: dict, decisions: Set[str], manuscript_types: Set[str]):
+
     return (
       (
-        len(decisions) == 0 or
-        manuscript.get('decision') is None or
+        manuscript.get('is_published') or
+        not decisions or
         manuscript.get('decision') in decisions
       ) and (
-        len(manuscript_types) == 0 or
-        manuscript.get('manuscript_type') is None or
+        not manuscript_types or
         manuscript.get('manuscript_type') in manuscript_types
       )
     )
 
-  def is_manuscript_valid(self, manuscript):
-    return self._manuscript_matched_decisions_and_types(
-      manuscript, self.valid_decisions, self.valid_manuscript_types
-    )
-
   def is_manuscript_published(self, manuscript):
-    return self._manuscript_matched_decisions_and_types(
+    return self._manuscript_published_or_matches_decisions_and_types(
       manuscript, self.published_decisions, self.published_manuscript_types
     )
 

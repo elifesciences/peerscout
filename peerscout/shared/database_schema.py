@@ -15,7 +15,7 @@ from sqlalchemy.dialects import postgresql
 
 Base = declarative_base()
 
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 
 class SchemaVersion(Base):
   __tablename__ = "schema_version"
@@ -113,6 +113,7 @@ class ManuscriptVersion(Base):
   decision = Column(String)
   decision_timestamp = Column(DateTime)
   created_timestamp = Column(DateTime)
+  is_published = Column(Boolean, doc='set if known, otherwise inferred from decision')
 
 def create_manuscript_version_id_fk(**kwargs):
   return Column(

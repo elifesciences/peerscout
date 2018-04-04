@@ -256,7 +256,8 @@ def update_database_with_person_with_manuscripts_list(db, person_with_manuscript
     'title': m.get('title'),
     'abstract': m.get('abstract'),
     'created_timestamp': pd.to_datetime(m.get('created_timestamp')),
-    'manuscript_type': m.get('manuscript_type')
+    'manuscript_type': m.get('manuscript_type'),
+    'is_published': True
   } for m in new_manuscript_info])
 
   new_manuscript_subject_areas = remove_duplicates(flatten([[{

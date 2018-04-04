@@ -63,6 +63,15 @@ class TestImportCsvFileToDatabase:
         (PERSON_ID_1, True)
       }
 
+  def test_should_tolerate_duplicate_person(self):
+    csv_content = create_csv_content([CSV_ITEM_1, CSV_ITEM_1])
+    with import_csv(csv_content) as db:
+      df = db.person.read_frame().reset_index()
+      LOGGER.debug('df:\n%s', df)
+      assert set(zip(df['person_id'], df['is_early_career_researcher'])) == {
+        (PERSON_ID_1, True)
+      }
+
   def test_should_update_early_career_researcher_flag_for_existing_person(self):
     csv_content = create_csv_content([{
       **CSV_ITEM_1,

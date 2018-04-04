@@ -1,9 +1,10 @@
 import logging
 import json
+from typing import Dict
 from unittest.mock import Mock
 from configparser import ConfigParser
 
-from ..shared.database import empty_in_memory_database
+from ..shared.database import populated_in_memory_database
 
 from .enrichEarlyCareerResearchersInDatabase import (
   extract_manuscript,
@@ -49,7 +50,7 @@ class TestExtractManuscript(object):
     })
     assert result.get('manuscript_type') == MANUSCRIPT_TYPE1
 
-def MapRequestHandler(response_by_url_map):
+def MapRequestHandler(response_by_url_map: Dict[str, str]):
   def get_request_handler(url):
     response_text = response_by_url_map.get(url)
     if not response_text:
@@ -94,9 +95,11 @@ def get_crossref_response(items):
     }
   })
 
+EMPTY_DATASET = {}
+
 class TestEnrichEarlyCareerResearchers(object):
   def test_should_not_fail_if_database_is_empty(self):
-    with empty_in_memory_database() as db:
+    with populated_in_memory_database(EMPTY_DATASET) as db:
       enrich_early_career_researchers(db, MapRequestHandler({}))
 
   def test_should_import_one_by_orcid(self):
@@ -108,23 +111,20 @@ class TestEnrichEarlyCareerResearchers(object):
         }]
       }])
     }
-    with empty_in_memory_database() as db:
-      db.person.create_list([
-        ECR_1
-      ])
-      db.person_membership.create_list([
-        ORCID_MEMBERSHIP_1
-      ])
-      db.commit()
-
+    dataset = {
+      'person': [ECR_1],
+      'person_membership': [ORCID_MEMBERSHIP_1]
+    }
+    with populated_in_memory_database(dataset) as db:
       enrich_early_career_researchers(db, MapRequestHandler(response_by_url_map))
 
-      df = db.manuscript.read_frame().reset_index()
-      get_logger().debug('df:\n%s', df)
-      assert (
-        set(df[DOI]) ==
-        {DOI_1}
-      )
+      manuscript_df = db.manuscript.read_frame().reset_index()
+      get_logger().debug('manuscript_df:\n%s', manuscript_df)
+      assert set(manuscript_df[DOI]) == {DOI_1}
+
+      manuscript_version_df = db.manuscript_version.read_frame().reset_index()
+      get_logger().debug('manuscript_version_df:\n%s', manuscript_version_df)
+      assert set(manuscript_version_df['is_published']) == {True}
 
   def test_should_import_one_by_full_name(self):
     full_name = ' '.join([FIRST_NAME_1, LAST_NAME_1])
@@ -137,21 +137,20 @@ class TestEnrichEarlyCareerResearchers(object):
         }]
       }])
     }
-    with empty_in_memory_database() as db:
-      db.person.create_list([
-        ECR_1
-      ])
-      db.commit()
-
+    dataset = {
+      'person': [ECR_1]
       # not adding ORCID membership, this will trigger search by name instead
+    }
+    with populated_in_memory_database(dataset) as db:
       enrich_early_career_researchers(db, MapRequestHandler(response_by_url_map))
 
-      df = db.manuscript.read_frame().reset_index()
-      get_logger().debug('df:\n%s', df)
-      assert (
-        set(df[DOI]) ==
-        {DOI_1}
-      )
+      manuscript_df = db.manuscript.read_frame().reset_index()
+      get_logger().debug('manuscript_df:\n%s', manuscript_df)
+      assert set(manuscript_df[DOI]) == {DOI_1}
+
+      manuscript_version_df = db.manuscript_version.read_frame().reset_index()
+      get_logger().debug('manuscript_version_df:\n%s', manuscript_version_df)
+      assert set(manuscript_version_df['is_published']) == {True}
 
   def test_should_import_one_if_existing_doi_is_different(self):
     response_by_url_map = {
@@ -162,27 +161,20 @@ class TestEnrichEarlyCareerResearchers(object):
         }]
       }])
     }
-    with empty_in_memory_database() as db:
-      db.manuscript.create_list([{
+    dataset = {
+      'manuscript': [{
         MANUSCRIPT_ID: MANUSCRIPT_ID_1,
         DOI: DOI_1
-      }])
-      db.person.create_list([
-        ECR_1
-      ])
-      db.person_membership.create_list([
-        ORCID_MEMBERSHIP_1
-      ])
-      db.commit()
-
+      }],
+      'person': [ECR_1],
+      'person_membership': [ORCID_MEMBERSHIP_1]
+    }
+    with populated_in_memory_database(dataset) as db:
       enrich_early_career_researchers(db, MapRequestHandler(response_by_url_map))
 
       df = db.manuscript.read_frame().reset_index()
       get_logger().debug('df:\n%s', df)
-      assert (
-        set(df[DOI]) ==
-        {DOI_1, DOI_2}
-      )
+      assert set(df[DOI]) == {DOI_1, DOI_2}
 
   def test_should_not_import_one_if_doi_already_exists(self):
     response_by_url_map = {
@@ -193,27 +185,20 @@ class TestEnrichEarlyCareerResearchers(object):
         }]
       }])
     }
-    with empty_in_memory_database() as db:
-      db.manuscript.create_list([{
+    dataset = {
+      'manuscript': [{
         MANUSCRIPT_ID: MANUSCRIPT_ID_1,
         DOI: DOI_1
-      }])
-      db.person.create_list([
-        ECR_1
-      ])
-      db.person_membership.create_list([
-        ORCID_MEMBERSHIP_1
-      ])
-      db.commit()
-
+      }],
+      'person': [ECR_1],
+      'person_membership': [ORCID_MEMBERSHIP_1]
+    }
+    with populated_in_memory_database(dataset) as db:
       enrich_early_career_researchers(db, MapRequestHandler(response_by_url_map))
 
       df = db.manuscript.read_frame().reset_index()
       get_logger().debug('df:\n%s', df)
-      assert (
-        list(df[DOI]) ==
-        [DOI_1]
-      )
+      assert list(df[DOI]) == [DOI_1]
 
   def test_should_not_import_one_if_doi_already_exists_with_different_case(self):
     doi_1_original = 'Doi 1'
@@ -226,27 +211,20 @@ class TestEnrichEarlyCareerResearchers(object):
         }]
       }])
     }
-    with empty_in_memory_database() as db:
-      db.manuscript.create_list([{
+    dataset = {
+      'manuscript': [{
         MANUSCRIPT_ID: MANUSCRIPT_ID_1,
         DOI: doi_1_original
-      }])
-      db.person.create_list([
-        ECR_1
-      ])
-      db.person_membership.create_list([
-        ORCID_MEMBERSHIP_1
-      ])
-      db.commit()
-
+      }],
+      'person': [ECR_1],
+      'person_membership': [ORCID_MEMBERSHIP_1]
+    }
+    with populated_in_memory_database(dataset) as db:
       enrich_early_career_researchers(db, MapRequestHandler(response_by_url_map))
 
       df = db.manuscript.read_frame().reset_index()
       get_logger().debug('df:\n%s', df)
-      assert (
-        list(df[DOI]) ==
-        [doi_1_original]
-      )
+      assert list(df[DOI]) == [doi_1_original]
 
 class TestParseIntList(object):
   def test_should_return_default_value_for_none(self):

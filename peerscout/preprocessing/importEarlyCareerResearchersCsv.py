@@ -47,6 +47,7 @@ def to_persons_df(df):
   df = (
     df[sorted(PERSON_CSV_COLUMN_MAPPING.keys())]
     .rename(columns=PERSON_CSV_COLUMN_MAPPING)
+    .drop_duplicates()
     .set_index('person_id')
   )
   df['is_early_career_researcher'] = True

@@ -26,7 +26,7 @@ from .test_data import (
   MANUSCRIPT_ABSTRACT1,
   VALID_DECISIONS, VALID_MANUSCRIPT_TYPES,
   PUBLISHED_DECISIONS, PUBLISHED_MANUSCRIPT_TYPES,
-  DECISSION_ACCEPTED, DECISSION_REJECTED,
+  Decisions,
   KEYWORD1
 )
 
@@ -77,7 +77,8 @@ MANUSCRIPT_VERSION1_RESULT = {
   **MANUSCRIPT_VERSION1,
   'authors': [],
   'senior_editors': [],
-  'subject_areas': []
+  'subject_areas': [],
+  'is_published': True
 }
 
 MANUSCRIPT_VERSION2_RESULT = {
@@ -416,7 +417,7 @@ class TestRecommendReviewers:
         'person': [PERSON1],
         'manuscript_version': [{
           **MANUSCRIPT_VERSION1,
-          'decision': DECISSION_REJECTED
+          'decision': Decisions.REJECTED
         }],
         'manuscript_author': [AUTHOR1],
         'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
@@ -573,7 +574,8 @@ class TestRecommendReviewers:
         'person': [PERSON1],
         'manuscript_version': [{
           **MANUSCRIPT_VERSION1,
-          'decision': DECISSION_REJECTED
+          'decision': Decisions.REJECTED,
+          'is_published': None
         }],
         'manuscript_author': [AUTHOR1],
         'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
@@ -586,7 +588,7 @@ class TestRecommendReviewers:
         'person': [PERSON1],
         'manuscript_version': [{
           **MANUSCRIPT_VERSION1,
-          'decision': DECISSION_REJECTED
+          'decision': Decisions.REJECTED
         }],
         'manuscript_stage': _review_complete_stages(
           {**MANUSCRIPT_ID_FIELDS1, PERSON_ID: PERSON_ID1},
@@ -599,13 +601,13 @@ class TestRecommendReviewers:
       result = recommend_for_dataset(dataset, keywords=KEYWORD1, manuscript_no='')
       assert _potential_reviewers_person_ids(result['potential_reviewers']) == [PERSON_ID1]
 
-    def test_matching_one_keyword_author_should_suggest_authors_with_unknown_decision_and_type(self):
+    def test_matching_one_keyword_author_should_suggest_authors_with_unknown_decision_if_published(self):
       dataset = {
         'person': [PERSON1],
         'manuscript_version': [{
           **MANUSCRIPT_VERSION1,
           'decision': None,
-          'manuscript_type': None
+          'is_published': True
         }],
         'manuscript_author': [AUTHOR1],
         'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
@@ -762,7 +764,7 @@ class TestRecommendReviewers:
         'manuscript_version': [
           MANUSCRIPT_VERSION1, {
             **MANUSCRIPT_VERSION2,
-            'decision': DECISSION_ACCEPTED
+            'decision': Decisions.ACCEPTED
           }
         ],
         'manuscript_author': [
@@ -795,7 +797,8 @@ class TestRecommendReviewers:
         'manuscript_version': [
           MANUSCRIPT_VERSION1, {
             **MANUSCRIPT_VERSION2,
-            'decision': DECISSION_REJECTED
+            'decision': Decisions.REJECTED,
+            'is_published': None
           }
         ],
         'manuscript_author': [
@@ -811,7 +814,9 @@ class TestRecommendReviewers:
       author_of_manuscript_ids_by_person_id = _potential_reviewer_related_version_ids(
         potential_reviewers, RelationshipTypes.AUTHOR
       )
-      logger.debug("author_of_manuscript_ids_by_person_id: %s", author_of_manuscript_ids_by_person_id)
+      logger.debug(
+        "author_of_manuscript_ids_by_person_id: %s", author_of_manuscript_ids_by_person_id
+      )
       assert author_of_manuscript_ids_by_person_id == {
         PERSON_ID1: {
           MANUSCRIPT_VERSION_ID1
