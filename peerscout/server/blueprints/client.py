@@ -3,6 +3,8 @@ import os
 
 from flask import Blueprint
 
+from peerscout.utils.flask import no_cache
+
 LOGGER = logging.getLogger(__name__)
 
 def get_client_folder():
@@ -15,6 +17,7 @@ def create_client_blueprint():
   blueprint = Blueprint('client', __name__, static_folder=client_folder, static_url_path='')
 
   @blueprint.route('/')
+  @no_cache
   def _send_index():
     return blueprint.send_static_file('index.html')
 
