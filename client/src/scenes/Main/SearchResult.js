@@ -72,7 +72,6 @@ const SearchResult = ({
     matchingManuscripts = [],
     manuscriptsNotFound,
   } = searchResult;
-  const requestedSubjectAreas = extractAllSubjectAreas(matchingManuscripts);
   const hasManuscriptsNotFound = manuscriptsNotFound && manuscriptsNotFound.length > 0;
   const filteredPotentialReviewers =
     selectedManuscript ? [] : (
@@ -119,7 +118,6 @@ const SearchResult = ({
             key={ index }
             potentialReviewer={ potentialReviewer }
             relatedManuscriptByVersionId={ relatedManuscriptByVersionId }
-            requestedSubjectAreas={ requestedSubjectAreas }
             onSelectPotentialReviewer={ onSelectPotentialReviewer }
           />
         ))

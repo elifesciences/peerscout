@@ -117,7 +117,7 @@ export const DatesNotAvailable = ({ datesNotAvailable, style = {} }) => (
   <Text style={ style }>{ datesNotAvailable.map(formatPeriodNotAvailable).join(', ') }</Text>
 );
 
-export const RelatedManuscripts = ({label, manuscripts, requestedSubjectAreas}) => (
+export const RelatedManuscripts = ({label, manuscripts}) => (
   <View
     style={ styles.potentialReviewer.subSection }
   >
@@ -130,7 +130,6 @@ export const RelatedManuscripts = ({label, manuscripts, requestedSubjectAreas}) 
               <ManuscriptInlineSummary
                 key={ index }
                 manuscript={ manuscript }
-                requestedSubjectAreas={ requestedSubjectAreas }
               />
             ))
           }
@@ -143,7 +142,6 @@ export const RelatedManuscripts = ({label, manuscripts, requestedSubjectAreas}) 
 const PotentialReviewer = ({
   potentialReviewer,
   relatedManuscriptByVersionId,
-  requestedSubjectAreas,
   onSelectPotentialReviewer  
 }) => {
   const {
@@ -244,7 +242,6 @@ const PotentialReviewer = ({
               key={ relatedManuscriptsInfoList.label }
               label={ relatedManuscriptsInfoList.label }
               manuscripts={ relatedManuscriptsInfoList.manuscripts }
-              requestedSubjectAreas={ requestedSubjectAreas }
             />
           ))
         }

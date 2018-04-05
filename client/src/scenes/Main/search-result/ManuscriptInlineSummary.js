@@ -23,34 +23,17 @@ const styles = {
     display: 'inline-block'
   },
   manuscriptInlineSummary: {
-    matchingSubjectAreas: {
-      display: 'inline-block'
-    },
-    notMatchingSubjectAreas: {
-      display: 'inline-block',
-      color: '#888'
-    }
+    display: 'inline-block'
   }
 };
-
-export const hasMatchingSubjectAreas = (manuscript, requestedSubjectAreas) =>
-  requestedSubjectAreas.length === 0 || !!(manuscript['subject_areas'] || []).filter(
-    subjectArea => requestedSubjectAreas.has(subjectArea)
-  )[0];
 
 export const PublishedDate = ({ value }) => (
   <Text>{ formatDate(value) }</Text>
 );
 
-export const ManuscriptInlineSummary = ({ manuscript, scores = {}, requestedSubjectAreas }) => {
+export const ManuscriptInlineSummary = ({ manuscript, scores = {} }) => {
   return (
-    <View
-      style={
-        hasMatchingSubjectAreas(manuscript, requestedSubjectAreas) ?
-        styles.manuscriptInlineSummary.matchingSubjectAreas :
-        styles.manuscriptInlineSummary.notMatchingSubjectAreas
-      }
-    >
+    <View style={ styles.manuscriptInlineSummary }>
       <TooltipWrapper content={ <ManuscriptTooltipContent manuscript={ manuscript}/> } style={ styles.inlineContainer }>
         <Text>{ quote(manuscript['title']) }</Text>
       </TooltipWrapper>

@@ -28,7 +28,7 @@ test('ManuscriptInlineSummary', g => {
 
   g.test('.should pass manuscript to ManuscriptRefLinkWithAlternatives', t => {
     const component = shallow(<ManuscriptInlineSummary
-      manuscript={ MANUSCRIPT } requestedSubjectAreas={ [] }
+      manuscript={ MANUSCRIPT }
     />);
     const linkComponent = component.find('ManuscriptRefLinkWithAlternatives');
     t.equal(linkComponent.props()['manuscript'], MANUSCRIPT);
@@ -41,7 +41,7 @@ test('ManuscriptInlineSummary', g => {
       published_timestamp: '2017-01-01T00:00:00'
     };
     const component = shallow(<ManuscriptInlineSummary
-      manuscript={ manuscript } requestedSubjectAreas={ [] }
+      manuscript={ manuscript }
     />);
     t.equal(component.find('PublishedDate').props()['value'], manuscript.published_timestamp);
     t.end();
@@ -49,7 +49,7 @@ test('ManuscriptInlineSummary', g => {
 
   g.test('.should pass score to Score', t => {
     const component = shallow(<ManuscriptInlineSummary
-      manuscript={ MANUSCRIPT } requestedSubjectAreas={ [] } scores={ SCORE }
+      manuscript={ MANUSCRIPT } scores={ SCORE }
     />);
     const scoreComponent = component.find('Score');
     t.equal(scoreComponent.props()['score'], SCORE);
@@ -58,7 +58,7 @@ test('ManuscriptInlineSummary', g => {
 
   g.test('.should not add Score if no scores are provided', t => {
     const component = shallow(<ManuscriptInlineSummary
-      manuscript={ MANUSCRIPT } requestedSubjectAreas={ [] }
+      manuscript={ MANUSCRIPT }
     />);
     const scoreComponent = component.find('Score');
     t.equal(scoreComponent.length, 0);
