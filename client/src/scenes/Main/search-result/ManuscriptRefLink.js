@@ -9,7 +9,7 @@ import {
 } from '../../../components';
 
 import {
-  formatManuscriptId,
+  formatManuscriptDoi,
   doiUrl
 } from '../formatUtils';
 
@@ -27,7 +27,7 @@ export const ManuscriptRefLink = ({ manuscript }) => (
     target="_blank"
     href={ doiUrl(manuscript['doi']) }
   >
-    <Text>{ formatManuscriptId(manuscript) }</Text>
+    <Text>{ formatManuscriptDoi(manuscript) }</Text>
   </Link>
 );
 

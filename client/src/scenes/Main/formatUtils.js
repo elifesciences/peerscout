@@ -21,6 +21,10 @@ export const formatScoreWithDetails = score =>
 
 export const formatManuscriptId = manuscript => manuscript['manuscript_id'];
 
+export const formatManuscriptDoi = manuscript => (
+  manuscript['doi'] || formatManuscriptId(manuscript)
+);
+
 export const formatDate = date => date && new Date(date).toLocaleDateString();
 
 export const formatPeriodNotAvailable = periodNotAvailable =>

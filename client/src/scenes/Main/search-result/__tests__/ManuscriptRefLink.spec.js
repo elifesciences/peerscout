@@ -6,7 +6,7 @@ import { shallow, render } from 'enzyme';
 import ManuscriptRefLink from '../ManuscriptRefLink';
 
 import {
-  formatManuscriptId,
+  formatManuscriptDoi,
   doiUrl
 } from '../../formatUtils';
 
@@ -23,8 +23,9 @@ test('ManuscriptRefLink', g => {
   });
 
   g.test('.should render formatted manuscript id', t => {
-    const component = render(<ManuscriptRefLink manuscript={ MANUSCRIPT } />);
-    t.equal(component.text(), '' + formatManuscriptId(MANUSCRIPT));
+    const manuscript = {...MANUSCRIPT, doi: DOI};
+    const component = render(<ManuscriptRefLink manuscript={ manuscript } />);
+    t.equal(component.text(), '' + formatManuscriptDoi(manuscript));
     t.end();
   });
 
