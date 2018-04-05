@@ -76,3 +76,9 @@ class TestTqdm:
     set_description_mock.assert_called_with(
       DESCRIPTION, refresh=False
     )
+
+  def test_should_be_able_to_call_tqdm_pandas(
+    self, tqdm_mock: MagicMock):
+
+    tqdm.pandas()
+    tqdm_mock.pandas.assert_called()

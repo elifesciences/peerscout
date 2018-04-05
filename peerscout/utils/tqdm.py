@@ -42,3 +42,5 @@ def tqdm(*args, **kwargs):
       )
 
   return tqdm_instance
+
+tqdm.pandas = wraps(_tqdm.pandas)(lambda: _tqdm.pandas())
