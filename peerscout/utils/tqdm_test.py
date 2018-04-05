@@ -10,6 +10,8 @@ KW_ARGS = {'key1': 'value1', 'key2': 'value2'}
 
 OTHER_MIN_INTERVAL = 123.4
 
+DESCRIPTION = 'description'
+
 @pytest.fixture(name='tqdm_mock', autouse=True)
 def _tqdm_mock():
   with patch.object(tqdm_module, '_tqdm') as tqdm_mock:
@@ -54,3 +56,23 @@ class TestTqdm:
       *ARGS, mininterval=OTHER_MIN_INTERVAL, **KW_ARGS
     )
     env_get_mock.assert_called_with(MIN_INTERVAL_KEY)
+
+  def test_should_not_pass_when_updating_description_and_in_terminal(
+    self, tqdm_mock: MagicMock, isatty_mock: MagicMock):
+
+    isatty_mock.return_value = True
+    set_description_mock = tqdm_mock.return_value.set_description
+    tqdm(*ARGS, **KW_ARGS).set_description(DESCRIPTION)
+    set_description_mock.assert_called_with(
+      DESCRIPTION
+    )
+
+  def test_should_pass_refresh_false_when_updating_description_and_not_terminal(
+    self, tqdm_mock: MagicMock, isatty_mock: MagicMock):
+
+    isatty_mock.return_value = False
+    set_description_mock = tqdm_mock.return_value.set_description
+    tqdm(*ARGS, **KW_ARGS).set_description(DESCRIPTION)
+    set_description_mock.assert_called_with(
+      DESCRIPTION, refresh=False
+    )
