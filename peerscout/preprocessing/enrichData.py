@@ -4,6 +4,8 @@ import json
 import logging
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
+from configparser import ConfigParser
+from typing import List, Dict, Any
 
 import dateutil
 import requests
@@ -11,6 +13,7 @@ import pandas as pd
 import sqlalchemy
 from ratelimit import rate_limited
 
+from peerscout.utils.collection import parse_list
 from peerscout.utils.tqdm import tqdm
 from peerscout.utils.requests import configure_session_retry
 from peerscout.utils.threading import lazy_thread_local
@@ -21,6 +24,8 @@ from .preprocessingUtils import get_data_path
 
 from ..shared.database import connect_managed_configured_database
 from ..shared.app_config import get_app_config
+
+LOGGER = logging.getLogger(__name__)
 
 PERSON_ID = 'person_id'
 
@@ -33,8 +38,10 @@ DEFAULT_MAX_RETRY = 10
 
 DEFAULT_RETRY_ON_STATUS_CODES = [429, 500, 502, 503, 504]
 
-def get_logger():
-  return logging.getLogger(__name__)
+Person = Dict[str, Any]
+PersonList = List[Person]
+
+ENRICH_DATA_CONFIG_SECTION = 'enrich-data'
 
 class Columns:
   FIRST_NAME = 'first_name'
@@ -42,9 +49,9 @@ class Columns:
   ORCID = 'ORCID'
 
 def get(url, session=None):
-  get_logger().debug('requesting: %s', url)
+  LOGGER.debug('requesting: %s', url)
   response = (session or requests).get(url)
-  get_logger().debug('response received: %s (%s)', url, response.status_code)
+  LOGGER.debug('response received: %s (%s)', url, response.status_code)
   response.raise_for_status()
   return response.text
 
@@ -52,14 +59,13 @@ def create_cache(f, cache_dir, serializer, deserializer, suffix=''):
   cache_path = Path(cache_dir)
   cache_path.mkdir(exist_ok=True, parents=True)
   clean_pattern = re.compile(r'[^\w]')
-  logger = get_logger()
 
   def clean_fn(fn):
     return clean_pattern.sub('_', fn)
 
   def cached_f(*args):
     cache_file = cache_path.joinpath(Path(clean_fn(','.join([str(x) for x in args]))).name + suffix)
-    logger.debug("filename: %s", cache_file)
+    LOGGER.debug("filename: %s", cache_file)
     if cache_file.is_file():
       return deserializer(cache_file.read_bytes())
     result = f(*args)
@@ -98,7 +104,7 @@ def extract_manuscript(item):
 def contains_author_with_orcid(item, orcid):
   return True in [
     author['ORCID'].endswith(orcid)
-    for author in item['author']
+    for author in item.get('author', [])
     if 'ORCID' in author
   ]
 
@@ -130,47 +136,64 @@ def get_crossref_works_by_full_name_url(full_name):
     .format(full_name)
   )
 
-def clean_person_names(person):
+def clean_person_names(person: Person):
   return {
     **person,
     Columns.FIRST_NAME: unescape_and_strip_tags_if_not_none(person[Columns.FIRST_NAME]).strip(),
     Columns.LAST_NAME: unescape_and_strip_tags_if_not_none(person[Columns.LAST_NAME]).strip()
   }
 
-def clean_all_person_names(person_list):
+def clean_all_person_names(person_list: PersonList):
   return [clean_person_names(p) for p in person_list]
 
-def get_early_career_researchers(db):
+def get_persons_to_enrich(db, include_early_career_researchers=False, include_roles=None) \
+  -> PersonList:
+
+  if not include_early_career_researchers and not include_roles:
+    raise AssertionError('early_career_researchers or roles required')
   person_table = db.person
   person_membership_table = db.person_membership
+  query = db.session.query(
+    person_table.table.person_id,
+    person_table.table.first_name,
+    person_table.table.last_name,
+    person_membership_table.table.member_id
+  ).outerjoin(
+    db.person_role.table,
+    db.person_role.table.person_id == person_table.table.person_id
+  ).outerjoin(
+    person_membership_table.table,
+    person_membership_table.table.person_id == person_table.table.person_id
+  ).filter(
+    sqlalchemy.or_(
+      person_membership_table.table.member_type == None, # pylint: disable=C0121
+      person_membership_table.table.member_type == 'ORCID'
+    )
+  )
+
+  conditions = []
+  if include_early_career_researchers:
+    conditions.append(
+      person_table.table.is_early_career_researcher == True # pylint: disable=C0121
+    )
+  if include_roles:
+    conditions.append(
+      db.person_role.table.role.in_(include_roles)
+    )
+  query = query.filter(sqlalchemy.or_(*conditions))
+
   return clean_all_person_names(pd.DataFrame(
-    db.session.query(
-      person_table.table.person_id,
-      person_table.table.first_name,
-      person_table.table.last_name,
-      person_membership_table.table.member_id
-    ).outerjoin(
-      person_membership_table.table,
-      person_membership_table.table.person_id == person_table.table.person_id
-    ).filter(
-      sqlalchemy.and_(
-        person_table.table.is_early_career_researcher == True, # pylint: disable=C0121
-        sqlalchemy.or_(
-          person_membership_table.table.member_type == None, # pylint: disable=C0121
-          person_membership_table.table.member_type == 'ORCID'
-        )
-      )
-    ).all(),
+    query.distinct().all(),
     columns=[PERSON_ID, Columns.FIRST_NAME, Columns.LAST_NAME, Columns.ORCID]
   ).to_dict(orient='records'))
 
-def get_person_full_name(person):
+def get_person_full_name(person: Person):
   return ' '.join([person[Columns.FIRST_NAME], person[Columns.LAST_NAME]])
 
-def get_persons_with_orcid(person_list):
+def get_persons_with_orcid(person_list: PersonList):
   return [p for p in person_list if p[Columns.ORCID]]
 
-def get_manuscripts_for_person(person, get_request_handler):
+def get_manuscripts_for_person(person: Person, get_request_handler):
   orcid = person[Columns.ORCID]
   if orcid:
     url = get_crossref_works_by_orcid_url(orcid)
@@ -199,7 +222,9 @@ def tqdm_parallel_map_unordered(executor, fn, iterable, **kwargs):
     for f in tqdm(concurrent.futures.as_completed(futures_list), total=len(futures_list), **kwargs)
   )
 
-def get_person_with_manuscripts_list(person_list, get_request_handler, max_workers=1):
+def get_enriched_person_with_manuscripts_list(
+  person_list: PersonList, get_request_handler, max_workers=1):
+
   with ThreadPoolExecutor(max_workers=max_workers) as executor:
     yield from tqdm_parallel_map_unordered(
       executor,
@@ -270,15 +295,14 @@ def update_database_with_person_with_manuscripts_list(db, person_with_manuscript
     'person_id': m.get('person_id')
   } for m in new_manuscript_info])
 
-  logger = get_logger()
-  logger.debug("crossref_dois: %d", len(crossref_dois))
-  logger.debug("existing_dois: %d", len(existing_dois_lower))
-  logger.debug("new_dois: %d", len(new_dois))
-  logger.debug("new_manuscript_info: %d", len(new_manuscript_info))
-  logger.debug("new_manuscripts: %d", len(new_manuscripts))
-  logger.debug("new_manuscript_versions: %d", len(new_manuscript_versions))
-  logger.debug("new_manuscript_subject_areas: %d", len(new_manuscript_subject_areas))
-  logger.debug("new_manuscript_authors: %d", len(new_manuscript_authors))
+  LOGGER.debug("crossref_dois: %d", len(crossref_dois))
+  LOGGER.debug("existing_dois: %d", len(existing_dois_lower))
+  LOGGER.debug("new_dois: %d", len(new_dois))
+  LOGGER.debug("new_manuscript_info: %d", len(new_manuscript_info))
+  LOGGER.debug("new_manuscripts: %d", len(new_manuscripts))
+  LOGGER.debug("new_manuscript_versions: %d", len(new_manuscript_versions))
+  LOGGER.debug("new_manuscript_subject_areas: %d", len(new_manuscript_subject_areas))
+  LOGGER.debug("new_manuscript_authors: %d", len(new_manuscript_authors))
   if len(new_manuscript_info) > 0:
     db.manuscript.create_list(new_manuscripts)
     db.manuscript_version.create_list(new_manuscript_versions)
@@ -286,20 +310,26 @@ def update_database_with_person_with_manuscripts_list(db, person_with_manuscript
     db.manuscript_author.create_list(new_manuscript_authors)
     db.commit()
 
-def enrich_early_career_researchers(db, get_request_handler, max_workers=1):
-  logger = get_logger()
+def enrich_and_update_person_list(
+  db, person_list: PersonList, get_request_handler, max_workers=1):
 
-  person_list = get_early_career_researchers(db)
-  logger.info("number of early career researchers: %d", len(person_list))
-  logger.info(
-    "number of early career researchers with orcid: %d",
-    len(get_persons_with_orcid(person_list))
-  )
+  LOGGER.info("number of persons: %d", len(person_list))
+  LOGGER.info("number of persons with orcid: %d", len(get_persons_with_orcid(person_list)))
 
-  person_with_manuscripts_list = get_person_with_manuscripts_list(
+  person_with_manuscripts_list = get_enriched_person_with_manuscripts_list(
     person_list, get_request_handler, max_workers=max_workers
   )
   update_database_with_person_with_manuscripts_list(db, person_with_manuscripts_list)
+
+def get_configured_include_early_career_researcher(app_config: ConfigParser):
+  return app_config.getboolean(
+    ENRICH_DATA_CONFIG_SECTION, 'include_early_career_researcher', fallback=False
+  )
+
+def get_configured_include_roles(app_config: ConfigParser):
+  return parse_list(app_config.get(
+    ENRICH_DATA_CONFIG_SECTION, 'include_roles', fallback='')
+  )
 
 def get_configured_max_workers(app_config):
   return app_config.getint('pipeline', 'max_workers', fallback=DEFAULT_MAX_WORKERS)
@@ -314,7 +344,7 @@ def get_configured_rate_limit_and_interval_sec(app_config):
     )
   )
 
-def get_configured_max_retries(app_config):
+def get_configured_max_retries(app_config: ConfigParser):
   return app_config.getint('crossref', 'max_retries', fallback=DEFAULT_MAX_RETRY)
 
 def parse_int_list(s, default_value=None):
@@ -339,11 +369,11 @@ def decorate_get_request_handler(get_request_handler, app_config, cache_dir=None
   rate_limit_count, rate_limit_interval_sec = (
     get_configured_rate_limit_and_interval_sec(app_config)
   )
-  get_logger().info('using rate limit: %d / %ds', rate_limit_count, rate_limit_interval_sec)
+  LOGGER.info('using rate limit: %d / %ds', rate_limit_count, rate_limit_interval_sec)
 
   max_retries = get_configured_max_retries(app_config)
   retry_on_status_codes = get_configured_retry_on_status_codes(app_config)
-  get_logger().info(
+  LOGGER.info(
     'using max_retries: %d (status codes: %s)', max_retries, retry_on_status_codes
   )
 
@@ -368,8 +398,11 @@ def decorate_get_request_handler(get_request_handler, app_config, cache_dir=None
 def main():
   app_config = get_app_config()
 
+  include_early_career_researchers = get_configured_include_early_career_researcher(app_config)
+  include_roles = get_configured_include_roles(app_config)
+
   max_workers = get_configured_max_workers(app_config)
-  get_logger().info('using max_workers: %d', max_workers)
+  LOGGER.info('using max_workers: %d', max_workers)
 
   get_request_handler = decorate_get_request_handler(
     get,
@@ -378,13 +411,23 @@ def main():
   )
 
   with connect_managed_configured_database() as db:
-    enrich_early_career_researchers(
+    person_list = get_persons_to_enrich(
       db,
+      include_early_career_researchers=include_early_career_researchers,
+      include_roles=include_roles
+    )
+    LOGGER.info(
+      'person list: %d (include ecr: %s, roles: %s)',
+      len(person_list), include_early_career_researchers, include_roles
+    )
+    enrich_and_update_person_list(
+      db,
+      person_list,
       get_request_handler=get_request_handler,
       max_workers=max_workers
     )
 
-    get_logger().info('done')
+    LOGGER.info('done')
 
 if __name__ == "__main__":
   from ..shared.logging_config import configure_logging
