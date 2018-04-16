@@ -1,6 +1,8 @@
+import os
 from os import makedirs
 from os.path import isfile
 from textwrap import shorten
+from datetime import datetime
 import logging
 
 import boto3
@@ -11,7 +13,7 @@ from .preprocessingUtils import get_downloads_csv_path, get_downloads_xml_path
 
 from ..shared.app_config import get_app_config
 
-NAME = 'downloadFiles'
+LOGGER = logging.getLogger(__name__)
 
 # Prerequisites:
 # * Credentials setup in user profile
@@ -25,7 +27,16 @@ def download_objects(client, obj_list, download_path, downloaded_files=None):
     pbar.set_description("%40s" % shorten(remote_file, width=40))
     local_file = download_path + '/' + remote_file
     if not isfile(local_file):
+      remote_file_timestamp = obj.last_modified
+      LOGGER.debug(
+        'downloading file %s (timestamp: %s)', remote_file, remote_file_timestamp
+      )
+      local_access_time = datetime.now().timestamp()
+      local_modifed_time = remote_file_timestamp.timestamp()
+
       client.download_file(obj.bucket_name, remote_file, local_file)
+      os.utime(local_file, (local_access_time, local_modifed_time))
+
       if downloaded_files is not None:
         downloaded_files.append(remote_file)
 
@@ -82,9 +93,8 @@ def main():
     get_downloads_csv_path(),
     downloaded_files)
 
-  logger = logging.getLogger(NAME)
-  logger.info('%d files downloaded', len(downloaded_files))
-  logger.info('done')
+  LOGGER.info('%d files downloaded', len(downloaded_files))
+  LOGGER.info('done')
 
   return len(downloaded_files) > 0
 
