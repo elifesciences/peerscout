@@ -32,10 +32,10 @@ def download_objects(client, obj_list, download_path, downloaded_files=None):
         'downloading file %s (timestamp: %s)', remote_file, remote_file_timestamp
       )
       local_access_time = datetime.now().timestamp()
-      local_modifed_time = remote_file_timestamp.timestamp()
+      local_modified_time = remote_file_timestamp.timestamp()
 
       client.download_file(obj.bucket_name, remote_file, local_file)
-      os.utime(local_file, (local_access_time, local_modifed_time))
+      os.utime(local_file, (local_access_time, local_modified_time))
 
       if downloaded_files is not None:
         downloaded_files.append(remote_file)
