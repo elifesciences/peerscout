@@ -5,8 +5,11 @@ import { flatMap } from '../../../utils';
 
 import { duplicateManuscriptTitlesAsAlternatives } from '../manuscriptUtils';
 
-export const manuscriptToId = m => 'm' + m['manuscript_id'];
-export const personToId = p => 'p' + p['person_id'];
+export const manuscriptIdToNodeId = manuscriptId => `m${manuscriptId}`;
+export const manuscriptToId = m => manuscriptIdToNodeId(m['manuscript_id']);
+
+export const personIdToNodeId = personId => `p${personId}`;
+export const personToId = p => personIdToNodeId(p['person_id']);
 
 const limit = (a, max) => a && max && a.length > max ? a.slice(0, max) : a;
 
@@ -213,6 +216,7 @@ export const getManuscriptCorrespondingAuthorPersonIdSet = (manuscript, allNodes
 
 export const getNodeVersionIdFilter = versionIdSet => d => {
   const versionId = d.manuscript && d.manuscript.version_id;
+  console.log('versionId:', versionId, d);
   return versionId && versionIdSet.has(versionId);
 };
 

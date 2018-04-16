@@ -17,8 +17,8 @@ import {
   updateNodePosition,
   createTooltip,
   addNodeTooltipBehavior,
-  selectManuscriptsOfCorrespondingAuthorsNode,
-  selectCorrespondingAuthorsOfManuscriptNode
+  selectNodeByNode,
+  selectNodeByReviewer
 } from './chart';
 
 
@@ -102,30 +102,9 @@ const createChart = (parent, graph, options) => {
   const showSearch = !!graph.nodes[0].search;
   const legend = createLegend(svg, showSearch, options);
   const { setLegendOpen } = legend;
-    
-  const selectNodeId = selectedId => {
-    console.log("select node id:", selectedId);
-    const isSelected = d => d.id === selectedId;
-    node.classed('selected', isSelected);
-  };
-  
-  const selectNode = selectedNode => {
-    selectNodeId(selectedNode && selectedNode.id);
-    selectCorrespondingAuthorsOfManuscriptNode(node, selectedNode, graph.nodes);
-    selectManuscriptsOfCorrespondingAuthorsNode(node, selectedNode);
-  };
-    
-  const selectedReviewer = selectedReviewer => {
-    console.log("selected reviewer:", selectedReviewer);
-    const selectedPerson = selectedReviewer && selectedReviewer.person;
-    if (selectedPerson) {
-      selectNodeId(personToId(selectedPerson));
-    } else {
-      selectNodeId(null);
-    }
-    selectCorrespondingAuthorsOfNode(null);
-    selectManuscriptsOfCorrespondingAuthorsReviewer(selectedReviewer);    
-  };
+
+  const selectNode = selectedNode => selectNodeByNode(node, selectedNode, graph.nodes);
+  const selectedReviewer = selectedReviewer => selectNodeByReviewer(node, selectedReviewer);
 
   if (options.onNodeClicked) {
     node.on('click', options.onNodeClicked);

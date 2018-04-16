@@ -15,36 +15,36 @@ const MANUSCRIPT_NODE_PREFIX = 'm';
 const PERSON_NODE_PREFIX = 'p';
 const SEARCH_NODE_ID = 'search';
 
-const MANUSCRIPT_ID_1 = '1001';
-const MANUSCRIPT_ID_2 = '1002';
-const MANUSCRIPT_ID_3 = '1003';
+export const MANUSCRIPT_ID_1 = '1001';
+export const MANUSCRIPT_ID_2 = '1002';
+export const MANUSCRIPT_ID_3 = '1003';
 
-const VERSION_ID_1 = MANUSCRIPT_ID_1 + '-1';
-const VERSION_ID_2 = MANUSCRIPT_ID_2 + '-1';
-const VERSION_ID_3 = MANUSCRIPT_ID_3 + '-1';
+export const VERSION_ID_1 = MANUSCRIPT_ID_1 + '-1';
+export const VERSION_ID_2 = MANUSCRIPT_ID_2 + '-1';
+export const VERSION_ID_3 = MANUSCRIPT_ID_3 + '-1';
 
-const PERSON_ID_1 = 'person1';
-const PERSON_ID_2 = 'person2';
+export const PERSON_ID_1 = 'person1';
+export const PERSON_ID_2 = 'person2';
 
-const MANUSCRIPT_1 = {
+export const MANUSCRIPT_1 = {
   manuscript_id: MANUSCRIPT_ID_1,
   version_id: VERSION_ID_1,
   title: `Manuscript ${VERSION_ID_1}`
 };
 
-const MANUSCRIPT_2 = {
+export const MANUSCRIPT_2 = {
   manuscript_id: MANUSCRIPT_ID_2,
   version_id: VERSION_ID_2,
   title: `Manuscript ${VERSION_ID_2}`
 };
 
-const MANUSCRIPT_3 = {
+export const MANUSCRIPT_3 = {
   manuscript_id: MANUSCRIPT_ID_3,
   version_id: VERSION_ID_3,
   title: `Manuscript ${VERSION_ID_3}`
 };
 
-const PERSON_1 = {
+export const PERSON_1 = {
   person_id: PERSON_ID_1,
 };
 

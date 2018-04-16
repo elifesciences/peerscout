@@ -9,8 +9,13 @@ import {
   getPotentialReviewerCorrespondingAuthorVersionIdSet,
   getNodeVersionIdFilter,
   getManuscriptCorrespondingAuthorPersonIdSet,
-  getNodePersonIdFilter
+  getNodePersonIdFilter,
+  personToId
 } from './graph';
+
+export const SELECTED_NODE_CLASS = 'selected';
+export const MANUSCRIPT_OF_CORRESPONDING_AUTHOR_CLASS = 'node-manuscript-of-corresponding-author';
+export const CORRESPONDING_AUTHOR_CLASS = 'node-corresponding-author';
 
 const nodeScore = d => (
   (d && d.score) ||
@@ -129,7 +134,7 @@ export const selectManuscriptsOfCorrespondingAuthorsReviewer = (node, potentialR
   );
   console.log('correspondingAuthorOfVersionIds:', correspondingAuthorOfVersionIds);
   node.classed(
-    'node-manuscript-of-corresponding-author',
+    MANUSCRIPT_OF_CORRESPONDING_AUTHOR_CLASS,
     getNodeVersionIdFilter(correspondingAuthorOfVersionIds)
   );
 };
@@ -145,7 +150,7 @@ export const selectCorrespondingAuthorsOfManuscript = (node, manuscript, allNode
   );
   console.log('correspondingAuthorPersonIds:', correspondingAuthorPersonIds);
   node.classed(
-    'node-corresponding-author',
+    CORRESPONDING_AUTHOR_CLASS,
     getNodePersonIdFilter(correspondingAuthorPersonIds)
   );
 };
@@ -153,4 +158,24 @@ export const selectCorrespondingAuthorsOfManuscript = (node, manuscript, allNode
 export const selectCorrespondingAuthorsOfManuscriptNode = (node, selectedNode, allNodes) => {
   const manuscript = selectedNode && selectedNode.manuscript;
   selectCorrespondingAuthorsOfManuscript(node, manuscript, allNodes);
+};
+
+export const selectNodeById = (node, selectedId) => {
+  console.log("select node id:", selectedId);
+  const isSelected = d => d.id === selectedId;
+  node.classed(SELECTED_NODE_CLASS, isSelected);
+};
+
+export const selectNodeByNode = (node, selectedNode, allNodes) => {
+  selectNodeById(node, selectedNode && selectedNode.id);
+  selectCorrespondingAuthorsOfManuscriptNode(node, selectedNode, allNodes);
+  selectManuscriptsOfCorrespondingAuthorsNode(node, selectedNode);
+};
+
+export const selectNodeByReviewer = (node, selectedReviewer) => {
+  console.log("selected reviewer:", selectedReviewer);
+  const selectedPerson = selectedReviewer && selectedReviewer.person;
+  selectNodeById(node, selectedPerson && personToId(selectedPerson));
+  selectCorrespondingAuthorsOfManuscriptNode(node, null);
+  selectManuscriptsOfCorrespondingAuthorsReviewer(node, selectedReviewer);    
 };
