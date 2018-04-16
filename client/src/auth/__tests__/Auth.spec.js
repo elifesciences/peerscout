@@ -8,7 +8,6 @@ import withSandbox from '../../utils/__tests__/withSandbox';
 
 import Auth, { getAuthErrorMessage, SESSION_EXPIRED_ERROR_MESSAGE } from '../Auth';
 
-import * as Auth0Module from 'auth0-js';
 import * as Auth0LockModule from 'auth0-lock';
 
 import deferred from 'deferred';
@@ -57,34 +56,23 @@ const createMockStorage = () => ({
   removeItem: sinon.stub()
 });
 
-const createMockWebAuth = () => {
-  const webAuth = {
-    client: {
-      userInfo: sinon.stub()
-    }
-  };
-  webAuth.callbackUserInfo = (error, user) => lastCall(webAuth.client.userInfo).args[1](error, user);
-  webAuth.resolveUserInfo = user => webAuth.callbackUserInfo(null, user);
-  webAuth.rejectUserInfo = error => webAuth.callbackUserInfo(error, null);
-  return webAuth;
-}
-
 const createMockLock = () => {
   const handlerMap = {};
   const on = (event, handler) => {
     handlerMap[event] = handler
   };
+  const getUserInfo = sinon.stub();
+  const callbackUserInfo = (error, user) => lastCall(getUserInfo).args[1](error, user);
   return {
     on: sinon.spy(on),
-    _trigger: (event, ...args) => handlerMap[event](...args)
+    _trigger: (event, ...args) => handlerMap[event](...args),
+    getUserInfo,
+    resolveUserInfo: user => callbackUserInfo(null, user),
+    rejectUserInfo: error => callbackUserInfo(error, null)
   };
 };
 
 const createAuthTester = (t, config = AUTH0_CONFIG) => {
-  const webAuth = createMockWebAuth();
-  const WebAuth = t.sandbox.stub(Auth0Module, 'WebAuth');
-  WebAuth.returns(webAuth);
-
   const lock = createMockLock();
   const Auth0LockPasswordless = t.sandbox.stub(Auth0LockModule, 'Auth0LockPasswordless');
   Auth0LockPasswordless.returns(lock);
@@ -94,13 +82,10 @@ const createAuthTester = (t, config = AUTH0_CONFIG) => {
   const auth = new Auth({
     ...config,
     storage,
-    WebAuth,
     Auth0LockPasswordless
   });
 
   const authTester = {
-    webAuth,
-    WebAuth,
     lock,
     Auth0LockPasswordless,
     storage,
@@ -167,7 +152,7 @@ test('Auth', g => {
     t.true(authTester.auth.isAuthenticating(), 'should be authenticating still');
     t.false(authTester.auth.isAuthenticated(), 'should not be authenticated yet');
 
-    authTester.webAuth.resolveUserInfo(USER);
+    authTester.lock.resolveUserInfo(USER);
     t.equal(authTester.auth.email, EMAIL);
     t.equal(authTester.auth.error_description, undefined);
     t.equal(authTester.auth.access_token, AUTH_RESULT.accessToken);
@@ -184,7 +169,7 @@ test('Auth', g => {
     t.true(authTester.auth.isAuthenticating(), 'should be authenticating still');
     t.false(authTester.auth.isAuthenticated(), 'should not be authenticated yet');
 
-    authTester.webAuth.rejectUserInfo(USER_INFO_ERROR_OBJ);
+    authTester.lock.rejectUserInfo(USER_INFO_ERROR_OBJ);
     t.equal(authTester.auth.error_description, getAuthErrorMessage(USER_INFO_ERROR_OBJ));
     t.equal(authTester.auth.access_token, null);
     t.true(authTester.onStateChangeHandler.called, 'should call onStateChangeHandler');
@@ -200,7 +185,7 @@ test('Auth', g => {
     t.true(authTester.auth.isAuthenticating(), 'should be authenticating still');
     t.false(authTester.auth.isAuthenticated(), 'should not be authenticated yet');
 
-    authTester.webAuth.resolveUserInfo(USER);
+    authTester.lock.resolveUserInfo(USER);
     t.equal(authTester.auth.email, EMAIL);
     t.equal(authTester.auth.error_description, undefined);
     t.equal(authTester.auth.access_token, AUTH_RESULT.accessToken);

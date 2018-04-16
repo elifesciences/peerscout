@@ -1,5 +1,3 @@
-import { WebAuth } from 'auth0-js';
-
 import { Auth0LockPasswordless } from 'auth0-lock';
 
 const ACCESS_TOKEN_KEY = 'access_token';
@@ -17,7 +15,6 @@ export default class Auth {
   constructor(options) {
     this.options = options;
     this.storage = options.storage || global.localStorage;
-    this.WebAuth = options.WebAuth || WebAuth;
     this.Auth0LockPasswordless = options.Auth0LockPasswordless || Auth0LockPasswordless;
     this.lock = new this.Auth0LockPasswordless(
       options.client_id, options.domain, {
@@ -111,11 +108,7 @@ export default class Auth {
   }
 
   _userInfo(access_token, callback) {
-    const auth0 = new this.WebAuth({
-      domain: this.options.domain,
-      clientID: this.options.client_id
-    });
-    return auth0.client.userInfo(access_token, callback);
+    return this.lock.getUserInfo(access_token, callback);
   }
 
   revalidateToken() {

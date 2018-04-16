@@ -14,7 +14,6 @@
   "author": "Daniel Ecer",
   "license": "MIT",
   "dependencies": {
-    "auth0-js": "^8.12.2",
     "auth0-lock": "^11.2.3",
     "clipboard-js": "^0.3.2",
     "create-react-class": "^15.6.3",
