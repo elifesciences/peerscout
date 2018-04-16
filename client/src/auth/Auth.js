@@ -4,6 +4,15 @@ import { Auth0LockPasswordless } from 'auth0-lock';
 
 const ACCESS_TOKEN_KEY = 'access_token';
 
+export const SESSION_EXPIRED_ERROR_MESSAGE = 'Session expired'
+
+export const getAuthErrorMessage = error => {
+  if (error && typeof(error) === 'string') {
+    return error;
+  }
+  return SESSION_EXPIRED_ERROR_MESSAGE;
+};
+
 export default class Auth {
   constructor(options) {
     this.options = options;
@@ -60,7 +69,7 @@ export default class Auth {
         this.storage.setItem(ACCESS_TOKEN_KEY, access_token);
         this._userInfo(access_token, (err, user) => {
           if (err) {
-            this._setAuthorizationError(err);
+            this._setAuthorizationError(getAuthErrorMessage(err));
           } else {
             console.log('logged user:', user);
             this.email = user.email;
@@ -81,8 +90,8 @@ export default class Auth {
  
   // We’ll display an error if the user clicks an outdated or invalid magiclink
   _setAuthorizationError(error_description) {
-    this._setAccessToken(null, error_description);
     console.error('There was an error:', error_description);
+    this._setAccessToken(null, error_description);
   }
 
   _triggerStateChange() {
@@ -115,7 +124,7 @@ export default class Auth {
       this.storage.setItem(ACCESS_TOKEN_KEY, access_token);
       this._userInfo(access_token, (err, user) => {
         if (err) {
-          this._setAuthorizationError('Session expired');
+          this._setAuthorizationError(SESSION_EXPIRED_ERROR_MESSAGE);
         } else {
           this.email = user.email;
         }

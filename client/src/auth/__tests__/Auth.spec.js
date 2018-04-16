@@ -6,7 +6,7 @@ import sinon from 'sinon';
 
 import withSandbox from '../../utils/__tests__/withSandbox';
 
-import Auth from '../Auth';
+import Auth, { getAuthErrorMessage, SESSION_EXPIRED_ERROR_MESSAGE } from '../Auth';
 
 import * as Auth0Module from 'auth0-js';
 import * as Auth0LockModule from 'auth0-lock';
@@ -29,6 +29,12 @@ const AUTHORIZATION_ERROR = {
 };
 
 const USER_INFO_ERROR = 'invalid user';
+
+const USER_INFO_ERROR_OBJ = {
+  code: 401,
+  statusCode: 401,
+  name: 'Error'
+};
 
 const AUTH_RESULT = {
   accessToken: 'access1'
@@ -171,7 +177,6 @@ test('Auth', g => {
     t.end();
   }));
 
-
   g.test('.should handle authenticated with invalid user profile', withSandbox(t => {
     const authTester = createAuthTester(t);
     authTester.lock._trigger('hash_parsed', AUTH_HASH);
@@ -179,8 +184,8 @@ test('Auth', g => {
     t.true(authTester.auth.isAuthenticating(), 'should be authenticating still');
     t.false(authTester.auth.isAuthenticated(), 'should not be authenticated yet');
 
-    authTester.webAuth.rejectUserInfo(USER_INFO_ERROR);
-    t.equal(authTester.auth.error_description, USER_INFO_ERROR);
+    authTester.webAuth.rejectUserInfo(USER_INFO_ERROR_OBJ);
+    t.equal(authTester.auth.error_description, getAuthErrorMessage(USER_INFO_ERROR_OBJ));
     t.equal(authTester.auth.access_token, null);
     t.true(authTester.onStateChangeHandler.called, 'should call onStateChangeHandler');
     t.false(authTester.lastState.authenticating, 'should not be authenticating');
@@ -204,4 +209,21 @@ test('Auth', g => {
     t.true(authTester.lastState.authenticated, 'should be authenticated');
     t.end();
   }));
+});
+
+test('Auth.getAuthErrorMessage', g => {
+  g.test('.should return error if error is a non-empty string', t => {
+    t.equal(getAuthErrorMessage(USER_INFO_ERROR), USER_INFO_ERROR);
+    t.end();
+  });
+
+  g.test('.should return session expired error if error is an empty string', t => {
+    t.equal(getAuthErrorMessage(''), SESSION_EXPIRED_ERROR_MESSAGE);
+    t.end();
+  });
+
+  g.test('.should return session expired error if error is an object', t => {
+    t.equal(getAuthErrorMessage(USER_INFO_ERROR_OBJ), SESSION_EXPIRED_ERROR_MESSAGE);
+    t.end();
+  });
 });
