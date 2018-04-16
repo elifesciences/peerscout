@@ -2,10 +2,12 @@ import re
 from pathlib import Path
 import json
 import logging
+import os
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 from configparser import ConfigParser
 from typing import List, Dict, Any
+from datetime import datetime, timedelta
 
 import dateutil
 import requests
@@ -55,7 +57,23 @@ def get(url, session=None):
   response.raise_for_status()
   return response.text
 
-def create_cache(f, cache_dir, serializer, deserializer, suffix=''):
+def get_current_time():
+  return datetime.now()
+
+def get_file_time(file_path):
+  return datetime.fromtimestamp(os.path.getmtime(file_path))
+
+def is_file_expired(file_path, expire_after_secs):
+  return (
+    expire_after_secs and
+    get_file_time(file_path) + timedelta(seconds=expire_after_secs) <= get_current_time()
+  )
+
+def create_cache(f, cache_dir, serializer, deserializer, suffix='', expire_after_secs=0):
+  """
+  Simple cache implementation that makes it easy to inspect the cached response,
+  a file with the encoded url.
+  """
   cache_path = Path(cache_dir)
   cache_path.mkdir(exist_ok=True, parents=True)
   clean_pattern = re.compile(r'[^\w]')
@@ -66,7 +84,7 @@ def create_cache(f, cache_dir, serializer, deserializer, suffix=''):
   def cached_f(*args):
     cache_file = cache_path.joinpath(Path(clean_fn(','.join([str(x) for x in args]))).name + suffix)
     LOGGER.debug("filename: %s", cache_file)
-    if cache_file.is_file():
+    if cache_file.is_file() and not is_file_expired(cache_file, expire_after_secs):
       return deserializer(cache_file.read_bytes())
     result = f(*args)
     if not result is None:
@@ -193,11 +211,17 @@ def get_person_full_name(person: Person):
 def get_persons_with_orcid(person_list: PersonList):
   return [p for p in person_list if p[Columns.ORCID]]
 
+def get_json(get_request_handler, url):
+  try:
+    return json.loads(get_request_handler(url))
+  except Exception as e:
+    raise RuntimeError('failed to parse %s due to %s' % (url, e)) from e
+
 def get_manuscripts_for_person(person: Person, get_request_handler):
   orcid = person[Columns.ORCID]
   if orcid:
     url = get_crossref_works_by_orcid_url(orcid)
-    response = json.loads(get_request_handler(url))
+    response = get_json(get_request_handler, url)
     return [
       extract_manuscript(item)
       for item in response['message']['items']
@@ -208,7 +232,7 @@ def get_manuscripts_for_person(person: Person, get_request_handler):
     last_name = person[Columns.LAST_NAME]
     full_name = get_person_full_name(person)
     url = get_crossref_works_by_full_name_url(full_name)
-    response = json.loads(get_request_handler(url))
+    response = get_json(get_request_handler, url)
     return [
       extract_manuscript(item)
       for item in response['message']['items']
@@ -347,6 +371,9 @@ def get_configured_rate_limit_and_interval_sec(app_config):
 def get_configured_max_retries(app_config: ConfigParser):
   return app_config.getint('crossref', 'max_retries', fallback=DEFAULT_MAX_RETRY)
 
+def get_configured_expire_after_secs(app_config: ConfigParser):
+  return app_config.getint('crossref', 'expire_after_secs', fallback=0)
+
 def parse_int_list(s, default_value=None):
   if s:
     return [int(x.strip()) for x in s.split(',')]
@@ -363,7 +390,9 @@ def get_session_with_retry(**kwargs):
   configure_session_retry(session, **kwargs)
   return session
 
-def decorate_get_request_handler(get_request_handler, app_config, cache_dir=None):
+def decorate_get_request_handler(
+  get_request_handler, app_config, cache_dir=None, expire_after_secs=0):
+
   # Note: could also get this from the Crossref API itself
   #   (via X-Rate-Limit-Limit and X-Rate-Limit-Interval)
   rate_limit_count, rate_limit_interval_sec = (
@@ -390,7 +419,8 @@ def decorate_get_request_handler(get_request_handler, app_config, cache_dir=None
     return create_str_cache(
       rate_limited_get,
       cache_dir=cache_dir,
-      suffix='.json'
+      suffix='.json',
+      expire_after_secs=expire_after_secs
     )
   else:
     return rate_limited_get
@@ -404,10 +434,14 @@ def main():
   max_workers = get_configured_max_workers(app_config)
   LOGGER.info('using max_workers: %d', max_workers)
 
+  expire_after_secs = get_configured_expire_after_secs(app_config)
+  LOGGER.debug('using expire_after_secs: %d', expire_after_secs)
+
   get_request_handler = decorate_get_request_handler(
     get,
     app_config,
     cache_dir=get_data_path('cache-http'),
+    expire_after_secs=expire_after_secs
   )
 
   with connect_managed_configured_database() as db:

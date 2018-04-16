@@ -1,8 +1,10 @@
 import logging
 import json
+import os
 from typing import Dict
 from unittest.mock import patch, Mock, ANY
 from configparser import ConfigParser
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -14,6 +16,7 @@ from . import enrichData as enrich_data_module
 from .enrichData import (
   extract_manuscript,
   contains_author_with_orcid,
+  create_str_cache,
   enrich_and_update_person_list,
   get_crossref_works_by_orcid_url,
   get_crossref_works_by_full_name_url,
@@ -27,6 +30,7 @@ from .enrichData import (
 LOGGER = logging.getLogger(__name__)
 
 URL_1 = 'test://dummy.url'
+URL_2 = 'test://dummy.url2'
 
 TITLE1 = 'Title 1'
 ABSTRACT1 = 'Abstract 1'
@@ -83,6 +87,74 @@ def get_crossref_response(items):
       'items': items
     }
   })
+
+@pytest.fixture(name='mock_f')
+def _mock_f():
+  mock_f = Mock()
+  mock_f.return_value = 'mock_f return_value'
+  return mock_f
+
+class TestCreateStrCache(object):
+  @pytest.fixture
+  def now(self):
+    with patch.object(enrich_data_module, 'get_current_time') as now:
+      yield now
+
+  @pytest.fixture
+  def getmtime(self):
+    with patch('os.path.getmtime') as getmtime:
+      yield getmtime
+
+  def test_should_call_function_and_return_value_if_not_in_cache(self, tmpdir, mock_f: Mock):
+    cached_f = create_str_cache(mock_f, str(tmpdir))
+    assert cached_f(URL_1) == mock_f.return_value
+    mock_f.assert_called_with(URL_1)
+
+  def test_should_call_function_only_once_called_with_the_same_parameter(
+    self, tmpdir, mock_f: Mock):
+
+    cached_f = create_str_cache(mock_f, str(tmpdir))
+    cached_f(URL_1)
+    assert cached_f(URL_1) == mock_f.return_value
+    assert mock_f.call_count == 1
+
+  def test_should_call_function_multiple_times_if_called_with_the_different_parameter(
+    self, tmpdir, mock_f: Mock):
+
+    cached_f = create_str_cache(mock_f, str(tmpdir))
+    cached_f(URL_1)
+    assert cached_f(URL_2) == mock_f.return_value
+    assert mock_f.call_count == 2
+    mock_f.assert_called_with(URL_2)
+
+  def test_should_call_function_twice_if_cache_has_expired(
+    self, tmpdir, mock_f: Mock, now: Mock, getmtime: Mock):
+
+    now.return_value = datetime(2018, 1, 1)
+    getmtime.return_value = now.return_value.timestamp()
+
+    LOGGER.info('str(tmpdir): %s', str(tmpdir))
+    cached_f = create_str_cache(mock_f, str(tmpdir), expire_after_secs=10)
+    cached_f(URL_1)
+
+    now.return_value = now.return_value + timedelta(seconds=10)
+
+    assert cached_f(URL_1) == mock_f.return_value
+    assert mock_f.call_count == 2
+
+  def test_should_call_function_once_if_cache_has_not_yet_expired(
+    self, tmpdir, mock_f: Mock, now: Mock, getmtime: Mock):
+
+    now.return_value = datetime(2018, 1, 1)
+    getmtime.return_value = now.return_value.timestamp()
+
+    cached_f = create_str_cache(mock_f, str(tmpdir), expire_after_secs=10)
+    cached_f(URL_1)
+
+    now.return_value = now.return_value + timedelta(seconds=9)
+
+    assert cached_f(URL_1) == mock_f.return_value
+    assert mock_f.call_count == 1
 
 class TestExtractManuscript(object):
   def test_should_extract_title_if_present(self):
@@ -374,14 +446,28 @@ class TestParseIntList(object):
     assert parse_int_list('100, 200, 300', [1, 2, 3]) == [100, 200, 300]
 
 class TestDecorateGetRequestHandler(object):
-  def test_should_call_through_with_decorators(self):
+  @pytest.fixture(autouse=True)
+  def create_str_cache_mock(self):
+    with patch.object(enrich_data_module, 'create_str_cache') as create_str_cache_mock:
+      yield create_str_cache_mock
+
+  def test_should_call_through_with_decorators(self, mock_f):
     app_config = ConfigParser()
-    get_request_handler = Mock()
     decorated_get_request_handler = decorate_get_request_handler(
-      get_request_handler, app_config, cache_dir=None
+      mock_f, app_config, cache_dir=None
     )
-    assert decorated_get_request_handler(URL_1) == get_request_handler.return_value
-    assert decorate_get_request_handler != get_request_handler
+    assert decorated_get_request_handler(URL_1) == mock_f.return_value
+    assert decorate_get_request_handler != mock_f
+
+  def test_should_pass_expire_after_secs_to_cache(self, create_str_cache_mock, mock_f):
+    cache_dir = '.cache/dir'
+    decorate_get_request_handler(mock_f, dict_to_config({}), cache_dir=cache_dir, expire_after_secs=123)
+    create_str_cache_mock.assert_called_with(
+      ANY,
+      cache_dir=cache_dir,
+      suffix='.json',
+      expire_after_secs=123
+    )
 
 class TestMain:
   @pytest.fixture(name='get_app_config_mock', autouse=True)
@@ -417,6 +503,23 @@ class TestMain:
       as enrich_and_update_person_list_mock:
 
       yield enrich_and_update_person_list_mock
+
+  def test_should_parse_expire_after_secs_and_pass_to_decorate_get_request_handler(
+    self, get_app_config_mock, decorate_get_request_handler_mock):
+
+    get_app_config_mock.return_value = dict_to_config({
+      'crossref': {
+        'expire_after_secs': '123'
+      }
+    })
+
+    main()
+    decorate_get_request_handler_mock.assert_called_with(
+      ANY,
+      ANY,
+      cache_dir=ANY,
+      expire_after_secs=123
+    )
 
   def test_should_parse_false_early_career_researcher_and_pass_to_get_persons_to_enrich(
     self, get_app_config_mock, get_persons_to_enrich_mock):
