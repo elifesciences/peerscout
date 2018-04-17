@@ -3,6 +3,7 @@ import itertools
 import xml.etree.ElementTree
 from os import listdir, makedirs
 from os.path import basename, splitext, isfile
+import os
 from zipfile import ZipFile
 import html
 from html.parser import HTMLParser
@@ -226,16 +227,33 @@ def process_files_in_zip(zip_filename, process_file, ext=None):
             zip_filename, filename, err))
     pbar.set_description("Done")
 
+def sort_relative_filenames_by_file_modified_time(parent_dir, filenames):
+  paired_with_timestamp = [
+    (
+      os.path.getmtime(os.path.join(parent_dir, filename)),
+      filename
+    )
+    for filename in filenames
+  ]
+  sorted_pairs = sorted(paired_with_timestamp)
+  unpaired_filenames = [
+    pair[1] for pair in sorted_pairs
+  ]
+  return unpaired_filenames
+
 def process_files_in_directory(root_dir, process_file, ext=None):
   filenames = listfiles(root_dir)
   if ext is not None:
     filenames =\
       filter_filenames_by_ext(filenames, ext) +\
       filter_filenames_by_ext(filenames, '.zip')
-  pbar = tqdm(sorted(list(set(filenames))), leave=False)
+  sorted_filenames = sort_relative_filenames_by_file_modified_time(
+    root_dir, set(filenames)
+  )
+  pbar = tqdm(sorted_filenames, leave=False)
   for filename in pbar:
     pbar.set_description(rjust_and_shorten_text(filename, width=40))
-    full_filename = root_dir + "/" + filename
+    full_filename = os.path.join(root_dir, filename)
     if get_filename_ext(filename) == '.zip' and ext != '.zip':
       process_files_in_zip(full_filename, process_file, ext)
     else:
