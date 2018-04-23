@@ -5,7 +5,8 @@ import {
   Text,
   FlexColumn,
   RaisedButton,
-  FontAwesomeIcon
+  FontAwesomeIcon,
+  ErrorMessage
 } from '../components';
 
 const styles = {
@@ -18,22 +19,25 @@ const styles = {
   }
 };
 
-const LoginForm = ({ auth, style }) => (
-  <View style={ style }>
-    <FlexColumn>
-      <RaisedButton
-        onClick={ () => auth.loginUsingMagicLink() }
-        primary={ true }
-        label="Login using Magic Link"
-        icon={ <FontAwesomeIcon style={ styles.icon } name="sign-in"/> }
-      />
-      {
-        auth.error_description && (
-          <Text style={ styles.error }>{ auth.error_description }</Text>
-        )
-      }
-    </FlexColumn>
-  </View>
-);
+const LoginForm = ({ auth, style }) => {
+  const error = auth.getAuthenticationState().error_description;
+  return (
+    <View style={ style }>
+      <FlexColumn>
+        <RaisedButton
+          onClick={ () => auth.loginUsingMagicLink() }
+          primary={ true }
+          label="Login using Magic Link"
+          icon={ <FontAwesomeIcon style={ styles.icon } name="sign-in"/> }
+        />
+        {
+          error && (
+            <ErrorMessage style={ styles.error } error={ error } />
+          )
+        }
+      </FlexColumn>
+    </View>
+  );
+};
 
 export default LoginForm;

@@ -6,8 +6,13 @@ import { shallow } from 'enzyme';
 import LoggedInIndicator from '../LoggedInIndicator';
 
 const EMAIL = 'test@x.org';
-const AUTH = {email: EMAIL};
-const NOT_LOGGED_IN_AUTH = {email: null};
+
+const asAuth = authenticationState => ({
+  getAuthenticationState: () => authenticationState
+});
+
+const AUTH = asAuth({email: EMAIL});
+const NOT_LOGGED_IN_AUTH = asAuth({email: null});
 
 test('LoggedInIndicator', g => {
   g.test('.should be defined', t => {

@@ -1,6 +1,8 @@
 import { Auth0LockPasswordless } from 'auth0-lock';
 
-const ACCESS_TOKEN_KEY = 'access_token';
+import equals from 'deep-equal';
+
+const LOGGED_IN_KEY = 'logged_in';
 
 export const SESSION_EXPIRED_ERROR_MESSAGE = 'Session expired'
 
@@ -8,7 +10,35 @@ export const getAuthErrorMessage = error => {
   if (error && typeof(error) === 'string') {
     return error;
   }
+  if (error && error.error_description && typeof(error.error_description) === 'string') {
+    return error.error_description;
+  }
   return SESSION_EXPIRED_ERROR_MESSAGE;
+};
+
+const getAuthenticationState = ({
+  access_token,
+  email,
+  initialising,
+  error_description
+}) => {
+  const authenticated = !!access_token && email;
+  const authenticating = (!!access_token || initialising) && !authenticated;
+  return {
+    authenticating,
+    authenticated,
+    error_description,
+    logged_in: authenticated,
+    access_token,
+    email
+  };
+};
+
+const EMPTY_STATE = {
+  initialising: false,
+  access_token: null,
+  email: null,
+  error_description: null
 };
 
 export default class Auth {
@@ -21,34 +51,52 @@ export default class Auth {
         passwordlessMethod: "link"
       }
     );
-    this.initialising = true;
+
+    this._state = {
+      ...EMPTY_STATE,
+      initialising: true
+    };
+    this._authenticationState = getAuthenticationState(this._state);
+
     this.lock.on('authorization_error', error => {
       console.log('authorization_error:', error);
       this._setAuthorizationError(error.errorDescription || error.error)
     });
     this.lock.on('authenticated', authResult => {
       console.log('authResult:', authResult)
-      this._setAccessToken(authResult.accessToken);
+      this._updateUserInfo(authResult.accessToken);
     });
     this.lock.on('hash_parsed', hash => {
       console.log('hash_parsed, hash:', hash);
       if (!hash) {
         this._checkExistingToken();
       }
-      this.initialising = false;
-      if (!this.isAuthenticating()) {
-        this._triggerStateChange();
-      }
     });
     this.profile = null;
     this.listeners = [];
   }
 
+  // Was the user marked as logged in? (and should we check the access token etc.)
+  _wasLoggedIn() {
+    return !!this.storage.getItem(LOGGED_IN_KEY);
+  }
+
+  // saves the state whether a user is logged in (this should not be used as the authentication state)
+  _saveLoggedIn(loggedIn) {
+    if (loggedIn) {
+      this.storage.setItem(LOGGED_IN_KEY, '1');
+    } else {
+      this.storage.removeItem(LOGGED_IN_KEY);
+    }
+  }
+
   _checkExistingToken() {
-    const access_token = this.storage.getItem(ACCESS_TOKEN_KEY);
-    console.log('_checkExistingToken, access_token:', access_token);
-    if (access_token) {
-      this._setAccessToken(access_token);
+    if (this._wasLoggedIn()) {
+      this._checkSession();
+    } else {
+      this._setState({
+        initialising: false
+      });
     }
   }
 
@@ -56,55 +104,77 @@ export default class Auth {
     // do nothing, it's now handled by Auth0 / after hash_parsed event
   }
 
-  // The _doAuthentication function will get the user profile information if authentication is successful
-  _setAccessToken(access_token, error_description) {
-    console.log('_setAccessToken', !!access_token, error_description);
-    if (access_token !== this.access_token) {
-      this.access_token = access_token;
-      this.error_description = error_description;
-      if (access_token) {
-        this.storage.setItem(ACCESS_TOKEN_KEY, access_token);
-        this._userInfo(access_token, (err, user) => {
-          if (err) {
-            this._setAuthorizationError(getAuthErrorMessage(err));
-          } else {
-            console.log('logged user:', user);
-            this.email = user.email;
-            console.log('logged in email:', this.email);
-            this._triggerStateChange();
-          }
-        });
+  _checkSession() {
+    this._setState({
+      initialising: true
+    });
+    this.lock.checkSession({}, (error, authResult) => {
+      console.log('_checkSession', error, authResult);
+      if (error || !authResult) {
+        this._setAuthorizationError(getAuthErrorMessage(error));
       } else {
-        this.storage.removeItem(ACCESS_TOKEN_KEY);
-        this.email = null;
+        this._updateUserInfo(authResult.accessToken);
       }
-      this._triggerStateChange();
-    } else if (error_description !== this.error_description) {
-      this.error_description = error_description;
-      this._triggerStateChange();
-    }
+    });
+  }
+
+  _updateUserInfo(access_token) {
+    this._setState({
+      initialising: true
+    });
+    this._userInfo(access_token, (err, user) => {
+      console.log('_updateUserInfo:', err, user);
+      if (err) {
+        this._setAuthorizationError(getAuthErrorMessage(err));
+      } else {
+        console.log('logged user:', user);
+        const email = user.email;
+        console.log('logged in email:', email);
+        this._setState({
+          access_token,
+          initialising: false,
+          email
+        });
+        this._saveLoggedIn(true);
+      }
+    });
   }
  
   // We’ll display an error if the user clicks an outdated or invalid magiclink
   _setAuthorizationError(error_description) {
     console.error('There was an error:', error_description);
-    this._setAccessToken(null, error_description);
+    this._saveLoggedIn(false);
+    this._setState({
+      ...EMPTY_STATE,
+      initialising: false,
+      error_description
+    });
   }
 
   _triggerStateChange() {
     this.listeners.forEach(listener => {
       listener(this.getAuthenticationState());
-    })
+    });
+  }
+
+  _setState(state) {
+    this._state = {
+      ...this._state,
+      ...state
+    };
+    console.log('this._state:', this._state);
+    this._setAuthenticationState(getAuthenticationState(this._state));
+  }
+
+  _setAuthenticationState(authenticationState) {
+    if (!equals(authenticationState, this._authenticationState)) {
+      this._authenticationState = authenticationState;
+      this._triggerStateChange();
+    }
   }
 
   getAuthenticationState() {
-    return {
-      authenticating: this.isAuthenticating(),
-      authenticated: this.isAuthenticated(),
-      logged_in: this.isAuthenticated(),
-      access_token: this.access_token,
-      email: this.email
-    };
+    return this._authenticationState;
   }
 
   _userInfo(access_token, callback) {
@@ -112,17 +182,7 @@ export default class Auth {
   }
 
   revalidateToken() {
-    const access_token = this.storage.getItem(ACCESS_TOKEN_KEY);
-    if (access_token) {
-      this.storage.setItem(ACCESS_TOKEN_KEY, access_token);
-      this._userInfo(access_token, (err, user) => {
-        if (err) {
-          this._setAuthorizationError(SESSION_EXPIRED_ERROR_MESSAGE);
-        } else {
-          this.email = user.email;
-        }
-      });
-    }
+    this._checkSession();
   }
 
   onStateChange(listener) {
@@ -130,15 +190,15 @@ export default class Auth {
   }
 
   getAccessToken() {
-    return this.access_token;
+    return this.getAuthenticationState().access_token;
   }
 
   isAuthenticating() {
-    return (!!this.access_token || this.initialising) && !this.isAuthenticated();
+    return this.getAuthenticationState().authenticating;
   }
 
   isAuthenticated() {
-    return !!this.access_token && this.email;
+    return this.getAuthenticationState().authenticated;
   }
 
   loginUsingMagicLink() {
@@ -146,9 +206,14 @@ export default class Auth {
   }
 
   logout() {
-    const access_token = this.access_token;
+    const access_token = this.getAccessToken();
     if (access_token) {
-      this._setAccessToken(null);
+      this._saveLoggedIn(false);
+      this._setState({
+        initialising: false,
+        access_token: null,
+        email: null
+      });
       this.lock.logout({returnTo: window.location.href});
     }
   }
