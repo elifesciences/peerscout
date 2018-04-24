@@ -569,6 +569,23 @@ class TestRecommendReviewers:
       result = recommend_for_dataset(dataset, keywords=KEYWORD1, manuscript_no='')
       assert [r['person'][PERSON_ID] for r in result['potential_reviewers']] == [PERSON_ID1]
 
+    def test_matching_one_keyword_should_not_fail_on_unset_first_and_last_name(self):
+      # Note: use two persons to trigger sort
+      dataset = {
+        'person': [
+          PERSON1,
+          {**PERSON2, 'first_name': None, 'last_name': None}
+        ],
+        'manuscript_version': [MANUSCRIPT_VERSION1],
+        'manuscript_author': [AUTHOR1, AUTHOR2],
+        'manuscript_keyword': [MANUSCRIPT_KEYWORD1]
+      }
+      result = recommend_for_dataset(dataset, keywords=KEYWORD1, manuscript_no='')
+      assert (
+        {r['person'][PERSON_ID] for r in result['potential_reviewers']} ==
+        {PERSON_ID1, PERSON_ID2}
+      )
+
     def test_matching_one_keyword_author_should_not_suggest_authors_of_rejected_manuscripts(self):
       dataset = {
         'person': [PERSON1],

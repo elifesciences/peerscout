@@ -1,7 +1,5 @@
 from itertools import groupby
 import itertools
-from collections import Counter
-import ast
 import logging
 from typing import Collection, Dict, Iterable
 
@@ -10,12 +8,6 @@ import pandas as pd
 from peerscout.utils.collection import (
   invert_set_dict
 )
-
-from peerscout.utils.pandas import (
-  groupby_agg_droplevel
-)
-
-from .utils import unescape_and_strip_tags, filter_by
 
 from  peerscout.utils.collection import (
   iter_flatten,
@@ -29,9 +21,7 @@ from  peerscout.utils.collection import (
 
 from peerscout.shared.database_types import PersonId, VersionId
 
-from .manuscript_utils import (
-  duplicate_manuscript_titles_as_alternatives
-)
+from .utils import unescape_and_strip_tags, filter_by
 
 from .manuscript_keywords import ManuscriptKeywordService
 from .manuscript_subject_areas import ManuscriptSubjectAreaService
@@ -231,8 +221,8 @@ def sorted_potential_reviewers(potential_reviewers):
       -(potential_reviewer['scores'].get('keyword') or 0),
       -(potential_reviewer['scores'].get('similarity') or 0),
       deep_get(potential_reviewer, review_duration_mean_keys, potential_reviewer_mean_duration),
-      potential_reviewer['person']['first_name'],
-      potential_reviewer['person']['last_name']
+      potential_reviewer['person'].get('first_name', ''),
+      potential_reviewer['person'].get('last_name', '')
     )
   )
 
