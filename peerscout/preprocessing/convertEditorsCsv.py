@@ -17,13 +17,22 @@ NAME = 'convertEditorsCsv'
 def get_logger():
   return logging.getLogger(NAME)
 
+def read_editors_csv_as_data_frame(stream):
+  return pd.read_csv(stream, skiprows=3)
+
+def extract_distinct_emails_from_data_frame(df):
+  emails = set(df['email'])
+  if 'secondary_email' in df.columns:
+    emails |= set(df['secondary_email'])
+  emails = {s.strip() for s in emails if s and not pd.isnull(s)}
+  return emails - {''}
+
 def convert_csv_file_to(filename, stream, valid_emails_filename):
   logger = get_logger()
   logger.info("converting: %s", filename)
-  emails = sorted(set([
-    v for v in pd.read_csv(stream, skiprows=3)['email'].values
-    if len(v) > 0
-  ]))
+  emails = sorted(extract_distinct_emails_from_data_frame(
+    read_editors_csv_as_data_frame(stream)
+  ))
   logger.info("emails: %d", len(emails))
   logger.info("writing to: %s", valid_emails_filename)
   os.makedirs(os.path.dirname(valid_emails_filename), exist_ok=True)
