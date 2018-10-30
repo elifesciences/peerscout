@@ -1,9 +1,12 @@
 # we don't have a elife base image yet for node, so we use directly the official one
-FROM node:6.13.0-stretch AS client
+FROM node:8.12.0-stretch AS client
 
 USER node
+
 RUN mkdir /home/node/client
 WORKDIR /home/node/client
-COPY --chown=node:node client/package.json /home/node/client/
+
+COPY --chown=node:node client/package.json client/package-lock.json ./
 RUN npm install
-COPY --chown=node:node client /home/node/client/
+
+COPY --chown=node:node client ./
