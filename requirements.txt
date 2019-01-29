@@ -10,7 +10,7 @@ SQLAlchemy==1.2.2
 Flask==0.12.4
 Flask-Cors==3.0.3
 gensim==3.3.0
-lxml==4.1.1
+lxml==4.3.0
 pyLDAvis==2.1.2
 ratelimit==1.4.1
 scikit-learn==0.19.1
