@@ -41,9 +41,12 @@ def setup_module():
   logging.basicConfig(level=logging.DEBUG)
   get_logger().setLevel(logging.DEBUG)
 
-@pytest.fixture(name='logger')
 def get_logger():
-  return logging.getLogger(__name__)
+  return logging.getLogger('test')
+
+@pytest.fixture(name='logger')
+def _logger_fixture():
+  return get_logger()
 
 def zip_for_files(filenames):
   zip_stream = io.BytesIO()

@@ -202,9 +202,12 @@ def setup_module():
   set_debugv_enabled(True)
   logging.getLogger().setLevel(logging.DEBUG)
 
-@pytest.fixture(name='logger')
 def get_logger():
   return logging.getLogger('test')
+
+@pytest.fixture(name='logger')
+def _logger_fixture():
+  return get_logger()
 
 @contextmanager
 def create_recommend_reviewers(dataset, filter_by_subject_area_enabled=False):
