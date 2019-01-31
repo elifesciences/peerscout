@@ -1,4 +1,4 @@
-Cython==0.27.3
+Cython==0.29.3
 numpy==1.14.0
 pandas==0.24.0
 requests==2.20.0
