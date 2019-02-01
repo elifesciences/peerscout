@@ -8,7 +8,7 @@ boto3==1.9.86
 psycopg2==2.7.3.2
 SQLAlchemy==1.2.17
 Flask==1.0.2
-Flask-Cors==3.0.3
+Flask-Cors==3.0.7
 gensim==3.7.1
 lxml==4.3.0
 pyLDAvis==2.1.2
