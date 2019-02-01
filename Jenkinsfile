@@ -23,13 +23,6 @@ elifePipeline({
         }
     }
 
-    stage 'Project tests', {
-        lock('peerscout--ci') {
-            builderDeployRevision 'peerscout--ci', commit
-            builderSmokeTests 'peerscout--ci', '/srv/peerscout'
-        }
-    }
-
     stage 'End2end', {
         lock('peerscout--end2end') {
             builderDeployRevision 'peerscout--end2end', commit
