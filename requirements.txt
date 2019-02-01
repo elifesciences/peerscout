@@ -6,7 +6,7 @@ tqdm==4.30.0
 bokeh==1.0.4
 boto3==1.9.86
 psycopg2==2.7.3.2
-SQLAlchemy==1.2.2
+SQLAlchemy==1.2.17
 Flask==0.12.4
 Flask-Cors==3.0.3
 gensim==3.3.0
