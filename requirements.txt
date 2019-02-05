@@ -12,7 +12,7 @@ Flask-Cors==3.0.7
 gensim==3.7.1
 lxml==4.3.0
 pyLDAvis==2.1.2
-ratelimit==1.4.1
+ratelimit==2.2.1
 scikit-learn==0.20.2
 scipy==1.2.0
 spacy==2.0.18
