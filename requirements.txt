@@ -2,7 +2,7 @@ Cython==0.29.5
 numpy==1.16.1
 pandas==0.24.1
 requests==2.21.0
-tqdm==4.30.0
+tqdm==4.31.1
 bokeh==1.0.4
 boto3==1.9.96
 psycopg2==2.7.7
