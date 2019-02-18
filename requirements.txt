@@ -4,7 +4,7 @@ pandas==0.24.1
 requests==2.21.0
 tqdm==4.30.0
 bokeh==1.0.4
-boto3==1.9.89
+boto3==1.9.96
 psycopg2==2.7.7
 SQLAlchemy==1.2.18
 Flask==1.0.2
