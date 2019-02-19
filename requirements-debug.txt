@@ -1,6 +1,6 @@
 flake8==3.7.5
 proofreader==0.0.8
-pytest==4.2.1
+pytest==4.3.0
 pytest-cov==2.6.1
 pytest-watch==4.2.0
 pylint
