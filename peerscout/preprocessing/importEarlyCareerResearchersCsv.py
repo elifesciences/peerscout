@@ -7,11 +7,13 @@ from .preprocessingUtils import get_downloads_csv_path
 from .import_utils import (
   add_or_update_persons_from_dataframe,
   update_person_subject_areas,
+  update_person_keywords,
   update_person_orcids,
   comma_separated_column_to_map,
   normalise_subject_area_map,
   xml_decode_person_names,
-  find_last_csv_file_in_directory
+  find_last_csv_file_in_directory,
+  dedup_map_values
 )
 
 from ..shared.database import connect_managed_configured_database
@@ -31,7 +33,7 @@ class CsvColumns:
 
 ALL_CSV_COLUMNS = [
   CsvColumns.PERSON_ID, CsvColumns.FIRST_NAME, CsvColumns.LAST_NAME, CsvColumns.ORCID,
-  CsvColumns.FIRST_SUBJECT_AREA, CsvColumns.SECOND_SUBJECT_AREA
+  CsvColumns.FIRST_SUBJECT_AREA, CsvColumns.SECOND_SUBJECT_AREA, CsvColumns.KEYWORDS
 ]
 
 PERSON_CSV_COLUMN_MAPPING = {
@@ -39,6 +41,9 @@ PERSON_CSV_COLUMN_MAPPING = {
   CsvColumns.FIRST_NAME: 'first_name',
   CsvColumns.LAST_NAME: 'last_name'
 }
+
+KEYWORD_SEPARATOR = '|'
+
 
 def read_editors_csv(stream):
   return pd.read_csv(stream, skiprows=3, dtype=str)[ALL_CSV_COLUMNS].fillna('')
@@ -62,6 +67,12 @@ def to_subject_areas_by_person_id_map(df):
       df[CsvColumns.SECOND_SUBJECT_AREA]
     )
   }
+
+def to_keywords_by_person_id_map(df):
+  return comma_separated_column_to_map(
+    df[CsvColumns.PERSON_ID], df[CsvColumns.KEYWORDS],
+    sep=KEYWORD_SEPARATOR
+  )
 
 def to_orcid_by_person_id_map(df):
   return comma_separated_column_to_map(df[CsvColumns.PERSON_ID], df[CsvColumns.ORCID])
@@ -94,6 +105,9 @@ def import_csv_file_to_database(filename, stream, db):
   )
   update_person_subject_areas(
     db, normalise_subject_area_map(to_subject_areas_by_person_id_map(df))
+  )
+  update_person_keywords(
+    db, dedup_map_values(to_keywords_by_person_id_map(df))
   )
   update_person_orcids(
     db, to_orcid_by_person_id_map(df)

@@ -15,6 +15,7 @@ from .importEarlyCareerResearchersCsv import (
   import_csv_file_to_database,
   CsvColumns,
   ALL_CSV_COLUMNS,
+  KEYWORD_SEPARATOR,
   find_file_to_import,
   main
 )
@@ -30,6 +31,9 @@ LAST_NAME_1 = 'Smith'
 ORCID_1 = 'O-12345'
 SUBJECT_AREA_1 = 'Subject Area 1'
 SUBJECT_AREA_2 = 'Subject Area 2'
+
+KEYWORD_1 = 'Keyword 1'
+KEYWORD_2 = 'Keyword 2'
 
 CSV_ITEM_1 = {
   CsvColumns.PERSON_ID: PERSON_ID_1,
@@ -173,6 +177,49 @@ class TestImportCsvFileToDatabase:
       LOGGER.debug('df:\n%s', df)
       assert set(zip(df['person_id'], df['subject_area'])) == {
         (PERSON_ID_2, SUBJECT_AREA_2)
+      }
+
+  def test_should_import_empty_keywords(self):
+    csv_content = create_csv_content([{
+      **CSV_ITEM_1,
+      CsvColumns.KEYWORDS: ''
+    }])
+    with import_csv(csv_content) as db:
+      df = db.person.read_frame().reset_index()
+      LOGGER.debug('df:\n%s', df)
+      assert set(df['person_id']) == set([PERSON_ID_1])
+      assert len(db.person_keyword.read_frame()) == 0
+
+  def test_should_import_multiple_keywords(self):
+    csv_content = create_csv_content([{
+      **CSV_ITEM_1,
+      CsvColumns.KEYWORDS: KEYWORD_SEPARATOR.join([KEYWORD_1, KEYWORD_2])
+    }])
+    with import_csv(csv_content) as db:
+      df = db.person_keyword.read_frame().reset_index()
+      LOGGER.debug('df:\n%s', df)
+      assert set(zip(df['person_id'], df['keyword'])) == {
+        (PERSON_ID_1, KEYWORD_1),
+        (PERSON_ID_1, KEYWORD_2)
+      }
+
+  def test_should_clear_existing_keywords_but_keep_other_persons_keywords(self):
+    csv_content = create_csv_content([{
+      **CSV_ITEM_1,
+      CsvColumns.KEYWORDS: ''
+    }])
+    dataset = {
+      'person': [{'person_id': PERSON_ID_1}, {'person_id': PERSON_ID_2}],
+      'person_keyword': [
+        {'person_id': PERSON_ID_1, 'keyword': KEYWORD_1},
+        {'person_id': PERSON_ID_2, 'keyword': KEYWORD_2}
+      ]
+    }
+    with import_csv(csv_content, dataset) as db:
+      df = db.person_keyword.read_frame().reset_index()
+      LOGGER.debug('df:\n%s', df)
+      assert set(zip(df['person_id'], df['keyword'])) == {
+        (PERSON_ID_2, KEYWORD_2)
       }
 
   def test_should_import_empty_orcid(self):

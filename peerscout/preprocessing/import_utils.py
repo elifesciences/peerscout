@@ -19,12 +19,12 @@ def get_existing_person_ids(db, include_person_ids):
     db.person.table.person_id.in_(include_person_ids)
   ).all())
 
-def parse_comma_separated_list(s):
-  return [y for y in (x.strip() for x in s.split(',')) if y]
+def parse_comma_separated_list(s, sep=','):
+  return [y for y in (x.strip() for x in s.split(sep)) if y]
 
-def comma_separated_column_to_map(keys, comma_separated_values):
+def comma_separated_column_to_map(keys, comma_separated_values, sep=','):
   return {
-    key: parse_comma_separated_list(value_str)
+    key: parse_comma_separated_list(value_str, sep=sep)
     for key, value_str in zip(keys, comma_separated_values)
   }
 
