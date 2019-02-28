@@ -9,6 +9,7 @@ from .import_utils import (
   update_person_subject_areas,
   update_person_keywords,
   update_person_orcids,
+  update_person_status_to,
   comma_separated_column_to_map,
   normalise_subject_area_map,
   xml_decode_person_names,
@@ -17,6 +18,7 @@ from .import_utils import (
 )
 
 from ..shared.database import connect_managed_configured_database
+from ..shared.database_schema import Person
 
 from ..shared.app_config import get_app_config
 
@@ -56,6 +58,7 @@ def to_persons_df(df):
     .set_index('person_id')
   )
   df['is_early_career_researcher'] = True
+  df['status'] = Person.Status.ACTIVE
   return df
 
 def to_subject_areas_by_person_id_map(df):
@@ -112,7 +115,9 @@ def import_csv_file_to_database(filename, stream, db):
   update_person_orcids(
     db, to_orcid_by_person_id_map(df)
   )
-  update_early_career_researcher_status(db, set(df[CsvColumns.PERSON_ID]))
+  person_ids = set(df[CsvColumns.PERSON_ID])
+  update_early_career_researcher_status(db, person_ids)
+  update_person_status_to(db, person_ids, Person.Status.ACTIVE)
 
 def find_file_to_import():
   app_config = get_app_config()

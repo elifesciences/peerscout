@@ -7,6 +7,7 @@ from configparser import ConfigParser
 import pytest
 
 from ..shared.database import populated_in_memory_database
+from ..shared.database_schema import Person
 
 from .import_testing_utils import create_csv_content as _create_csv_content
 
@@ -105,6 +106,27 @@ class TestImportCsvFileToDatabase:
       assert set(zip(df['person_id'], df['is_early_career_researcher'])) == {
         (PERSON_ID_1, True),
         (PERSON_ID_2, False)
+      }
+
+  def test_should_create_person_with_status_active(self):
+    csv_content = create_csv_content([CSV_ITEM_1])
+    with import_csv(csv_content) as db:
+      df = db.person.read_frame().reset_index()
+      LOGGER.debug('df:\n%s', df)
+      assert set(zip(df['person_id'], df['status'])) == {
+        (PERSON_ID_1, Person.Status.ACTIVE)
+      }
+
+  def test_should_update_person_status_to_active(self):
+    csv_content = create_csv_content([CSV_ITEM_1])
+    dataset = {
+      'person': [{'person_id': PERSON_ID_1, 'status': Person.Status.INACTIVE}]
+    }
+    with import_csv(csv_content, dataset) as db:
+      df = db.person.read_frame().reset_index()
+      LOGGER.debug('df:\n%s', df)
+      assert set(zip(df['person_id'], df['status'])) == {
+        (PERSON_ID_1, Person.Status.ACTIVE)
       }
 
   def test_should_xml_decode_first_and_last_name(self):

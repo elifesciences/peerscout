@@ -9,6 +9,7 @@ from .import_utils import (
   update_person_subject_areas,
   update_person_keywords,
   update_person_roles,
+  update_person_status_to,
   comma_separated_column_to_map,
   normalise_subject_area_map,
   dedup_map_values,
@@ -18,6 +19,7 @@ from .import_utils import (
 )
 
 from ..shared.database import connect_managed_configured_database
+from ..shared.database_schema import Person
 
 from ..shared.app_config import get_app_config
 
@@ -80,6 +82,7 @@ def import_csv_file_to_database(filename, stream, db):
   )
   db.person_role.delete_all()
   update_person_roles(db, to_roles_by_person_id_map(df))
+  update_person_status_to(db, set(df[CsvColumns.PERSON_ID]), Person.Status.ACTIVE)
 
 def find_file_to_import():
   app_config = get_app_config()

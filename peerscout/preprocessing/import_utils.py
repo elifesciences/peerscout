@@ -1,11 +1,13 @@
 from io import StringIO
 import logging
 import os
+from typing import Iterable
 
 import pandas as pd
 
 from peerscout.utils.collection import force_list, applymap_dict
 
+from ..shared.database import Database
 from ..shared.database_schema import PersonMembership
 
 from .dataNormalisationUtils import normalise_subject_area
@@ -101,6 +103,15 @@ def update_person_orcids(db, orcid_by_person_id):
   update_one_to_many_table_using_df(
     db, db.person_membership, df, 'person_id', orcid_by_person_id.keys()
   )
+
+def update_person_status_to(db: Database, person_ids: Iterable[str], person_status: str):
+  LOGGER.debug('updating person status (%d) to %s', len(person_ids), person_status)
+  db.session.query(db.person.table).filter(
+    db.person.table.person_id.in_(person_ids)
+  ).update({
+    'status': person_status
+  }, synchronize_session=False)
+  db.commit()
 
 def find_last_csv_file_in_directory(root_dir, prefix):
   files = sorted([
