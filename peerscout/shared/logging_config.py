@@ -18,7 +18,7 @@ def configure_logging(name):
   file_handler = TimedRotatingFileHandler(
     filename=log_filename,
     when='midnight',
-    backupCount=42
+    backupCount=int(os.environ.get('PEERSCOUT_MAX_LOG_DAYS', 842))
   )
   file_handler.setLevel(logging.DEBUG)
   file_handler.setFormatter(logging.Formatter(
