@@ -1,6 +1,6 @@
 pandas==0.24.2
 requests==2.22.0
-tqdm==4.31.1
+tqdm==4.32.1
 bokeh==1.2.0
 boto3==1.9.158
 psycopg2-binary==2.8.2
