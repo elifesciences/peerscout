@@ -1,25 +1,19 @@
 elifePipeline({
     def commit
+
     stage 'Checkout', {
         checkout scm
         commit = elifeGitRevision()
     }
 
     node('containers-jenkins-plugin') {
-        stage 'Build image', {
+        stage 'Build and run tests', {
             checkout scm
-            sh "docker build -f Dockerfile.client -t elifesciences/peerscout_client:${commit} ."
-            sh "docker build -f Dockerfile -t elifesciences/peerscout:${commit} --build-arg commit=${commit} ."
-        }
-
-        stage 'Project tests (container)', {
-            sh "docker run elifesciences/peerscout_client:${commit} ./project_tests.sh"
-            dockerBuildCi 'peerscout', commit
-
-            // substitute with:
-            // dockerProjectTests 'peerscout', commit, ['build/pytest.xml']
-            // when correctly using `docker cp` on build/
-            sh "docker run elifesciences/peerscout_ci:${commit}"
+            try {
+                sh "make IMAGE_TAG=${commit} ci-build-and-test"
+            } finally {
+                sh "make ci-clean"
+            }
         }
     }
 

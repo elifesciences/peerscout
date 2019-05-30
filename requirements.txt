@@ -1,11 +1,9 @@
-Cython==0.29.7
-numpy==1.16.1
 pandas==0.24.2
 requests==2.21.0
 tqdm==4.31.1
 bokeh==1.2.0
 boto3==1.9.157
-psycopg2==2.8.2
+psycopg2-binary==2.8.2
 SQLAlchemy==1.3.3
 Flask==1.0.2
 Flask-Cors==3.0.7
@@ -15,6 +13,5 @@ pyLDAvis==2.1.2
 ratelimit==2.2.1
 scikit-learn==0.21.2
 scipy==1.2.1
-spacy==2.1.4
 bhtsne==0.1.9
 newrelic==2.102.0.85

@@ -5,9 +5,26 @@ FROM elifesciences/python:cacd250ec201feab491c0738f261561b5360997b
 USER elife
 ENV PROJECT_FOLDER=/srv/peerscout
 RUN mkdir ${PROJECT_FOLDER}
+
+ENV VENV=${PROJECT_FOLDER}/venv
+RUN virtualenv ${VENV}
+ENV PYTHONUSERBASE=${VENV} PATH=${VENV}/bin:$PATH
+
 WORKDIR ${PROJECT_FOLDER}
-COPY --chown=elife:elife install.sh requirements.txt ${PROJECT_FOLDER}/
-RUN DEBUG=0 /bin/bash install.sh
+
+COPY --chown=elife:elife requirements.spacy.txt ${PROJECT_FOLDER}/
+RUN pip install -r requirements.spacy.txt
+RUN python -m spacy download en
+
+COPY --chown=elife:elife requirements.prereq.txt ${PROJECT_FOLDER}/
+RUN pip install -r requirements.prereq.txt
+
+COPY --chown=elife:elife requirements.txt ${PROJECT_FOLDER}/
+RUN pip install -r requirements.txt
+
+ARG install_dev
+COPY requirements.dev.txt ./
+RUN if [ "${install_dev}" = "y" ]; then pip install -r requirements.dev.txt; fi
 
 COPY --from=client --chown=elife:elife /home/node/client/ ${PROJECT_FOLDER}/client/
 COPY --chown=elife:elife peerscout/ ${PROJECT_FOLDER}/peerscout/

@@ -1,0 +1,43 @@
+version: '3'
+
+services:
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    image: elifesciences/peerscout_client:${IMAGE_TAG}
+    command: /bin/sh -c exit 0
+
+  peerscout:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args: 
+        commit: ${IMAGE_TAG}
+    image: elifesciences/peerscout:${IMAGE_TAG}
+    command: /bin/sh -c exit 0
+    depends_on:
+      - client
+
+  peerscout-base-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args: 
+        commit: ${IMAGE_TAG}
+        install_dev: y
+    image: elifesciences/peerscout_base_dev:${IMAGE_TAG}
+    command: /bin/sh -c exit 0
+    depends_on:
+      - client
+
+  peerscout-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args: 
+        base_image: elifesciences/peerscout_base_dev:${IMAGE_TAG}
+    image: elifesciences/peerscout_dev:${IMAGE_TAG}
+    command: /bin/sh -c exit 0
+    depends_on:
+      - peerscout-base-dev

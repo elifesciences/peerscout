@@ -1,14 +1,11 @@
-ARG commit=develop
-FROM elifesciences/peerscout:${commit}
-ENV DEBUG=1
+ARG base_image
+FROM ${base_image}
 
 USER root
 RUN mkdir build/ && chown www-data:www-data build/
 RUN touch app.cfg && chown www-data:www-data app.cfg
 
 USER elife
-COPY --chown=elife:elife requirements-debug.txt ${PROJECT_FOLDER}/
-RUN venv/bin/pip install -r requirements-debug.txt
 
 ENV COVERAGE_FILE=${PROJECT_FOLDER}/build/.coverage
 COPY --chown=elife:elife project_tests.sh pytest.ini ${PROJECT_FOLDER}/

@@ -15,14 +15,12 @@ fi
 
 source venv/bin/activate
 
-# we need to install packages in the correct order to avoid module not found
-for line in $(cat requirements.txt)
-do
-  pip install "$line"
-done
+pip install -r requirements.spacy.txt
+pip install -r requirements.prereq.txt
+pip install -r requirements.txt
 
 if [ "${DEBUG:-1}" = "1" ]; then
-    pip install -r requirements-debug.txt
+    pip install -r requirements.dev.txt
 fi
 
 python -m spacy download en
