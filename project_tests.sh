@@ -3,7 +3,11 @@ set -e # everything must succeed.
 
 source venv/bin/activate
 
-pytest --cov=peerscout --cov-report html:build/cov_html --cov-report xml:build/cov.xml --junitxml=build/pytest.xml
+echo "running flake8"
+flake8 peerscout setup.py
 
-# run proofreader (pylint and flake8) informational only
-python -m proofreader peerscout || true
+echo "running pylint"
+pylint peerscout setup.py
+
+echo "running tests"
+pytest --cov=peerscout --cov-report html:build/cov_html --cov-report xml:build/cov.xml --junitxml=build/pytest.xml

@@ -8,7 +8,7 @@ RUN touch app.cfg && chown www-data:www-data app.cfg
 USER elife
 
 ENV COVERAGE_FILE=${PROJECT_FOLDER}/build/.coverage
-COPY --chown=elife:elife project_tests.sh pytest.ini ${PROJECT_FOLDER}/
+COPY --chown=elife:elife project_tests.sh pytest.ini .pylintrc .flake8 setup.py ${PROJECT_FOLDER}/
 
 USER www-data
 CMD ["./project_tests.sh"]

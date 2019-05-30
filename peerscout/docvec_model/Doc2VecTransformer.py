@@ -5,70 +5,72 @@ import gensim
 NAME = 'Doc2VecTransformer'
 
 # Doc2Vec sklearn wrapper
-class Doc2VecTransformer(object):
-  def __init__(
-    self, n_epochs=50, vec_size=100, window=10, min_count=5, workers=2, seed=1):
 
-    self.n_epochs = n_epochs
-    self.vec_size = vec_size
-    self.window = window
-    self.min_count = min_count
-    self.workers = workers
-    self.seed = seed
-    self.model = None
 
-  def transform(self, X):
-    words_by_sentence = [
-      s.split(' ')
-      for s in X
-    ]
-    return [
-      self.model.infer_vector(words)
-      for words in words_by_sentence
-    ]
+class Doc2VecTransformer:
+    def __init__(
+            self, n_epochs=50, vec_size=100, window=10, min_count=5, workers=2, seed=1):
 
-  def fit(self, X, y=None):
-    return self.fit_transform(X, y)
+        self.n_epochs = n_epochs
+        self.vec_size = vec_size
+        self.window = window
+        self.min_count = min_count
+        self.workers = workers
+        self.seed = seed
+        self.model = None
 
-  def fit_transform(self, X, y=None):
-    logger = logging.getLogger(NAME)
+    def transform(self, X):
+        words_by_sentence = [
+            s.split(' ')
+            for s in X
+        ]
+        return [
+            self.model.infer_vector(words)
+            for words in words_by_sentence
+        ]
 
-    words_by_sentence = [
-      s.split(' ')
-      for s in X
-    ]
+    def fit(self, X, y=None):
+        return self.fit_transform(X, y)
 
-    logging.debug('words_by_sentence: %.100s...', words_by_sentence)
+    def fit_transform(self, X, y=None):  # pylint: disable=unused-argument
+        logger = logging.getLogger(NAME)
 
-    sentences = [
-      gensim.models.doc2vec.TaggedDocument(words=words, tags=[i])
-      for i, words in enumerate(words_by_sentence)
-    ]
+        words_by_sentence = [
+            s.split(' ')
+            for s in X
+        ]
 
-    model = gensim.models.Doc2Vec(
-      vector_size=self.vec_size,
-      window=self.window,
-      min_count=self.min_count,
-      workers=self.workers,
-      alpha=0.025,
-      min_alpha=0.025,
-      seed=self.seed
-    )
-    self.model = model
-    model.build_vocab(sentences)
-    current_epoch = 0
+        logging.debug('words_by_sentence: %.100s...', words_by_sentence)
 
-    for _ in range(self.n_epochs):
-      logger.info("epoch: %d, alpha: %f", current_epoch, model.alpha)
-      model.train(
-        sentences,
-        total_examples=len(sentences),
-        epochs=1
-      )
-      model.alpha = model.alpha * 0.95 # decrease the learning rate
-      model.min_alpha = model.alpha # fix the learning rate, no deca
-      current_epoch += 1
+        sentences = [
+            gensim.models.doc2vec.TaggedDocument(words=words, tags=[i])
+            for i, words in enumerate(words_by_sentence)
+        ]
 
-    model.delete_temporary_training_data(keep_doctags_vectors=True, keep_inference=True)
+        model = gensim.models.Doc2Vec(
+            vector_size=self.vec_size,
+            window=self.window,
+            min_count=self.min_count,
+            workers=self.workers,
+            alpha=0.025,
+            min_alpha=0.025,
+            seed=self.seed
+        )
+        self.model = model
+        model.build_vocab(sentences)
+        current_epoch = 0
 
-    return [model.docvecs[i] for i in range(len(sentences))]
+        for _ in range(self.n_epochs):
+            logger.info("epoch: %d, alpha: %f", current_epoch, model.alpha)
+            model.train(
+                sentences,
+                total_examples=len(sentences),
+                epochs=1
+            )
+            model.alpha = model.alpha * 0.95  # decrease the learning rate
+            model.min_alpha = model.alpha  # fix the learning rate, no deca
+            current_epoch += 1
+
+        model.delete_temporary_training_data(keep_doctags_vectors=True, keep_inference=True)
+
+        return [model.docvecs[i] for i in range(len(sentences))]

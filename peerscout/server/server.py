@@ -1,4 +1,3 @@
-import os
 import logging
 
 from flask import Flask
@@ -15,33 +14,37 @@ from .blueprints.client import create_client_blueprint
 
 LOGGER = logging.getLogger(__name__)
 
+
 def create_app(config):
-  app = Flask(__name__)
-  app.json_encoder = CustomJSONEncoder
-  CORS(app)
+    app = Flask(__name__)
+    app.json_encoder = CustomJSONEncoder
+    CORS(app)
 
-  api, reload_api = create_api_blueprint(config)
-  app.register_blueprint(api, url_prefix='/api')
+    api, reload_api = create_api_blueprint(config)
+    app.register_blueprint(api, url_prefix='/api')
 
-  control = create_control_blueprint(
-    reload_fn=reload_api
-  )
-  app.register_blueprint(control, url_prefix='/control')
+    control = create_control_blueprint(
+        reload_fn=reload_api
+    )
+    app.register_blueprint(control, url_prefix='/control')
 
-  app.register_blueprint(create_client_blueprint())
+    app.register_blueprint(create_client_blueprint())
 
-  return app
+    return app
+
 
 def initialize_logging():
-  configure_logging('server')
-  logging.getLogger('summa.preprocessing.cleaner').setLevel(logging.WARNING)
+    configure_logging('server')
+    logging.getLogger('summa.preprocessing.cleaner').setLevel(logging.WARNING)
+
 
 def main():
-  config = get_app_config()
-  port = config.get('server', 'port', fallback=8080)
-  host = config.get('server', 'host', fallback=None)
-  app = create_app(config)
-  app.run(port=port, host=host, threaded=True)
+    config = get_app_config()
+    port = config.get('server', 'port', fallback=8080)
+    host = config.get('server', 'host', fallback=None)
+    app = create_app(config)
+    app.run(port=port, host=host, threaded=True)
+
 
 if __name__ == "__main__":
-  main()
+    main()

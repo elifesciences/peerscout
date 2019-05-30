@@ -1,67 +1,71 @@
 from sqlalchemy import (
-  Column,
-  Boolean,
-  DateTime,
-  Integer,
-  Interval,
-  String
+    Column,
+    Boolean,
+    DateTime,
+    Integer,
+    Interval,
+    String
 )
 from sqlalchemy.ext.declarative import declarative_base
 
+
 def compile_minutes_duration(dialect, minutes):
-  if dialect == 'postgresql':
-    return "INTERVAL 'P0Y0M0DT0H{}M0S'".format(minutes)
-  elif dialect == 'sqlite':
-    return str(minutes * 60)
-  else:
-    raise Exception("unsupported dialect: {}".format(dialect))
+    if dialect == 'postgresql':
+        return "INTERVAL 'P0Y0M0DT0H{}M0S'".format(minutes)
+    elif dialect == 'sqlite':
+        return str(minutes * 60)
+    else:
+        raise Exception("unsupported dialect: {}".format(dialect))
+
 
 def compile_years_duration(dialect, years):
-  if dialect == 'postgresql':
-    return "INTERVAL 'P{}Y0M0DT0H0M0S'".format(years)
-  elif dialect == 'sqlite':
-    return str(years * 60 * 60 * 24 * 12)
-  else:
-    raise Exception("unsupported dialect: {}".format(dialect))
+    if dialect == 'postgresql':
+        return "INTERVAL 'P{}Y0M0DT0H0M0S'".format(years)
+    elif dialect == 'sqlite':
+        return str(years * 60 * 60 * 24 * 12)
+    else:
+        raise Exception("unsupported dialect: {}".format(dialect))
+
 
 def compile_duration_days(dialect, expr_from, expr_to):
-  SECONDS_IN_DAY = 24 * 60 * 60
-  if dialect == 'postgresql':
-    return "(extract(epoch from {} - {})/{})".format(expr_to, expr_from, SECONDS_IN_DAY)
-  elif dialect == 'sqlite':
-    return "(julianday({}) - julianday({}))".format(expr_to, expr_from)
-  else:
-    raise Exception("unsupported dialect: {}".format(dialect))
+    SECONDS_IN_DAY = 24 * 60 * 60
+    if dialect == 'postgresql':
+        return "(extract(epoch from {} - {})/{})".format(expr_to, expr_from, SECONDS_IN_DAY)
+    elif dialect == 'sqlite':
+        return "(julianday({}) - julianday({}))".format(expr_to, expr_from)
+    else:
+        raise Exception("unsupported dialect: {}".format(dialect))
+
 
 def create_views(dialect):
-  Base = declarative_base()
+    Base = declarative_base()
 
-  min_duration = compile_minutes_duration(dialect, 1)
-  one_year = compile_years_duration(dialect, 1)
+    min_duration = compile_minutes_duration(dialect, 1)
+    one_year = compile_years_duration(dialect, 1)
 
-  class ManuscriptPersonReviewTimes(Base):
-    __tablename__ = "manuscript_person_review_times"
+    class ManuscriptPersonReviewTimes(Base):
+        __tablename__ = "manuscript_person_review_times"
 
-    version_id = Column(String, primary_key=True)
-    person_id = Column(String, primary_key=True)
+        version_id = Column(String, primary_key=True)
+        person_id = Column(String, primary_key=True)
 
-    contacted_timestamp = Column(DateTime)
+        contacted_timestamp = Column(DateTime)
 
-    accepted_timestamp = Column(DateTime)
-    accepted_duration = Column(Interval)
+        accepted_timestamp = Column(DateTime)
+        accepted_duration = Column(Interval)
 
-    declined_timestamp = Column(DateTime)
-    declined_duration = Column(Interval)
+        declined_timestamp = Column(DateTime)
+        declined_duration = Column(Interval)
 
-    reviewed_timestamp = Column(DateTime)
-    reviewed_duration = Column(Interval)
+        reviewed_timestamp = Column(DateTime)
+        reviewed_duration = Column(Interval)
 
-    accepted_declined = Column(Boolean)
-    awaiting_accept = Column(Boolean)
-    awaiting_review = Column(Boolean)
+        accepted_declined = Column(Boolean)
+        awaiting_accept = Column(Boolean)
+        awaiting_review = Column(Boolean)
 
-    __query__ =\
-    """
+        __query__ = (
+            """
     select
       mv.version_id,
       ms_contacted.person_id,
@@ -107,49 +111,49 @@ def create_views(dialect):
       and ms_reviewed.stage_timestamp >= ms_contacted.stage_timestamp + {min_duration}
       and ms_reviewed.stage_name = 'Review Received'
     group by mv.version_id, ms_contacted.person_id
-    """.format(
-      accepted_duration_days=compile_duration_days(
-        dialect,
-        'min(ms_contacted.stage_timestamp)',
-        'min(ms_accepted.stage_timestamp)'
-      ),
-      declined_duration_days=compile_duration_days(
-        dialect,
-        'min(ms_contacted.stage_timestamp)',
-        'min(ms_declined.stage_timestamp)'
-      ),
-      reviewed_duration_days=compile_duration_days(
-        dialect,
-        'min(ms_accepted.stage_timestamp)',
-        'min(ms_reviewed.stage_timestamp)'
-      ),
-      min_duration=min_duration
-    )
+            """).format(
+                accepted_duration_days=compile_duration_days(
+                    dialect,
+                    'min(ms_contacted.stage_timestamp)',
+                    'min(ms_accepted.stage_timestamp)'
+                ),
+                declined_duration_days=compile_duration_days(
+                    dialect,
+                    'min(ms_contacted.stage_timestamp)',
+                    'min(ms_declined.stage_timestamp)'
+                ),
+                reviewed_duration_days=compile_duration_days(
+                    dialect,
+                    'min(ms_accepted.stage_timestamp)',
+                    'min(ms_reviewed.stage_timestamp)'
+                ),
+                min_duration=min_duration
+            )
 
-  class PersonReviewStatsMixin(object):
-    person_id = Column(String, primary_key=True)
+    class PersonReviewStatsMixin:
+        person_id = Column(String, primary_key=True)
 
-    accepted_duration_min = Column(Interval)
-    accepted_duration_max = Column(Interval)
-    accepted_duration_avg = Column(Interval)
-    accepted_count = Column(Integer)
+        accepted_duration_min = Column(Interval)
+        accepted_duration_max = Column(Interval)
+        accepted_duration_avg = Column(Interval)
+        accepted_count = Column(Integer)
 
-    declined_duration_min = Column(Interval)
-    declined_duration_max = Column(Interval)
-    declined_duration_avg = Column(Interval)
-    declined_count = Column(Integer)
+        declined_duration_min = Column(Interval)
+        declined_duration_max = Column(Interval)
+        declined_duration_avg = Column(Interval)
+        declined_count = Column(Integer)
 
-    reviewed_duration_min = Column(Interval)
-    reviewed_duration_max = Column(Interval)
-    reviewed_duration_avg = Column(Interval)
-    reviewed_count = Column(Integer)
+        reviewed_duration_min = Column(Interval)
+        reviewed_duration_max = Column(Interval)
+        reviewed_duration_avg = Column(Interval)
+        reviewed_count = Column(Integer)
 
-    accepted_declined_count = Column(Integer)
-    awaiting_accept_count = Column(Integer)
-    awaiting_review_count = Column(Integer)
+        accepted_declined_count = Column(Integer)
+        awaiting_accept_count = Column(Integer)
+        awaiting_review_count = Column(Integer)
 
-  _BASE_REVIEW_STATS_QUERY =\
-  """
+    _BASE_REVIEW_STATS_QUERY =\
+        """
   select
     person_id,
 
@@ -176,27 +180,27 @@ def create_views(dialect):
   from manuscript_person_review_times
   """
 
-  class PersonReviewStatsOverall(PersonReviewStatsMixin, Base):
-    __tablename__ = "person_review_stats_overall"
+    class PersonReviewStatsOverall(PersonReviewStatsMixin, Base):
+        __tablename__ = "person_review_stats_overall"
 
-    __query__ =\
-    _BASE_REVIEW_STATS_QUERY +\
-    """
+        __query__ =\
+            _BASE_REVIEW_STATS_QUERY +\
+            """
     group by person_id
     """
 
-  class PersonReviewStatsLast12m(PersonReviewStatsMixin, Base):
-    __tablename__ = "person_review_stats_last12m"
+    class PersonReviewStatsLast12m(PersonReviewStatsMixin, Base):
+        __tablename__ = "person_review_stats_last12m"
 
-    __query__ =\
-    _BASE_REVIEW_STATS_QUERY +\
-    """
+        __query__ =\
+            _BASE_REVIEW_STATS_QUERY +\
+            """
     where contacted_timestamp >= (current_date - {interval})
     group by person_id
     """.format(interval=one_year)
 
-  return [
-    ManuscriptPersonReviewTimes,
-    PersonReviewStatsOverall,
-    PersonReviewStatsLast12m
-  ]
+    return [
+        ManuscriptPersonReviewTimes,
+        PersonReviewStatsOverall,
+        PersonReviewStatsLast12m
+    ]

@@ -1,4 +1,4 @@
 [flake8]
-application-import-names = profiles
+application-import-names = peerscout
 max-line-length = 100
-ignore = E111
+ignore = W503, W504, E711, E712, E121, E123, E125
