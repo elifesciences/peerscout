@@ -52,7 +52,7 @@ def train_lda(
 
   if lda is None:
     lda = LatentDirichletAllocation(
-      n_topics=n_topics,
+      n_components=n_topics,
       max_iter=max_iter,
       learning_method=learning_method,
       learning_offset=learning_offset,
