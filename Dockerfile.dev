@@ -9,6 +9,7 @@ USER elife
 
 ENV COVERAGE_FILE=${PROJECT_FOLDER}/build/.coverage
 COPY --chown=elife:elife project_tests.sh pytest.ini .pylintrc .flake8 setup.py ${PROJECT_FOLDER}/
+COPY --chown=elife:elife tests/ ${PROJECT_FOLDER}/tests/
 
 USER www-data
 CMD ["./project_tests.sh"]
