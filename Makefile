@@ -54,6 +54,10 @@ server-test-pytest: server-build-dev
 	$(DOCKER_COMPOSE) run --rm peerscout-dev pytest $(PYTEST_ARGS)
 
 
+server-watch: server-build-dev
+	$(DOCKER_COMPOSE) run --rm peerscout-dev pytest-watch -- $(PYTEST_ARGS)
+
+
 server-dev-shell: server-build-dev
 	$(DOCKER_COMPOSE) run --rm peerscout-dev bash
 
