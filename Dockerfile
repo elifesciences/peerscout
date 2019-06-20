@@ -1,13 +1,18 @@
 ARG commit=develop
 FROM elifesciences/peerscout_client:${commit} AS client
-FROM elifesciences/python:cacd250ec201feab491c0738f261561b5360997b
+FROM elifesciences/python_3.6:6f4c43c064fe45e0a158694fbdad9e473dbcad87
+
+USER root
+RUN apt-get update && \
+    apt-get -y install gcc g++ && \
+    rm -rf /var/lib/apt/lists/*
 
 USER elife
 ENV PROJECT_FOLDER=/srv/peerscout
 RUN mkdir ${PROJECT_FOLDER}
 
 ENV VENV=${PROJECT_FOLDER}/venv
-RUN virtualenv ${VENV}
+RUN python -m venv ${VENV}
 ENV PYTHONUSERBASE=${VENV} PATH=${VENV}/bin:$PATH
 
 WORKDIR ${PROJECT_FOLDER}
@@ -26,7 +31,7 @@ ARG install_dev
 COPY requirements.dev.txt ./
 RUN if [ "${install_dev}" = "y" ]; then pip install -r requirements.dev.txt; fi
 
-COPY --from=client --chown=elife:elife /home/node/client/ ${PROJECT_FOLDER}/client/
+COPY --from=client --chown=elife:elife /home/node/client/dist/ ${PROJECT_FOLDER}/client/dist/
 COPY --chown=elife:elife peerscout/ ${PROJECT_FOLDER}/peerscout/
 COPY --chown=elife:elife server.sh ${PROJECT_FOLDER}/
 COPY --chown=elife:elife update-data-and-reload.sh ${PROJECT_FOLDER}/
@@ -35,7 +40,7 @@ COPY --chown=elife:elife app-defaults.cfg ${PROJECT_FOLDER}/
 
 USER root
 RUN mkdir .data && chown www-data:www-data .data
-RUN mkdir logs && chown www-data:www-data logs
+RUN mkdir logs && chown www-data:www-data logs && chmod -R a+w logs
 
 USER www-data
-CMD ["venv/bin/python"]
+CMD ["/srv/peerscout/server.sh"]

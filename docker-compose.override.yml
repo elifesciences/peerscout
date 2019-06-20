@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+  init:
+    build:
+      context: ./docker/init
+      dockerfile: Dockerfile
+    image: elifesciences/peerscout_init:${IMAGE_TAG}
+    volumes:
+      - config-aws:/home/elife/volume-config-aws
+      - ~/.aws:/home/elife/user-config-aws
+
+  db:
+    image: postgres:9.6
+    restart: always
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: peerscout_db
+      POSTGRES_USER: peerscout_user
+      POSTGRES_PASSWORD: peerscout_password
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/5432"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    ports:
+      - "9432:5432"
+
+  peerscout:
+    depends_on:
+      - client
+      - db
+      - init
+    volumes:
+      - ./app-dev.cfg:/srv/peerscout/app.cfg
+      - ./.data:/srv/peerscout/.data
+      - config-aws:/home/elife/.aws
+
+volumes:
+  config-aws:

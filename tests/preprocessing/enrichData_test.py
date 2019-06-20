@@ -30,6 +30,7 @@ LOGGER = logging.getLogger(__name__)
 
 URL_1 = 'test://dummy.url'
 URL_2 = 'test://dummy.url2'
+UNICODE_URL_1 = 'test://dummy.url?\xe4'
 
 TITLE1 = 'Title 1'
 ABSTRACT1 = 'Abstract 1'
@@ -112,6 +113,11 @@ class TestCreateStrCache:
         cached_f = create_str_cache(mock_f, str(tmpdir))
         assert cached_f(URL_1) == mock_f.return_value
         mock_f.assert_called_with(URL_1)
+
+    def test_should_call_function_with_unicode(self, tmpdir, mock_f: Mock):
+        cached_f = create_str_cache(mock_f, str(tmpdir))
+        assert cached_f(UNICODE_URL_1) == mock_f.return_value
+        mock_f.assert_called_with(UNICODE_URL_1)
 
     def test_should_call_function_only_once_called_with_the_same_parameter(
             self, tmpdir, mock_f: Mock):

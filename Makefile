@@ -3,7 +3,11 @@ DOCKER_COMPOSE_CI = docker-compose -f docker-compose.yml
 DOCKER_COMPOSE = $(DOCKER_COMPOSE_DEV)
 
 
-.PHONY: all test clean build
+PYTEST_ARGS=
+STEP=
+
+
+.PHONY: all test clean build logs
 
 
 dev-venv:
@@ -31,7 +35,11 @@ client-shell: client-build
 
 
 server-build:
-	$(DOCKER_COMPOSE) build peerscout
+	# only dev compose file has "init" service defined
+	@if [ "$(DOCKER_COMPOSE)" = "$(DOCKER_COMPOSE_DEV)" ]; then \
+		$(DOCKER_COMPOSE) build init; \
+	fi
+	$(DOCKER_COMPOSE) build client peerscout
 
 
 server-build-dev:
@@ -42,12 +50,72 @@ server-test: server-build-dev
 	$(DOCKER_COMPOSE) run --rm peerscout-dev ./project_tests.sh
 
 
-server-shell: server-build
-	$(DOCKER_COMPOSE) run --rm peerscout bash
+server-test-pytest: server-build-dev
+	$(DOCKER_COMPOSE) run --rm peerscout-dev pytest $(PYTEST_ARGS)
 
 
 server-dev-shell: server-build-dev
 	$(DOCKER_COMPOSE) run --rm peerscout-dev bash
+
+
+db-start:
+	$(DOCKER_COMPOSE) up -d db
+
+
+migrate-schema: server-build
+	$(DOCKER_COMPOSE) run --rm --user elife peerscout ./migrate-schema.sh
+
+
+update-data-and-reload: server-build
+	$(DOCKER_COMPOSE) run --rm --user elife peerscout ./update-data-and-reload.sh
+
+
+run-preprocessing-step: server-build
+	$(DOCKER_COMPOSE) run --rm --user elife peerscout python -m peerscout.preprocessing.$(STEP)
+
+
+fix-data-permissions:
+	mkdir -p .data
+	chmod -R a+w .data
+
+
+start: server-build
+	$(DOCKER_COMPOSE) up -d peerscout
+
+
+stop:
+	$(DOCKER_COMPOSE) stop peerscout
+
+
+www-shell:
+	$(DOCKER_COMPOSE) exec peerscout bash
+
+
+www-shell-run:
+	$(DOCKER_COMPOSE) run --rm peerscout bash
+
+
+elife-shell:
+	$(DOCKER_COMPOSE) exec --user elife peerscout bash
+
+
+elife-shell-run:
+	$(DOCKER_COMPOSE) run --rm --user elife peerscout bash
+
+
+restart: stop start
+
+
+down:
+	$(DOCKER_COMPOSE) down
+
+
+clean:
+	$(DOCKER_COMPOSE) down -v
+
+
+logs:
+	$(DOCKER_COMPOSE) logs -f
 
 
 build: .PHONY

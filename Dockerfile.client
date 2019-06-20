@@ -10,3 +10,5 @@ COPY --chown=node:node client/package.json client/package-lock.json ./
 RUN npm ci
 
 COPY --chown=node:node client ./
+
+RUN npm run bundle
