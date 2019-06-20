@@ -30,6 +30,10 @@ client-test: client-build
 	$(DOCKER_COMPOSE) run --rm client ./project_tests.sh
 
 
+client-watch: client-build
+	$(DOCKER_COMPOSE) run --rm client npm run ~test
+
+
 client-shell: client-build
 	$(DOCKER_COMPOSE) run --rm client bash
 
