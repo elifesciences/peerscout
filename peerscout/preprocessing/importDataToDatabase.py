@@ -1,7 +1,9 @@
+import argparse
 import itertools
 from os.path import basename, splitext
 import re
 import logging
+from typing import List
 
 import pandas as pd
 
@@ -23,6 +25,10 @@ from .dataNormalisationUtils import normalise_subject_area
 
 from ..shared.database import connect_managed_configured_database
 
+
+LOGGER = logging.getLogger(__name__)
+
+
 # The data version is similar to the schema version,
 # but rather means that the way the data should be interpreted has changed
 # (and therefore previously processed files may need to be processed again)
@@ -32,10 +38,6 @@ DATA_VERSION = 8
 class NoteTypes:
     # Note: the keywords seem to be actually stored in 'Pn Area Of Expertise', not 'Pn Keywords'
     KEYWORDS = 'Pn Area Of Expertise'
-
-
-def get_logger():
-    return logging.getLogger(__name__)
 
 
 def auto_convert(name, value):
@@ -116,7 +118,7 @@ def find_unknown_paths(doc, known_paths):
 def sanity_check_unknown_paths(doc, known_paths):
     unknown_paths = find_unknown_paths(doc, known_paths)
     if len(unknown_paths) > 0:
-        get_logger().warning("unknown_paths: %s", unknown_paths)
+        LOGGER.warning("unknown_paths: %s", unknown_paths)
 
 
 def parse_keyword_str(keyword_str):
@@ -661,15 +663,9 @@ def apply_early_career_researcher_flag(
     return df
 
 
-def convert_zip_file(
-        zip_filename, zip_stream, db, field_mapping_by_table_name,
+def _convert_data(
+        process_fn: callable, db, field_mapping_by_table_name,
         early_career_researcher_person_ids, export_emails=False):
-
-    logger = get_logger()
-
-    processed = db.import_processed.get(zip_filename)
-    if processed is not None and processed.version == DATA_VERSION:
-        return
 
     table_names = {
         'person',
@@ -684,10 +680,9 @@ def convert_zip_file(
             table_names.add(table_name)
     tables = dict((table_name, TableOutput(name=table_name)) for table_name in table_names)
 
-    def process_file(filename, stream):
-        return convert_xml_file_contents(filename, stream, tables, field_mapping_by_table_name)
-
-    process_files_in_zip(zip_stream, process_file, ext=".xml")
+    process_fn(
+        tables=tables
+    )
 
     db.session.close_all()
 
@@ -733,7 +728,7 @@ def convert_zip_file(
         t for t in table_names if t not in table_names_supporting_update_or_insert_set
     ]
 
-    logger.debug('removing records: %s', table_names_not_supporting_update_or_insert)
+    LOGGER.debug('removing records: %s', table_names_not_supporting_update_or_insert)
     pbar = tqdm(list(reversed(table_names_not_supporting_update_or_insert)), leave=False)
     for table_name in pbar:
         pbar.set_description(rjust_and_shorten_text(
@@ -742,7 +737,7 @@ def convert_zip_file(
         ))
         remove_records(db, table_name, frame_by_table_name[table_name], tables[table_name].key)
 
-    logger.debug('updating/creating records: %s', table_names_supporting_update_or_insert)
+    LOGGER.debug('updating/creating records: %s', table_names_supporting_update_or_insert)
     pbar = tqdm(table_names_supporting_update_or_insert, leave=False)
     for table_name in pbar:
         df = frame_by_table_name[table_name]
@@ -753,7 +748,7 @@ def convert_zip_file(
         if len(df) > 0:
             db[table_name].update_or_create_list(df.to_dict(orient='records'))
 
-    logger.debug('inserting records: %s', table_names_not_supporting_update_or_insert)
+    LOGGER.debug('inserting records: %s', table_names_not_supporting_update_or_insert)
     pbar = tqdm(table_names_not_supporting_update_or_insert, leave=False)
     for table_name in pbar:
         df = frame_by_table_name[table_name]
@@ -764,13 +759,76 @@ def convert_zip_file(
         if len(df) > 0:
             insert_records(db, table_name, df)
 
-    logger.debug('marking file as processed: %s (%d)', zip_filename, DATA_VERSION)
+
+def convert_zip_file(
+        zip_filename: str, zip_stream, db, field_mapping_by_table_name,
+        early_career_researcher_person_ids, export_emails=False,
+        skip_if_processed=True):
+
+    if skip_if_processed:
+        processed = db.import_processed.get(zip_filename)
+        if processed is not None and processed.version == DATA_VERSION:
+            LOGGER.debug('skip already processed zip file: %s', zip_filename)
+            return
+
+    def process_zip(tables):
+        def process_file(filename, stream):
+            return convert_xml_file_contents(filename, stream, tables, field_mapping_by_table_name)
+
+        process_files_in_zip(zip_stream, process_file, ext=".xml")
+
+    _convert_data(
+        process_fn=process_zip,
+        db=db,
+        field_mapping_by_table_name=field_mapping_by_table_name,
+        early_career_researcher_person_ids=early_career_researcher_person_ids,
+        export_emails=export_emails
+    )
+
+    LOGGER.debug('marking file as processed: %s (%d)', zip_filename, DATA_VERSION)
     db.import_processed.update_or_create(import_processed_id=zip_filename, version=DATA_VERSION)
 
     db.commit()
 
 
-def main():
+def convert_xml_file(
+        xml_filename: str, db, field_mapping_by_table_name,
+        early_career_researcher_person_ids, export_emails=False):
+
+    def process_xml(tables):
+        with open(xml_filename, 'rb') as stream:
+            return convert_xml_file_contents(
+                xml_filename, stream, tables, field_mapping_by_table_name
+            )
+
+    _convert_data(
+        process_fn=process_xml,
+        db=db,
+        field_mapping_by_table_name=field_mapping_by_table_name,
+        early_career_researcher_person_ids=early_career_researcher_person_ids,
+        export_emails=export_emails
+    )
+
+    db.commit()
+
+
+def parse_args(argv: List[str] = None):
+    parser = argparse.ArgumentParser(
+        description="PeerScout, import XML data to database"
+    )
+    parser.add_argument(
+        "--zip-file",
+        help="Force processing of particular Zip file"
+    )
+    parser.add_argument(
+        "--xml-file",
+        help="Force processing of particular XML file"
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: List[str] = None):
+    args = parse_args(argv)
 
     field_mapping_by_table_name = default_field_mapping_by_table_name
 
@@ -785,17 +843,32 @@ def main():
             ).all()
         )
 
-        def process_zip(filename, stream):
+        def process_zip(filename, stream, skip_if_processed=True):
             return convert_zip_file(
                 filename, stream, db, field_mapping_by_table_name,
-                early_career_researcher_person_ids
+                early_career_researcher_person_ids,
+                skip_if_processed=skip_if_processed
             )
 
-        source = get_downloads_xml_path()
+        if args.xml_file:
+            LOGGER.info('processing xml file %s', args.xml_file)
+            convert_xml_file(
+                args.xml_file,
+                db=db,
+                field_mapping_by_table_name=field_mapping_by_table_name,
+                early_career_researcher_person_ids=early_career_researcher_person_ids
+            )
+        elif args.zip_file:
+            LOGGER.info('processing zip file %s', args.zip_file)
+            with open(args.zip_file, 'rb') as zip_stream:
+                process_zip(args.zip_file, zip_stream, skip_if_processed=False)
+        else:
+            source = get_downloads_xml_path()
 
-        process_files_in_directory_or_zip(source, process_zip, ext=".zip")
+            LOGGER.info('processing zip files in %s', source)
+            process_files_in_directory_or_zip(source, process_zip, ext=".zip")
 
-        get_logger().info("done")
+        LOGGER.info("done")
 
 
 if __name__ == "__main__":
