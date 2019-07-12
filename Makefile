@@ -3,8 +3,14 @@ DOCKER_COMPOSE_CI = docker-compose -f docker-compose.yml
 DOCKER_COMPOSE = $(DOCKER_COMPOSE_DEV)
 
 
-PYTEST_ARGS=
-STEP=
+PEERSCOUT_PYTHON = $(DOCKER_COMPOSE) run --rm --user elife peerscout python
+
+
+PYTEST_ARGS =
+STEP =
+SQL =
+NO_BUILD =
+ARGS =
 
 
 .PHONY: all test clean build logs
@@ -40,10 +46,12 @@ client-shell: client-build
 
 server-build:
 	# only dev compose file has "init" service defined
-	@if [ "$(DOCKER_COMPOSE)" = "$(DOCKER_COMPOSE_DEV)" ]; then \
+	@if [ "$(DOCKER_COMPOSE)" = "$(DOCKER_COMPOSE_DEV)" ] && [ "$(NO_BUILD)" != "y" ]; then \
 		$(DOCKER_COMPOSE) build init; \
 	fi
-	$(DOCKER_COMPOSE) build client peerscout
+	@if [ "$(NO_BUILD)" != "y" ]; then \
+		$(DOCKER_COMPOSE) build client peerscout; \
+	fi
 
 
 server-build-dev:
@@ -70,6 +78,30 @@ db-start:
 	$(DOCKER_COMPOSE) up -d db
 
 
+db-shell:
+	$(DOCKER_COMPOSE) exec db bash
+
+
+db-sql-shell:
+	$(DOCKER_COMPOSE) exec db psql \
+		--username=peerscout_user \
+		peerscout_db
+
+
+.require-SQL:
+	@if [ -z "$(SQL)" ]; then \
+		echo "SQL required"; \
+		exit 1; \
+	fi
+
+
+db-run-sql: .require-SQL
+	$(DOCKER_COMPOSE) exec db psql \
+		--username=peerscout_user \
+		peerscout_db \
+		-c "$(SQL)"
+
+
 migrate-schema: server-build
 	$(DOCKER_COMPOSE) run --rm --user elife peerscout ./migrate-schema.sh
 
@@ -79,7 +111,7 @@ update-data-and-reload: server-build
 
 
 run-preprocessing-step: server-build
-	$(DOCKER_COMPOSE) run --rm --user elife peerscout python -m peerscout.preprocessing.$(STEP)
+	$(PEERSCOUT_PYTHON) -m peerscout.preprocessing.$(STEP) $(ARGS)
 
 
 fix-data-permissions:
