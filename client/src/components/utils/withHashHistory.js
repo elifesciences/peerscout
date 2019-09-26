@@ -1,6 +1,6 @@
 import { withProps } from 'recompose';
 
-import createHashHistory from 'history/createHashHistory';
+import { createHashHistory } from "history";
 
 export const withHashHistory = withProps(props => ({
   ...props,

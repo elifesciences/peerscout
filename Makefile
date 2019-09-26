@@ -104,6 +104,10 @@ server-dev-shell: server-build-dev
 	$(DOCKER_COMPOSE) run --rm peerscout-dev bash
 
 
+server-logs:
+	$(DOCKER_COMPOSE) logs -f peerscout
+
+
 db-start:
 	$(DOCKER_COMPOSE) up -d db
 
