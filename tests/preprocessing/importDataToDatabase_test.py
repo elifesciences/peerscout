@@ -24,6 +24,12 @@ from peerscout.preprocessing.importDataToDatabase import (
     NoteTypes
 )
 
+from ..test_utils import log_on_exception
+
+
+LOGGER = logging.getLogger(__name__)
+
+
 PERSON_ID = 'person_id'
 AUTHOR_1_ID = 'author1'
 
@@ -121,6 +127,13 @@ class TestConvertZipFile:
                 set(df['version_id']) ==
                 set([VERSION_ID1])
             )
+
+    @log_on_exception
+    def test_should_set_created_timestamp_to_none_and_not_nat(self, logger):
+        with empty_database_and_convert_files(['regular-00001.xml']) as db:
+            df = db.manuscript_version.read_frame().reset_index()
+            logger.debug('df:\n%s', df)
+            assert df['created_timestamp'].values[0] is None
 
     def test_with_duplicate_author(self):
         with empty_database_and_convert_files(['with-duplicate-author-00001.xml']) as db:

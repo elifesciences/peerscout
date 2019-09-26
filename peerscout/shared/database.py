@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session, Session
 from sqlalchemy.orm import load_only
 
 from peerscout.utils.json import CustomJSONEncoder
+from peerscout.utils.pandas import replace_null_with_none
 
 from .database_schema import (
     Base,
@@ -21,8 +22,11 @@ from .database_views import create_views
 from .app_config import get_app_config
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 def get_logger():
-    return logging.getLogger(__name__)
+    return LOGGER
 
 
 def json_serializer(d):
@@ -161,13 +165,14 @@ class Entity:
 
     def read_frame(self):
         primary_key = self.primary_key
-        return pd.read_sql_table(
+        df = pd.read_sql_table(
             self.table.__tablename__,
             self.session.get_bind(),
             index_col=primary_key[0].name if len(primary_key) == 1 else None
         )
+        return replace_null_with_none(df)
 
-    def write_frame(self, df, **kwargs):
+    def write_frame(self, df: pd.DataFrame, **kwargs):
         df.to_sql(
             self.table.__tablename__,
             self.session.get_bind(),

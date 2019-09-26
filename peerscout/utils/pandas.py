@@ -49,3 +49,10 @@ def groupby_agg_droplevel(df, groupby_columns, agg_param):
     # magic droplevel that retains the main level if sub level label is blank
     df.columns = droplevel_keep_non_blanks(df.columns)
     return df
+
+
+def replace_null_with_none(df: pd.DataFrame) -> pd.DataFrame:
+    """Replaces pandas null (NaN, NaT, None) with None.
+    The effect is that the column type will be changed to object.
+    """
+    return df.astype(object).where((pd.notnull(df)), None)

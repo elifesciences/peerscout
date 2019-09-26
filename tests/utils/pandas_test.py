@@ -1,9 +1,11 @@
 from __future__ import absolute_import
 
+import numpy as np
 import pandas as pd
 
 from peerscout.utils.pandas import (
-    groupby_agg_droplevel
+    groupby_agg_droplevel,
+    replace_null_with_none
 )
 
 
@@ -68,3 +70,25 @@ class TestGroupbyAggDroplevel:
         })
         assert set(result_df.columns) == {'group', 'sum', 'count'}
         assert len(result_df) == 0
+
+
+class TestReplaceNullWithNone:
+    def test_should_keep_valid_value(self):
+        assert replace_null_with_none(
+            pd.DataFrame([['valid']])
+        )[0][0] == 'valid'
+
+    def test_should_return_none_for_none(self):
+        assert replace_null_with_none(
+            pd.DataFrame([[None]])
+        )[0][0] is None
+
+    def test_should_return_none_for_nan(self):
+        assert replace_null_with_none(
+            pd.DataFrame([[np.NaN]])
+        )[0][0] is None
+
+    def test_should_return_none_for_nat(self):
+        assert replace_null_with_none(
+            pd.DataFrame([[pd.NaT]])
+        )[0][0] is None

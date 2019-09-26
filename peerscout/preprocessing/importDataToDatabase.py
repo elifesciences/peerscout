@@ -8,6 +8,7 @@ from typing import List
 import pandas as pd
 
 from peerscout.utils.tqdm import tqdm
+from peerscout.utils.pandas import replace_null_with_none
 
 from .convertUtils import (
     process_files_in_directory_or_zip,
@@ -746,7 +747,10 @@ def _convert_data(
             width=40
         ))
         if len(df) > 0:
-            db[table_name].update_or_create_list(df.to_dict(orient='records'))
+            db[table_name].update_or_create_list(
+                replace_null_with_none(df)
+                .to_dict(orient='records')
+            )
 
     LOGGER.debug('inserting records: %s', table_names_not_supporting_update_or_insert)
     pbar = tqdm(table_names_not_supporting_update_or_insert, leave=False)

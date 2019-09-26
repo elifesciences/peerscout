@@ -2,9 +2,13 @@ DOCKER_COMPOSE_DEV = docker-compose
 DOCKER_COMPOSE_CI = docker-compose -f docker-compose.yml
 DOCKER_COMPOSE = $(DOCKER_COMPOSE_DEV)
 
+VENV = venv
+PIP = $(VENV)/bin/pip
+PYTHON = $(VENV)/bin/python
 
 PEERSCOUT_PYTHON = $(DOCKER_COMPOSE) run --rm --user elife peerscout python
 
+NOT_SLOW_PYTEST_ARGS = -m 'not slow'
 
 PYTEST_ARGS =
 STEP =
@@ -18,6 +22,32 @@ ARGS =
 
 dev-venv:
 	./install.sh
+
+
+dev-flake8:
+	$(PYTHON) -m flake8 peerscout tests setup.py
+
+
+dev-pylint:
+	$(PYTHON) -m pylint peerscout tests setup.py
+
+
+dev-lint: dev-flake8 dev-pylint
+
+
+dev-pytest:
+	$(PYTHON) -m pytest -p no:cacheprovider $(ARGS)
+
+
+dev-watch:
+	$(PYTHON) -m pytest_watch -- -p no:cacheprovider -p no:warnings $(NOT_SLOW_PYTEST_ARGS) $(ARGS)
+
+
+dev-watch-slow:
+	$(PYTHON) -m pytest_watch -- -p no:cacheprovider -p no:warnings $(ARGS)
+
+
+dev-test: dev-lint dev-pytest
 
 
 client-build:
