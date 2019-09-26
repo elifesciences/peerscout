@@ -12,7 +12,6 @@ services:
 
   db:
     image: postgres:9.6
-    restart: always
     volumes:
       - postgres-data:/var/lib/postgresql/data
     environment:
@@ -39,6 +38,7 @@ services:
     volumes:
       - ./app-dev.cfg:/srv/peerscout/app.cfg
       - ./.data:/srv/peerscout/.data
+      - ./logs:/srv/peerscout/logs
       - config-aws:/home/elife/.aws
 
   peerscout-dev:
